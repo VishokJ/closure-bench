@@ -1,0 +1,7 @@
+obj_dir/
+results/**/build/
+*.vcd
+*.fst
+__pycache__/
+.venv/
+.env
