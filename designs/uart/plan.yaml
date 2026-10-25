@@ -5,6 +5,11 @@
 #   DOC           document from sources.yaml + page; the anchor must appear on that page
 #   BASE          a baseline coverage point that must exist with 0 hits
 #
+# role (optional, default evidence): `requirement` marks a DOC or README source
+# that states what the design must do. A verified requirement is value evidence
+# on its own (tools/check, gate value). RTL and BASE never count: they say what
+# the design does, not what it must do.
+#
 # provenance.status:
 #   auto_accepted  passed every mechanical gate; not yet audited
 #   audited        additionally spot-checked by a person (see provenance.audited_by)
@@ -13,7 +18,7 @@ design: uart
 items:
   - id: R1
     cover: R1_frame_error
-    cover_module: rx_cov
+    cover_module: cov_R1
     description: >-
       The receiver flags a frame error: a frame ends with the stop bit low,
       so frame_error pulses and the word is discarded.
@@ -28,10 +33,12 @@ items:
         lines: [126, 127]
         anchor: "frame_error_reg <= 1;"
       - type: README
+        role: requirement
         file: third_party/verilog-uart/README.md
         lines: [42, 44]
         anchor: "frame_error output and the received word will be discarded"
       - type: DOC
+        role: requirement
         doc: pc16550d
         section: "8.4 Line Status Register, bit 3"
         page: 16

@@ -1,0 +1,6 @@
+# Waivers: holes and mutants that are deliberately not tasks, each with a reason.
+#
+# mutants: equivalent mutants (cannot change observable behaviour), keyed by the
+# stable mutant ID from closure_core/mutants.py. tools/check reports survivors
+# that no testbench kills and no waiver explains as unexplained holes.
+mutants: {}

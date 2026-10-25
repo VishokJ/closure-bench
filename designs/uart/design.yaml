@@ -7,13 +7,17 @@ rtl:
   - third_party/verilog-uart/rtl/uart_rx.v
   - third_party/verilog-uart/rtl/uart_tx.v
 
-# Our functional coverage, attached to the RTL with `bind`.
-covers:
-  - designs/uart/covers/rx_cov.sv
-
+# Each plan item's cover is covers/<ID>.sv (module cov_<ID>, with its own bind).
 plan: plan.yaml
 
 # The inherited regression: the starting state every task extends.
 baselines:
   rx: {top: tb_uart_rx, file: designs/uart/baseline/tb_uart_rx.sv}
   tx: {top: tb_uart_tx, file: designs/uart/baseline/tb_uart_tx.sv}
+
+# Mutation gate (tools/check): fixed-operator mutants of these line ranges,
+# the always blocks. Equivalent mutants are waived in waivers.yaml.
+mutate:
+  third_party/verilog-uart/rtl/uart_rx.v: [86, 140]
+  third_party/verilog-uart/rtl/uart_tx.v: [78, 113]
+waivers: waivers.yaml

@@ -8,12 +8,29 @@ Gates per item:
   gold          designs/<d>/gold/<ID>.sv scores 1 (the task is solvable)
   near_miss     every designs/<d>/near_miss/<ID>_*.sv scores 0 (boundary is exact)
   determinism   grading the gold twice gives an identical result
-  mutation          (pending) gold catches a mutant nothing else catches
-  description_only  (pending) a model shown only the agent's view can hit the cover
-  duplicate         (pending) hit signature differs from every other item
+  value         evidence the item matters, either kind is enough:
+                mutant: the gold kills at least one mutant every baseline
+                  survives (closure_core/mutants.py; a kill = passes on the
+                  original RTL, fails on the mutant);
+                spec: a verified DOC or README source with role: requirement.
+                Mutants are one-line edits and cannot represent missing
+                features or spec mismatches, so no kill is only absence of
+                evidence. Kills are computed for every item either way.
+                Spec-only items are always in the audit sample.
+  duplicate     some testbench we run (baseline, gold, near-miss) hits this item
+                and not the other, for every other selected item. A signature is
+                the set of testbenches that hit an item; adding testbenches can
+                only split signatures, never merge them. Reported, not enforced:
+                implications (this gold also hits item X) and items whose golds
+                kill the same baseline-surviving mutants.
+
+No gate calls a model. Solvability from the agent's view is established by the
+pilot; items no pilot model solves get a fairness check (docs/PLAN.md §6).
+
+Mutant results are cached in results/check/mutation_cache.json.
 
 Usage:  tools/check [--design uart] [--item R1 ...] [--offline] [-j N]
-Exit 0 only if every implemented gate passes for every selected item.
+Exit 0 only if every gate passes for every selected item.
 """
 
 from __future__ import annotations
@@ -22,18 +39,18 @@ import argparse
 import json
 import re
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from closure_core import citations, load_design  # noqa: E402
+from closure_core import citations, load_design, mutants  # noqa: E402
 from closure_core.grader import grade, simulate  # noqa: E402
 
-PENDING = ("mutation", "description_only", "duplicate")
 COVER_RE = re.compile(r"^\s*(\w+)\s*:\s*cover\b", re.M)
 MODULE_RE = re.compile(r"^\s*module\s+(\w+)", re.M)
+REQUIREMENT_TYPES = ("DOC", "README")
 
 
 def cover_labels(design) -> dict[str, list[str]]:
@@ -47,6 +64,108 @@ def cover_labels(design) -> dict[str, list[str]]:
             mod = [name for pos, name in mods if pos < c.start()][-1:] or ["?"]
             out.setdefault(c.group(1), []).append(mod[0])
     return out
+
+
+def mutation_runs(design, items, pool, cache_path: Path) -> dict:
+    """Run every mutant against every testbench that instantiates its module.
+
+    Not a gate: the kills are evidence for the value gate and feed the
+    survivor bookkeeping.
+    """
+    cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
+    ms = [m for f, (lo, hi) in design.mutate.items() for m in mutants.generate(f, lo, hi)]
+    tbs = {f"baseline:{n}": (b["file"].read_text(), b["top"]) for n, b in design.baselines.items()}
+    for it in items:
+        gold = design.pack / "gold" / f"{it.id}.sv"
+        if gold.exists():
+            tbs[f"gold:{it.id}"] = (gold.read_text(), "tb")
+
+    run = lambda tb, m=None: pool.submit(mutants.simulate, design, *tbs[tb], m, cache=cache)
+    orig = {tb: f.result() for tb, f in {tb: run(tb) for tb in tbs}.items()}
+    futs = {(tb, m.id): run(tb, m) for tb in tbs if orig[tb]["status"] == "ok"
+            for m in ms if m.module in orig[tb]["modules"]}
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    save = lambda: cache_path.write_text(json.dumps(dict(cache), indent=1, sort_keys=True) + "\n")
+    keys = {f: k for k, f in futs.items()}
+    status = {}
+    for n, f in enumerate(as_completed(keys), 1):
+        status[keys[f]] = f.result()["status"]
+        if n % 20 == 0 or n == len(keys):  # an interrupted run keeps what it computed
+            save()
+            print(f"mutation: {n}/{len(keys)}", file=sys.stderr, flush=True)
+    save()
+
+    stillborn = sorted({mid for (_, mid), st in status.items() if st in ("compile_error", "compile_timeout")})
+    killed_by = {m.id: {tb for (tb, mid), st in status.items() if mid == m.id and st != "ok"}
+                 for m in ms if m.id not in stillborn}
+    survivors = {mid for mid, k in killed_by.items() if not any(tb.startswith("baseline:") for tb in k)}
+    waivers = design.waivers.get("mutants", {}) or {}
+    gold_kills = {mid for mid in survivors if killed_by[mid]}
+
+    per_gold, only_gold = {}, {}
+    for it in items:
+        tb = f"gold:{it.id}"
+        if tb in tbs and orig[tb]["status"] == "ok":
+            per_gold[it.id] = sorted(mid for mid in survivors if tb in killed_by[mid])
+            only_gold[it.id] = [mid for mid in per_gold[it.id] if killed_by[mid] == {tb}]
+
+    valid = len(killed_by)
+    base_killed = valid - len(survivors)
+    return {
+        "mutants": len(ms), "stillborn": stillborn, "valid": valid,
+        "baseline_killed": base_killed,
+        "baseline_score": round(base_killed / valid, 3) if valid else None,
+        "baseline_plus_gold_score": round((base_killed + len(gold_kills)) / valid, 3) if valid else None,
+        "survivors_killed_by_gold": sorted(gold_kills),
+        "gold_kills": per_gold,  # item -> baseline survivors its gold kills
+        "only_gold_kills": only_gold,  # ... that no other testbench kills
+        "waived": sorted(survivors & set(waivers)),
+        "unexplained": sorted(survivors - gold_kills - set(waivers)),
+        # A waiver claims the mutant is equivalent; a kill disproves it.
+        "bad_waivers": sorted(mid for mid in waivers if mid not in killed_by or killed_by[mid]),
+        "golds_checked": sorted(tb for tb in tbs if tb.startswith("gold:")),
+    }
+
+
+def source_label(src: dict) -> str:
+    where = src.get("file") or src.get("doc") or src.get("point")
+    at = f"lines {src['lines']}" if "lines" in src else f"page {src['page']}" if "page" in src else ""
+    return " ".join(str(x) for x in (src["type"], where, at) if x)
+
+
+def value_gate(kills: list[str], sources: list[tuple[dict, bool | None]]) -> tuple[bool, str, list[str]]:
+    """Evidence that the item matters: (ok, mutant|spec|both|none, requirement labels).
+
+    sources: (source, citation verified) per plan source. Only verified DOC or
+    README sources with role: requirement count; RTL and BASE say what the
+    design does, not what it must do.
+    """
+    spec = [source_label(s) for s, ok in sources
+            if s.get("role") == "requirement" and s["type"] in REQUIREMENT_TYPES and ok is True]
+    evidence = {(True, True): "both", (True, False): "mutant",
+                (False, True): "spec", (False, False): "none"}[(bool(kills), bool(spec))]
+    return evidence != "none", evidence, spec
+
+
+def duplicate_gate(corpus: dict[str, dict[str, int]], ids: list[str],
+                   kills: dict[str, list[str]], put) -> dict:
+    """corpus: testbench -> plan_hits, only for runs with status ok."""
+    sig = {i: {tb for tb, h in corpus.items() if h[i] > 0} for i in ids}
+    implies = {i: [j for j in ids if j != i and corpus.get(f"gold:{i}", {}).get(j, 0) > 0]
+               for i in ids}
+    same_kills = {i: [j for j in ids if j != i and kills.get(i) and kills.get(i) == kills.get(j)]
+                  for i in ids}
+    for i in ids:
+        if f"gold:{i}" not in sig[i]:
+            put(i, "duplicate", None, "no gold that hits this item")
+            continue
+        same = [j for j in ids if j != i and sig[j] == sig[i]]
+        notes = [f"implies {', '.join(implies[i])}"] if implies[i] else []
+        notes += [f"same mutant kills as {', '.join(same_kills[i])}"] if same_kills[i] else []
+        head = [f"no testbench separates it from {', '.join(same)}"] if same else []
+        put(i, "duplicate", not same, "; ".join(head + notes))
+    return {"implies": {i: v for i, v in implies.items() if v},
+            "same_mutant_kills": {i: v for i, v in same_kills.items() if v}}
 
 
 def main() -> int:
@@ -91,6 +210,7 @@ def main() -> int:
 
         baselines = {name: f.result() for name, f in base_futs.items()}
         base_points = [p for s in baselines.values() for p in s.points]
+        corpus = {f"baseline:{n}": s.plan_hits for n, s in baselines.items() if s.sim.status == "ok"}
 
         for it in items:
             # baseline
@@ -101,6 +221,8 @@ def main() -> int:
             # gold + determinism
             if it.id in gold_futs:
                 a, b = (f.result() for f in gold_futs[it.id])
+                if a.status == "ok":
+                    corpus[f"gold:{it.id}"] = a.plan_hits
                 put(it.id, "gold", a.reward == 1.0,
                     f"status {a.status}, hits {a.target_hits[it.id]}" + (f"\n{a.diagnostics[-600:]}" if a.reward != 1.0 else ""))
                 strip = lambda r: {k: v for k, v in json.loads(r.to_json()).items() if k not in ("compile_s", "run_s")}
@@ -111,6 +233,7 @@ def main() -> int:
 
             # near_miss
             nm = [(n, f.result()) for n, f in near_futs[it.id]]
+            corpus.update({f"near_miss:{n}": r.plan_hits for n, r in nm if r.status == "ok"})
             if not nm:
                 put(it.id, "near_miss", "n/a")
             else:
@@ -118,17 +241,27 @@ def main() -> int:
                          for n, r in nm if r.status != "ok" or r.target_hits[it.id] != 0]
                 put(it.id, "near_miss", not wrong, "; ".join(wrong) or f"{len(nm)} near-miss TBs miss")
 
+        mutation = mutation_runs(design, items, pool, args.report.with_name("mutation_cache.json"))
+
+    # duplicate (among the selected items only)
+    duplicate = duplicate_gate(corpus, [it.id for it in items], mutation["gold_kills"], put)
+
     # citations
     store = citations.DocStore(design.pack, offline=args.offline)
+    verified: dict[str, list[tuple[dict, bool | None]]] = {}
     for it in items:
         results = []
         for src in it.sources:
+            r = None
             if src["type"] in ("RTL", "README"):
-                results.append(citations.check_file_anchor(design.repo_root, it.id, src))
+                r = citations.check_file_anchor(design.repo_root, it.id, src)
             elif src["type"] == "DOC":
-                results.append(citations.check_doc(store, it.id, src))
+                r = citations.check_doc(store, it.id, src)
             elif src["type"] == "BASE":
-                results.append(citations.check_base(base_points, it.id, src))
+                r = citations.check_base(base_points, it.id, src)
+            if r:
+                results.append(r)
+            verified.setdefault(it.id, []).append((src, r.ok if r else None))
         if not results:
             put(it.id, "citations", False, "no sources")
         else:
@@ -137,29 +270,55 @@ def main() -> int:
             ok = False if failed else (None if unverified else True)
             put(it.id, "citations", ok, "; ".join(f"{r.kind} {r.detail}" for r in failed + unverified))
 
+    # value: mutant evidence (gold kills a baseline survivor) or spec evidence
+    value = {}
     for it in items:
-        for g in PENDING:
-            put(it.id, g, "pending")
+        kills = mutation["gold_kills"].get(it.id, [])
+        ok, evidence, spec = value_gate(kills, verified.get(it.id, []))
+        only = mutation["only_gold_kills"].get(it.id, [])
+        value[it.id] = {"evidence": evidence, "kills": kills, "only_by_this_gold": only,
+                        "requirements": spec}
+        put(it.id, "value", ok,
+            f"evidence {evidence}; kills {len(kills)} baseline survivors"
+            + (f" ({len(only)} only by this gold: {', '.join(only)})" if only else "")
+            + f"; requirements: {'; '.join(spec) or '-'}")
+    by_path = {p: sorted(i for i, v in value.items() if v["evidence"] == p)
+               for p in ("mutant", "spec", "both", "none")}
 
     # report
-    order = ["citations", "cover_sync", "baseline", "gold", "near_miss", "determinism", *PENDING]
-    sym = {True: "pass", False: "FAIL", None: "unverified", "n/a": "n/a", "pending": "pending"}
+    order = ["citations", "cover_sync", "baseline", "gold", "near_miss", "determinism", "value",
+             "duplicate"]
+    sym = {True: "pass", False: "FAIL", None: "unverified", "n/a": "n/a"}
     width = max(len(g) for g in order)
     all_ok = not orphans
     for it in items:
         print(f"\n{it.id}  ({it.cover}, {it.provenance.get('status', '?')})")
         for g in order:
             ok, detail = gates[it.id][g]
-            all_ok &= ok in (True, "n/a", "pending")
+            all_ok &= ok in (True, "n/a")
             print(f"  {g:<{width}}  {sym[ok]:<10}  {detail.splitlines()[0] if detail else ''}")
             for extra in detail.splitlines()[1:]:
                 print(f"  {'':<{width}}  {'':<10}  {extra}")
     if orphans:
         print(f"\nFAIL  covers with no plan item: {orphans}")
+    m = mutation
+    print(f"\nmutants: {m['mutants']} generated, {len(m['stillborn'])} stillborn, {m['valid']} valid; "
+          f"baseline kills {m['baseline_killed']} ({m['baseline_score']}), "
+          f"baseline + golds {m['baseline_plus_gold_score']}; "
+          f"{len(m['waived'])} waived, {len(m['unexplained'])} unexplained survivors")
+    print("value evidence: " + ", ".join(f"{p} {len(v)}" for p, v in by_path.items())
+          + (f"; spec-only (always audited): {', '.join(by_path['spec'])}" if by_path["spec"] else ""))
+    for i, js in duplicate["implies"].items():
+        print(f"implies: gold {i} also hits {', '.join(js)}")
+    if m["bad_waivers"]:
+        all_ok = False
+        print(f"FAIL  waivers on mutants that are killed or do not exist: {m['bad_waivers']}")
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(
-        {"design": design.name, "orphan_covers": orphans,
+        {"design": design.name, "orphan_covers": orphans, "mutation": mutation,
+         "duplicate": duplicate,
+         "value": {"items": value, "by_evidence": by_path, "spec_only_audit": by_path["spec"]},
          "items": {i: {g: {"ok": v[0], "detail": v[1]} for g, v in gs.items()} for i, gs in gates.items()}},
         indent=2, default=str) + "\n")
     print(f"\n{'ALL GATES PASS' if all_ok else 'SOME GATES FAIL OR UNVERIFIED'}  (report: {args.report.relative_to(ROOT)})")
