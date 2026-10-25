@@ -5,3 +5,7 @@ results/**/build/
 __pycache__/
 .venv/
 .env
+outputs/
+results/
+.DS_Store
+*.egg-info/

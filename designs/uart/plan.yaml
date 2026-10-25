@@ -1,0 +1,40 @@
+# Coverage plan: one entry per behaviour that must be verified.
+#
+# Every item cites at least one pinned source; tools/check verifies them:
+#   RTL / README  file + lines at the pinned commit; the anchor must appear on those lines
+#   DOC           document from sources.yaml + page; the anchor must appear on that page
+#   BASE          a baseline coverage point that must exist with 0 hits
+#
+# provenance.status:
+#   auto_accepted  passed every mechanical gate; not yet audited
+#   audited        additionally spot-checked by a person (see provenance.audited_by)
+design: uart
+
+items:
+  - id: R1
+    cover: R1_frame_error
+    cover_module: rx_cov
+    description: >-
+      The receiver flags a frame error: a frame ends with the stop bit low,
+      so frame_error pulses and the word is discarded.
+    tier: T0
+    provenance:
+      proposed_by: claude-opus-5.5
+      status: auto_accepted
+      audited_by: null
+    sources:
+      - type: RTL
+        file: third_party/verilog-uart/rtl/uart_rx.v
+        lines: [126, 127]
+        anchor: "frame_error_reg <= 1;"
+      - type: README
+        file: third_party/verilog-uart/README.md
+        lines: [42, 44]
+        anchor: "frame_error output and the received word will be discarded"
+      - type: DOC
+        doc: pc16550d
+        section: "8.4 Line Status Register, bit 3"
+        page: 16
+        anchor: "This bit is the Framing Error (FE) indicator"
+      - type: BASE
+        point: {kind: v_branch, file: uart_rx.v, line: 122, name: else}

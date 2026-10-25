@@ -1,0 +1,12 @@
+# External documents cited by plan.yaml. Not vendored (copyrighted); tools/check
+# downloads each one to a local cache, pins its SHA-256 in sources.lock on first
+# download, and verifies the hash and the cited anchors on every later run.
+documents:
+  pc16550d:
+    title: "PC16550D Universal Asynchronous Receiver/Transmitter with FIFOs"
+    publisher: "National Semiconductor, June 1995 (TL/C/8652)"
+    url: "https://pdos.csail.mit.edu/6.828/2018/readings/hardware/PC16550D.pdf"
+  axis:
+    title: "AMBA AXI-Stream Protocol Specification, ARM IHI 0051B, Issue B"
+    publisher: "Arm, April 2021"
+    url: "https://documentation-service.arm.com/static/64819f1516f0f201aa6b963c"

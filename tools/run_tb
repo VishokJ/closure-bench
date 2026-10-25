@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Run one testbench against the pinned RTL with our covers attached.
+
+Prints the simulation status, plan-item hits and coverage totals, and writes
+coverage.dat plus RTL annotated with hit counts to the output directory.
+
+Usage:  tools/run_tb designs/uart/baseline/tb_uart_rx.sv --top tb_uart_rx --out results/baseline_rx
+"""
+
+from __future__ import annotations
+
+import argparse
+import collections
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from closure_core import load_design  # noqa: E402
+from closure_core.grader import SUBMISSION_TOP, simulate  # noqa: E402
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("testbench", type=Path)
+    ap.add_argument("--design", default="uart")
+    ap.add_argument("--top", default=SUBMISSION_TOP)
+    ap.add_argument("--out", type=Path, default=ROOT / "results" / "run")
+    args = ap.parse_args()
+
+    design = load_design(args.design)
+    work = args.out / "work"
+    s = simulate(design, args.testbench.read_text(), top=args.top, keep_workdir=work)
+    print(f"status: {s.sim.status}")
+    if s.sim.status != "ok":
+        print(s.sim.run_log or s.sim.compile_log)
+        return 1
+    print(next((l for l in s.sim.run_log.splitlines() if l.startswith("PASS")), ""))
+
+    totals = collections.defaultdict(lambda: [0, 0])
+    for p in s.points:
+        if "/rtl/" in p.file:
+            totals[p.kind][0] += p.hits > 0
+            totals[p.kind][1] += 1
+    for kind, (hit, n) in sorted(totals.items()):
+        print(f"RTL {kind:9s} {hit}/{n}")
+    for pid, h in s.plan_hits.items():
+        print(f"plan {pid:4s} {h} hits")
+
+    # coverage.dat names sources by their temp-dir paths; point them at the kept copy.
+    raw = (work / "coverage.dat").read_text(errors="replace")
+    raw = re.sub(r"/[^\x01\x02']*?/cb-sim-[^/\x01\x02']+", str(work.resolve()), raw)
+    cov = args.out / "coverage.dat"
+    cov.write_text(raw)
+    r = subprocess.run(["verilator_coverage", "--annotate", str(args.out / "annotated"),
+                        "--annotate-min", "1", str(cov)], capture_output=True, text=True)
+    if r.returncode:
+        print(r.stdout + r.stderr)
+        return 1
+    print(f"annotated RTL: {args.out / 'annotated'}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

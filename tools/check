@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""Validity suite: every plan item must pass every gate before it can be a task.
+
+Gates per item:
+  citations     every cited source verifies (RTL/README anchors, DOC page+hash, BASE point)
+  cover_sync    exactly one cover with the item's label, in the module the plan names
+  baseline      no baseline testbench hits the item (the task is not free)
+  gold          designs/<d>/gold/<ID>.sv scores 1 (the task is solvable)
+  near_miss     every designs/<d>/near_miss/<ID>_*.sv scores 0 (boundary is exact)
+  determinism   grading the gold twice gives an identical result
+  mutation          (pending) gold catches a mutant nothing else catches
+  description_only  (pending) a model shown only the agent's view can hit the cover
+  duplicate         (pending) hit signature differs from every other item
+
+Usage:  tools/check [--design uart] [--item R1 ...] [--offline] [-j N]
+Exit 0 only if every implemented gate passes for every selected item.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from closure_core import citations, load_design  # noqa: E402
+from closure_core.grader import grade, simulate  # noqa: E402
+
+PENDING = ("mutation", "description_only", "duplicate")
+COVER_RE = re.compile(r"^\s*(\w+)\s*:\s*cover\b", re.M)
+MODULE_RE = re.compile(r"^\s*module\s+(\w+)", re.M)
+
+
+def cover_labels(design) -> dict[str, list[str]]:
+    """label -> modules it appears in, across all cover files."""
+    out: dict[str, list[str]] = {}
+    for f in design.covers:
+        text = f.read_text()
+        # Assign each label to the closest preceding `module` declaration.
+        mods = [(m.start(), m.group(1)) for m in MODULE_RE.finditer(text)]
+        for c in COVER_RE.finditer(text):
+            mod = [name for pos, name in mods if pos < c.start()][-1:] or ["?"]
+            out.setdefault(c.group(1), []).append(mod[0])
+    return out
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="closure-bench validity suite")
+    ap.add_argument("--design", default="uart")
+    ap.add_argument("--item", action="append", help="limit to these plan IDs")
+    ap.add_argument("--offline", action="store_true", help="do not download cited documents")
+    ap.add_argument("-j", type=int, default=4, help="parallel simulations")
+    ap.add_argument("--report", type=Path, default=ROOT / "results" / "check" / "report.json")
+    args = ap.parse_args()
+
+    design = load_design(args.design)
+    items = [it for it in design.plan if not args.item or it.id in args.item]
+    gates: dict[str, dict[str, tuple]] = {it.id: {} for it in items}
+
+    def put(item, gate, ok, detail=""):
+        gates[item][gate] = (ok, detail)
+
+    # cover_sync (also catches covers with no plan item)
+    labels = cover_labels(design)
+    plan_labels = {it.cover for it in design.plan}
+    orphans = sorted(set(labels) - plan_labels)
+    for it in items:
+        mods = labels.get(it.cover, [])
+        ok = mods == [it.cover_module]
+        put(it.id, "cover_sync", ok, "" if ok else f"label {it.cover!r} found in modules {mods}")
+
+    with ThreadPoolExecutor(args.j) as pool:
+        # One simulation per baseline gives hits for every item at once.
+        base_futs = {name: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
+                     for name, b in design.baselines.items()}
+        gold_futs = {}
+        near_futs = {}
+        for it in items:
+            gold = design.pack / "gold" / f"{it.id}.sv"
+            if gold.exists():
+                text = gold.read_text()
+                gold_futs[it.id] = (pool.submit(grade, design, [it.id], text),
+                                    pool.submit(grade, design, [it.id], text))
+            near_futs[it.id] = [(p.name, pool.submit(grade, design, [it.id], p.read_text()))
+                                for p in sorted((design.pack / "near_miss").glob(f"{it.id}_*.sv"))]
+
+        baselines = {name: f.result() for name, f in base_futs.items()}
+        base_points = [p for s in baselines.values() for p in s.points]
+
+        for it in items:
+            # baseline
+            bad = [f"{n}: status {s.sim.status}" for n, s in baselines.items() if s.sim.status != "ok"]
+            hit = [f"{n}: {s.plan_hits[it.id]} hits" for n, s in baselines.items() if s.plan_hits[it.id] > 0]
+            put(it.id, "baseline", not bad and not hit, "; ".join(bad + hit))
+
+            # gold + determinism
+            if it.id in gold_futs:
+                a, b = (f.result() for f in gold_futs[it.id])
+                put(it.id, "gold", a.reward == 1.0,
+                    f"status {a.status}, hits {a.target_hits[it.id]}" + (f"\n{a.diagnostics[-600:]}" if a.reward != 1.0 else ""))
+                strip = lambda r: {k: v for k, v in json.loads(r.to_json()).items() if k not in ("compile_s", "run_s")}
+                put(it.id, "determinism", strip(a) == strip(b))
+            else:
+                put(it.id, "gold", False, f"missing gold/{it.id}.sv")
+                put(it.id, "determinism", None, "no gold")
+
+            # near_miss
+            nm = [(n, f.result()) for n, f in near_futs[it.id]]
+            if not nm:
+                put(it.id, "near_miss", "n/a")
+            else:
+                wrong = [f"{n}: status {r.status}, hits {r.target_hits[it.id]}"
+                         for n, r in nm if r.status != "ok" or r.target_hits[it.id] != 0]
+                put(it.id, "near_miss", not wrong, "; ".join(wrong) or f"{len(nm)} near-miss TBs miss")
+
+    # citations
+    store = citations.DocStore(design.pack, offline=args.offline)
+    for it in items:
+        results = []
+        for src in it.sources:
+            if src["type"] in ("RTL", "README"):
+                results.append(citations.check_file_anchor(design.repo_root, it.id, src))
+            elif src["type"] == "DOC":
+                results.append(citations.check_doc(store, it.id, src))
+            elif src["type"] == "BASE":
+                results.append(citations.check_base(base_points, it.id, src))
+        if not results:
+            put(it.id, "citations", False, "no sources")
+        else:
+            failed = [r for r in results if r.ok is False]
+            unverified = [r for r in results if r.ok is None]
+            ok = False if failed else (None if unverified else True)
+            put(it.id, "citations", ok, "; ".join(f"{r.kind} {r.detail}" for r in failed + unverified))
+
+    for it in items:
+        for g in PENDING:
+            put(it.id, g, "pending")
+
+    # report
+    order = ["citations", "cover_sync", "baseline", "gold", "near_miss", "determinism", *PENDING]
+    sym = {True: "pass", False: "FAIL", None: "unverified", "n/a": "n/a", "pending": "pending"}
+    width = max(len(g) for g in order)
+    all_ok = not orphans
+    for it in items:
+        print(f"\n{it.id}  ({it.cover}, {it.provenance.get('status', '?')})")
+        for g in order:
+            ok, detail = gates[it.id][g]
+            all_ok &= ok in (True, "n/a", "pending")
+            print(f"  {g:<{width}}  {sym[ok]:<10}  {detail.splitlines()[0] if detail else ''}")
+            for extra in detail.splitlines()[1:]:
+                print(f"  {'':<{width}}  {'':<10}  {extra}")
+    if orphans:
+        print(f"\nFAIL  covers with no plan item: {orphans}")
+
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(json.dumps(
+        {"design": design.name, "orphan_covers": orphans,
+         "items": {i: {g: {"ok": v[0], "detail": v[1]} for g, v in gs.items()} for i, gs in gates.items()}},
+        indent=2, default=str) + "\n")
+    print(f"\n{'ALL GATES PASS' if all_ok else 'SOME GATES FAIL OR UNVERIFIED'}  (report: {args.report.relative_to(ROOT)})")
+    return 0 if all_ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

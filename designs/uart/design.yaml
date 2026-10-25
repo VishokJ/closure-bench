@@ -1,0 +1,19 @@
+# Design pack: alexforencich/verilog-uart (pinned in third_party/, see UPSTREAM.md)
+name: uart
+
+# Compiled for every simulation, in this order. Paths are relative to the repo root.
+rtl:
+  - third_party/verilog-uart/rtl/uart.v
+  - third_party/verilog-uart/rtl/uart_rx.v
+  - third_party/verilog-uart/rtl/uart_tx.v
+
+# Our functional coverage, attached to the RTL with `bind`.
+covers:
+  - designs/uart/covers/rx_cov.sv
+
+plan: plan.yaml
+
+# The inherited regression: the starting state every task extends.
+baselines:
+  rx: {top: tb_uart_rx, file: designs/uart/baseline/tb_uart_rx.sv}
+  tx: {top: tb_uart_tx, file: designs/uart/baseline/tb_uart_tx.sv}
