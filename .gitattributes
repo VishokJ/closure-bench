@@ -1,0 +1,2 @@
+# Generated Verilator XML (tests/test_policy.py --regen): checked by the drift test, not reviewed by eye.
+tests/fixtures/policy/*.xml -diff linguist-generated=true

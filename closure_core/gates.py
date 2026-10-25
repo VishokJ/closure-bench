@@ -7,6 +7,8 @@ gates one at a time, cheapest first, stopping at the first failure.
 
   citations     every cited source verifies (RTL/README anchors, DOC page+hash, BASE point)
   cover_sync    exactly one cover with the item's label, in the module the plan names
+  cover_policy  the cover file only observes: allowlisted constructs, one module
+                cov_<ID>, one bind (closure_core/policy.py, on Verilator's AST)
   baseline      no baseline testbench hits the item (the task is not free)
   gold          the gold testbench scores 1 (the task is solvable)
   near_miss     every near-miss testbench scores 0 (boundary is exact)
@@ -41,7 +43,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from closure_core import citations as cit
-from closure_core import mutants
+from closure_core import mutants, policy
 from closure_core.design import Design, PlanItem
 from closure_core.grader import GradeResult, Simulation
 
@@ -77,6 +79,16 @@ def cover_sync(item: PlanItem, labels: dict[str, list[str]]) -> GateResult:
     return GateResult("cover_sync", ok, "" if ok else f"label {item.cover!r} found in modules {mods}")
 
 
+def cover_policy(design: Design, item: PlanItem) -> GateResult:
+    cover = str(design.pack / "covers" / f"{item.id}.sv")
+    rtl = [str(p) for p in design.rtl]
+    root, log = policy.xml_ast([*rtl, cover])
+    if root is None:
+        return GateResult("cover_policy", False, f"verilator --xml-only failed:\n{log[-1500:]}")
+    vs = policy.check_cover(policy.Ast(root), cover, item.id, rtl)
+    return GateResult("cover_policy", not vs, "\n".join(map(str, vs)), {"violations": [str(v) for v in vs]})
+
+
 def citations(design: Design, item: PlanItem, store: cit.DocStore,
               base_points: list) -> GateResult:
     """data["verified"]: (source, verified ok) per plan source, for the value gate."""
@@ -107,9 +119,21 @@ def baseline(item: PlanItem, baselines: dict[str, Simulation]) -> GateResult:
     return GateResult("baseline", not bad and not hit, "; ".join(bad + hit))
 
 
-def gold(item: PlanItem, a: GradeResult | None) -> GateResult:
+def testbench_policy(design: Design, tb: Path, *, gold: bool) -> list[str]:
+    """Policy violations of one of our testbenches (gold or near-miss)."""
+    rtl = [str(p) for p in design.rtl]
+    root, log = policy.xml_ast([*rtl, str(tb)], extra=policy.TESTBENCH_FLAGS)
+    if root is None:
+        return [f"verilator --xml-only failed:\n{log[-1500:]}"]
+    check = policy.check_gold if gold else policy.check_testbench
+    return [str(v) for v in check(policy.Ast(root), str(tb))]
+
+
+def gold(item: PlanItem, a: GradeResult | None, violations: list[str] = ()) -> GateResult:
     if a is None:
         return GateResult("gold", False, f"missing gold/{item.id}.sv")
+    if violations:
+        return GateResult("gold", False, "policy: " + "\n".join(violations))
     return GateResult("gold", a.reward == 1.0,
                       f"status {a.status}, hits {a.target_hits[item.id]}"
                       + (f"\n{a.diagnostics[-600:]}" if a.reward != 1.0 else ""))
@@ -122,12 +146,36 @@ def determinism(a: GradeResult | None, b: GradeResult | None) -> GateResult:
     return GateResult("determinism", strip(a) == strip(b))
 
 
-def near_miss(item: PlanItem, results: list[tuple[str, GradeResult]]) -> GateResult:
+NEAR_MISS_OVERLAP = 0.9  # reported, not enforced; arbitrary until we have data
+
+
+def line_overlap(gold_sim: Simulation, other: Simulation) -> float | None:
+    """Share of the design lines the gold hits that `other` also hits.
+
+    A real near-miss exercises nearly the gold's path and only misses the
+    boundary; one that does nothing passes the near-miss gate vacuously.
+    """
+    lines = lambda s: {(Path(p.file).name, p.line, p.name) for p in s.points
+                       if p.kind == "v_line" and p.hits > 0 and "/rtl/" in p.file}
+    g = lines(gold_sim)
+    return round(len(g & lines(other)) / len(g), 3) if g else None
+
+
+def near_miss(item: PlanItem, results: list[tuple[str, GradeResult]],
+              violations: dict[str, list[str]] | None = None,
+              overlap: dict[str, float | None] | None = None) -> GateResult:
     if not results:
         return GateResult("near_miss", "n/a")
+    bad = [f"{n}: policy: {'; '.join(v)}" for n, v in (violations or {}).items() if v]
     wrong = [f"{n}: status {r.status}, hits {r.target_hits[item.id]}"
              for n, r in results if r.status != "ok" or r.target_hits[item.id] != 0]
-    return GateResult("near_miss", not wrong, "; ".join(wrong) or f"{len(results)} near-miss TBs miss")
+    overlap = overlap or {}
+    low = [n for n, o in overlap.items() if o is not None and o < NEAR_MISS_OVERLAP]
+    notes = [f"{n}: covers {overlap[n]:.0%} of the gold's design lines (low: may pass vacuously)"
+             for n in low]
+    detail = "; ".join(bad + wrong) or f"{len(results)} near-miss TBs miss"
+    return GateResult("near_miss", not (bad or wrong), "; ".join([detail, *notes]),
+                      {"overlap": overlap, "low_overlap": low})
 
 
 def source_label(src: dict) -> str:

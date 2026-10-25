@@ -4,8 +4,10 @@
 `tb`, graded exactly like a submission).
 
 Authoring rule: a gold testbench must **check** the behaviour, not only reach
-it. It asserts on the outputs that behaviour defines and `$fatal`s if they are
-wrong (R1: frame_error must pulse). Every gold is run against the mutants that
+it. It checks the outputs that behaviour defines and calls `$fatal` if they are
+wrong (R1: frame_error must pulse). Write checks as `if (!ok) $fatal(...)`,
+never `assert`/`assume`: the grader compiles without `--assert`, so assertions
+never fire and a gold that relies on them can never fail. Every gold is run against the mutants that
 survive the baseline, and a mutant counts as killed only when a testbench fails
 on it, so a reach-only gold kills nothing.
 

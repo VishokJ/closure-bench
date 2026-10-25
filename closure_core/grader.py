@@ -106,6 +106,11 @@ def grade(
 
     s = simulate(design, tb_text, top=top, compile_timeout=compile_timeout,
                  run_timeout=run_timeout, keep_workdir=keep_workdir)
+    return score(design, targets, s)
+
+
+def score(design: Design, targets: list[str], s: Simulation) -> GradeResult:
+    """The reward for one simulation; grade() is simulate() followed by this."""
     target_hits = {t: s.plan_hits[t] for t in targets}
     ok = s.sim.status == "ok"
     reward = float(ok and all(h > 0 for h in target_hits.values()))

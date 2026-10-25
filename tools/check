@@ -23,9 +23,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from closure_core import citations, gates, load_design  # noqa: E402
-from closure_core.grader import grade, simulate  # noqa: E402
+from closure_core.grader import score, simulate  # noqa: E402
 
-ORDER = ["citations", "cover_sync", "baseline", "gold", "near_miss", "determinism", "value", "duplicate"]
+ORDER = ["citations", "cover_sync", "cover_policy", "baseline", "gold", "near_miss", "determinism", "value", "duplicate"]
 
 
 def main() -> int:
@@ -50,16 +50,21 @@ def main() -> int:
     orphans = sorted(set(labels) - {it.cover for it in design.plan})
     for it in items:
         put(it.id, gates.cover_sync(it, labels))
+        put(it.id, gates.cover_policy(design, it))
 
     golds = {it.id: design.golds[it.id] for it in items if it.id in design.golds}
     with ThreadPoolExecutor(args.j) as pool:
         # One simulation per baseline gives hits for every item at once.
         base_futs = {name: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
                      for name, b in design.baselines.items()}
-        gold_futs = {i: tuple(pool.submit(grade, design, [i], p.read_text()) for _ in range(2))
+        gold_futs = {i: tuple(pool.submit(simulate, design, p.read_text()) for _ in range(2))
                      for i, p in golds.items()}
-        near_futs = {it.id: [(p.name, pool.submit(grade, design, [it.id], p.read_text()))
+        near_futs = {it.id: [(p.name, pool.submit(simulate, design, p.read_text()))
                              for p in design.near_misses.get(it.id, ())] for it in items}
+        gold_policy = {i: pool.submit(gates.testbench_policy, design, p, gold=True)
+                       for i, p in golds.items()}
+        near_policy = {it.id: {p.name: pool.submit(gates.testbench_policy, design, p, gold=False)
+                               for p in design.near_misses.get(it.id, ())} for it in items}
 
         baselines = {name: f.result() for name, f in base_futs.items()}
         base_points = [p for s in baselines.values() for p in s.points]
@@ -67,14 +72,18 @@ def main() -> int:
 
         for it in items:
             put(it.id, gates.baseline(it, baselines))
-            a, b = (f.result() for f in gold_futs[it.id]) if it.id in gold_futs else (None, None)
+            sa, sb = (f.result() for f in gold_futs[it.id]) if it.id in gold_futs else (None, None)
+            a, b = (score(design, [it.id], s) if s else None for s in (sa, sb))
             if a and a.status == "ok":
                 corpus[f"gold:{it.id}"] = a.plan_hits
-            put(it.id, gates.gold(it, a))
+            put(it.id, gates.gold(it, a, gold_policy[it.id].result() if it.id in gold_policy else ()))
             put(it.id, gates.determinism(a, b))
             nm = [(n, f.result()) for n, f in near_futs[it.id]]
-            corpus.update({f"near_miss:{n}": r.plan_hits for n, r in nm if r.status == "ok"})
-            put(it.id, gates.near_miss(it, nm))
+            corpus.update({f"near_miss:{n}": s.plan_hits for n, s in nm if s.sim.status == "ok"})
+            put(it.id, gates.near_miss(
+                it, [(n, score(design, [it.id], s)) for n, s in nm],
+                {n: f.result() for n, f in near_policy[it.id].items()},
+                {n: gates.line_overlap(sa, s) for n, s in nm} if sa else None))
 
         mutation = gates.mutation_runs(design, golds, pool, report.with_name("mutation_cache.json"))
 

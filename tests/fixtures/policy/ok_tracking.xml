@@ -1,0 +1,701 @@
+<verilator_xml>
+  <files>
+    <file id="c" filename="/usr/share/verilator/include/verilated_std.sv" language="1800-2017" />
+    <file id="a" filename="&lt;built-in&gt;" language="1800-2017" />
+    <file id="b" filename="&lt;command-line&gt;" language="1800-2017" />
+    <file id="e" filename="tests/fixtures/policy/ok_tracking.sv" language="1800-2017" />
+    <file id="d" filename="third_party/verilog-uart/rtl/uart_rx.v" language="1800-2017" />
+  </files>
+  <module_files>
+    <file id="d" filename="third_party/verilog-uart/rtl/uart_rx.v" language="1800-2017" />
+    <file id="e" filename="tests/fixtures/policy/ok_tracking.sv" language="1800-2017" />
+  </module_files>
+  <cells>
+    <cell loc="d,32,8,32,15" name="uart_rx" submodname="uart_rx" hier="uart_rx">
+      <cell loc="e,29,20,29,27" name="u_cov_X" submodname="cov_X" hier="uart_rx.u_cov_X" />
+    </cell>
+  </cells>
+  <netlist>
+    <module loc="d,32,8,32,15" name="uart_rx" origName="uart_rx" topModule="1">
+      <var loc="d,34,15,34,25" name="DATA_WIDTH" dtype_id="1" vartype="logic" origName="DATA_WIDTH" param="true">
+        <const loc="d,34,28,34,29" name="32'sh8" dtype_id="1" />
+      </var>
+      <var loc="d,37,35,37,38" name="clk" dtype_id="2" dir="input" pinIndex="1" vartype="logic" origName="clk" />
+      <var loc="d,38,35,38,38" name="rst" dtype_id="2" dir="input" pinIndex="2" vartype="logic" origName="rst" />
+      <var loc="d,43,35,43,47" name="m_axis_tdata" dtype_id="3" dir="output" pinIndex="3" vartype="logic" origName="m_axis_tdata" />
+      <var loc="d,44,35,44,48" name="m_axis_tvalid" dtype_id="2" dir="output" pinIndex="4" vartype="logic" origName="m_axis_tvalid" />
+      <var loc="d,45,35,45,48" name="m_axis_tready" dtype_id="2" dir="input" pinIndex="5" vartype="logic" origName="m_axis_tready" />
+      <var loc="d,50,35,50,38" name="rxd" dtype_id="2" dir="input" pinIndex="6" vartype="logic" origName="rxd" />
+      <var loc="d,55,35,55,39" name="busy" dtype_id="2" dir="output" pinIndex="7" vartype="logic" origName="busy" />
+      <var loc="d,56,35,56,48" name="overrun_error" dtype_id="2" dir="output" pinIndex="8" vartype="logic" origName="overrun_error" />
+      <var loc="d,57,35,57,46" name="frame_error" dtype_id="2" dir="output" pinIndex="9" vartype="logic" origName="frame_error" />
+      <var loc="d,62,35,62,43" name="prescale" dtype_id="4" dir="input" pinIndex="10" vartype="logic" origName="prescale" />
+      <var loc="d,66,22,66,38" name="m_axis_tdata_reg" dtype_id="3" vartype="logic" origName="m_axis_tdata_reg" />
+      <initialstatic loc="d,66,41,66,42">
+        <assign loc="d,66,41,66,42" dtype_id="3">
+          <const loc="d,66,41,66,42" name="8'h0" dtype_id="3" />
+          <varref loc="d,66,41,66,42" name="m_axis_tdata_reg" dtype_id="3" />
+        </assign>
+      </initialstatic>
+      <var loc="d,67,5,67,22" name="m_axis_tvalid_reg" dtype_id="2" vartype="logic" origName="m_axis_tvalid_reg" />
+      <initialstatic loc="d,67,25,67,26">
+        <assign loc="d,67,25,67,26" dtype_id="2">
+          <const loc="d,67,25,67,26" name="1'h0" dtype_id="2" />
+          <varref loc="d,67,25,67,26" name="m_axis_tvalid_reg" dtype_id="2" />
+        </assign>
+      </initialstatic>
+      <var loc="d,69,5,69,12" name="rxd_reg" dtype_id="2" vartype="logic" origName="rxd_reg" />
+      <initialstatic loc="d,69,15,69,16">
+        <assign loc="d,69,15,69,16" dtype_id="2">
+          <const loc="d,69,15,69,16" name="1'h1" dtype_id="2" />
+          <varref loc="d,69,15,69,16" name="rxd_reg" dtype_id="2" />
+        </assign>
+      </initialstatic>
+      <var loc="d,71,5,71,13" name="busy_reg" dtype_id="2" vartype="logic" origName="busy_reg" />
+      <initialstatic loc="d,71,16,71,17">
+        <assign loc="d,71,16,71,17" dtype_id="2">
+          <const loc="d,71,16,71,17" name="1'h0" dtype_id="2" />
+          <varref loc="d,71,16,71,17" name="busy_reg" dtype_id="2" />
+        </assign>
+      </initialstatic>
+      <var loc="d,72,5,72,22" name="overrun_error_reg" dtype_id="2" vartype="logic" origName="overrun_error_reg" />
+      <initialstatic loc="d,72,25,72,26">
+        <assign loc="d,72,25,72,26" dtype_id="2">
+          <const loc="d,72,25,72,26" name="1'h0" dtype_id="2" />
+          <varref loc="d,72,25,72,26" name="overrun_error_reg" dtype_id="2" />
+        </assign>
+      </initialstatic>
+      <var loc="d,73,5,73,20" name="frame_error_reg" dtype_id="2" vartype="logic" origName="frame_error_reg" />
+      <initialstatic loc="d,73,23,73,24">
+        <assign loc="d,73,23,73,24" dtype_id="2">
+          <const loc="d,73,23,73,24" name="1'h0" dtype_id="2" />
+          <varref loc="d,73,23,73,24" name="frame_error_reg" dtype_id="2" />
+        </assign>
+      </initialstatic>
+      <var loc="d,75,22,75,30" name="data_reg" dtype_id="3" vartype="logic" origName="data_reg" />
+      <initialstatic loc="d,75,33,75,34">
+        <assign loc="d,75,33,75,34" dtype_id="3">
+          <const loc="d,75,33,75,34" name="8'h0" dtype_id="3" />
+          <varref loc="d,75,33,75,34" name="data_reg" dtype_id="3" />
+        </assign>
+      </initialstatic>
+      <var loc="d,76,12,76,24" name="prescale_reg" dtype_id="5" vartype="logic" origName="prescale_reg" />
+      <initialstatic loc="d,76,27,76,28">
+        <assign loc="d,76,27,76,28" dtype_id="5">
+          <const loc="d,76,27,76,28" name="19'h0" dtype_id="5" />
+          <varref loc="d,76,27,76,28" name="prescale_reg" dtype_id="5" />
+        </assign>
+      </initialstatic>
+      <var loc="d,77,11,77,18" name="bit_cnt" dtype_id="6" vartype="logic" origName="bit_cnt" />
+      <initialstatic loc="d,77,21,77,22">
+        <assign loc="d,77,21,77,22" dtype_id="6">
+          <const loc="d,77,21,77,22" name="4'h0" dtype_id="6" />
+          <varref loc="d,77,21,77,22" name="bit_cnt" dtype_id="6" />
+        </assign>
+      </initialstatic>
+      <always loc="d,86,1,86,7">
+        <sentree loc="d,86,8,86,9">
+          <senitem loc="d,86,10,86,17" edgeType="POS">
+            <varref loc="d,86,18,86,21" name="clk" dtype_id="2" />
+          </senitem>
+        </sentree>
+        <begin loc="d,86,23,86,28">
+          <if loc="d,87,5,87,7">
+            <varref loc="d,87,9,87,12" name="rst" dtype_id="2" />
+            <begin>
+              <begin loc="d,87,14,87,19">
+                <assigndly loc="d,88,26,88,28" dtype_id="3">
+                  <const loc="d,88,29,88,30" name="8'h0" dtype_id="3" />
+                  <varref loc="d,88,9,88,25" name="m_axis_tdata_reg" dtype_id="3" />
+                </assigndly>
+                <assigndly loc="d,89,27,89,29" dtype_id="2">
+                  <const loc="d,89,30,89,31" name="1'h0" dtype_id="2" />
+                  <varref loc="d,89,9,89,26" name="m_axis_tvalid_reg" dtype_id="2" />
+                </assigndly>
+                <assigndly loc="d,90,17,90,19" dtype_id="2">
+                  <const loc="d,90,20,90,21" name="1'h1" dtype_id="2" />
+                  <varref loc="d,90,9,90,16" name="rxd_reg" dtype_id="2" />
+                </assigndly>
+                <assigndly loc="d,91,22,91,24" dtype_id="5">
+                  <const loc="d,91,25,91,26" name="19'h0" dtype_id="5" />
+                  <varref loc="d,91,9,91,21" name="prescale_reg" dtype_id="5" />
+                </assigndly>
+                <assigndly loc="d,92,17,92,19" dtype_id="6">
+                  <const loc="d,92,20,92,21" name="4'h0" dtype_id="6" />
+                  <varref loc="d,92,9,92,16" name="bit_cnt" dtype_id="6" />
+                </assigndly>
+                <assigndly loc="d,93,18,93,20" dtype_id="2">
+                  <const loc="d,93,21,93,22" name="1'h0" dtype_id="2" />
+                  <varref loc="d,93,9,93,17" name="busy_reg" dtype_id="2" />
+                </assigndly>
+                <assigndly loc="d,94,27,94,29" dtype_id="2">
+                  <const loc="d,94,30,94,31" name="1'h0" dtype_id="2" />
+                  <varref loc="d,94,9,94,26" name="overrun_error_reg" dtype_id="2" />
+                </assigndly>
+                <assigndly loc="d,95,25,95,27" dtype_id="2">
+                  <const loc="d,95,28,95,29" name="1'h0" dtype_id="2" />
+                  <varref loc="d,95,9,95,24" name="frame_error_reg" dtype_id="2" />
+                </assigndly>
+              </begin>
+            </begin>
+            <begin>
+              <begin loc="d,96,14,96,19">
+                <assigndly loc="d,97,17,97,19" dtype_id="2">
+                  <varref loc="d,97,20,97,23" name="rxd" dtype_id="2" />
+                  <varref loc="d,97,9,97,16" name="rxd_reg" dtype_id="2" />
+                </assigndly>
+                <assigndly loc="d,98,27,98,29" dtype_id="2">
+                  <const loc="d,98,30,98,31" name="1'h0" dtype_id="2" />
+                  <varref loc="d,98,9,98,26" name="overrun_error_reg" dtype_id="2" />
+                </assigndly>
+                <assigndly loc="d,99,25,99,27" dtype_id="2">
+                  <const loc="d,99,28,99,29" name="1'h0" dtype_id="2" />
+                  <varref loc="d,99,9,99,24" name="frame_error_reg" dtype_id="2" />
+                </assigndly>
+                <if loc="d,101,9,101,11">
+                  <and loc="d,101,27,101,29" dtype_id="2">
+                    <varref loc="d,101,13,101,26" name="m_axis_tvalid" dtype_id="2" />
+                    <varref loc="d,101,30,101,43" name="m_axis_tready" dtype_id="2" />
+                  </and>
+                  <begin>
+                    <begin loc="d,101,45,101,50">
+                      <assigndly loc="d,102,31,102,33" dtype_id="2">
+                        <const loc="d,102,34,102,35" name="1'h0" dtype_id="2" />
+                        <varref loc="d,102,13,102,30" name="m_axis_tvalid_reg" dtype_id="2" />
+                      </assigndly>
+                    </begin>
+                  </begin>
+                </if>
+                <if loc="d,105,9,105,11">
+                  <lt loc="d,105,26,105,27" dtype_id="2">
+                    <const loc="d,105,28,105,29" name="19'h0" dtype_id="5" />
+                    <varref loc="d,105,13,105,25" name="prescale_reg" dtype_id="5" />
+                  </lt>
+                  <begin>
+                    <begin loc="d,105,31,105,36">
+                      <assigndly loc="d,106,26,106,28" dtype_id="5">
+                        <sub loc="d,106,42,106,43" dtype_id="5">
+                          <varref loc="d,106,29,106,41" name="prescale_reg" dtype_id="5" />
+                          <const loc="d,106,42,106,43" name="19'h1" dtype_id="5" />
+                        </sub>
+                        <varref loc="d,106,13,106,25" name="prescale_reg" dtype_id="5" />
+                      </assigndly>
+                    </begin>
+                  </begin>
+                  <begin>
+                    <if loc="d,107,18,107,20">
+                      <lt loc="d,107,30,107,31" dtype_id="2">
+                        <const loc="d,107,32,107,33" name="4'h0" dtype_id="6" />
+                        <varref loc="d,107,22,107,29" name="bit_cnt" dtype_id="6" />
+                      </lt>
+                      <begin>
+                        <begin loc="d,107,35,107,40">
+                          <if loc="d,108,13,108,15">
+                            <lt loc="d,108,25,108,26" dtype_id="2">
+                              <const loc="d,108,37,108,38" name="4'h9" dtype_id="6" />
+                              <varref loc="d,108,17,108,24" name="bit_cnt" dtype_id="6" />
+                            </lt>
+                            <begin>
+                              <begin loc="d,108,41,108,46">
+                                <if loc="d,109,17,109,19">
+                                  <varref loc="d,109,22,109,29" name="rxd_reg" dtype_id="2" />
+                                  <begin>
+                                    <begin loc="d,112,26,112,31">
+                                      <assigndly loc="d,113,29,113,31" dtype_id="6">
+                                        <const loc="d,113,32,113,33" name="4'h0" dtype_id="6" />
+                                        <varref loc="d,113,21,113,28" name="bit_cnt" dtype_id="6" />
+                                      </assigndly>
+                                      <assigndly loc="d,114,34,114,36" dtype_id="5">
+                                        <const loc="d,114,37,114,38" name="19'h0" dtype_id="5" />
+                                        <varref loc="d,114,21,114,33" name="prescale_reg" dtype_id="5" />
+                                      </assigndly>
+                                    </begin>
+                                  </begin>
+                                  <begin>
+                                    <begin loc="d,109,31,109,36">
+                                      <assigndly loc="d,110,29,110,31" dtype_id="6">
+                                        <sub loc="d,110,40,110,41" dtype_id="6">
+                                          <varref loc="d,110,32,110,39" name="bit_cnt" dtype_id="6" />
+                                          <const loc="d,110,40,110,41" name="4'h1" dtype_id="6" />
+                                        </sub>
+                                        <varref loc="d,110,21,110,28" name="bit_cnt" dtype_id="6" />
+                                      </assigndly>
+                                      <assigndly loc="d,111,34,111,36" dtype_id="5">
+                                        <sub loc="d,111,52,111,53" dtype_id="5">
+                                          <sel loc="d,111,52,111,53" dtype_id="5">
+                                            <shiftl loc="d,111,47,111,49" dtype_id="7">
+                                              <extend loc="d,111,38,111,46" dtype_id="7" width="32" widthminv="16">
+                                                <varref loc="d,111,38,111,46" name="prescale" dtype_id="4" />
+                                              </extend>
+                                              <const loc="d,111,50,111,51" name="32'sh3" dtype_id="1" />
+                                            </shiftl>
+                                            <const loc="d,111,52,111,53" name="32'h0" dtype_id="7" />
+                                            <const loc="d,111,52,111,53" name="32'h13" dtype_id="7" />
+                                          </sel>
+                                          <const loc="d,111,52,111,53" name="19'h1" dtype_id="5" />
+                                        </sub>
+                                        <varref loc="d,111,21,111,33" name="prescale_reg" dtype_id="5" />
+                                      </assigndly>
+                                    </begin>
+                                  </begin>
+                                </if>
+                              </begin>
+                            </begin>
+                            <begin>
+                              <if loc="d,116,22,116,24">
+                                <lt loc="d,116,34,116,35" dtype_id="2">
+                                  <const loc="d,116,36,116,37" name="4'h1" dtype_id="6" />
+                                  <varref loc="d,116,26,116,33" name="bit_cnt" dtype_id="6" />
+                                </lt>
+                                <begin>
+                                  <begin loc="d,116,39,116,44">
+                                    <assigndly loc="d,117,25,117,27" dtype_id="6">
+                                      <sub loc="d,117,36,117,37" dtype_id="6">
+                                        <varref loc="d,117,28,117,35" name="bit_cnt" dtype_id="6" />
+                                        <const loc="d,117,36,117,37" name="4'h1" dtype_id="6" />
+                                      </sub>
+                                      <varref loc="d,117,17,117,24" name="bit_cnt" dtype_id="6" />
+                                    </assigndly>
+                                    <assigndly loc="d,118,30,118,32" dtype_id="5">
+                                      <sub loc="d,118,48,118,49" dtype_id="5">
+                                        <sel loc="d,118,48,118,49" dtype_id="5">
+                                          <shiftl loc="d,118,43,118,45" dtype_id="7">
+                                            <extend loc="d,118,34,118,42" dtype_id="7" width="32" widthminv="16">
+                                              <varref loc="d,118,34,118,42" name="prescale" dtype_id="4" />
+                                            </extend>
+                                            <const loc="d,118,46,118,47" name="32'sh3" dtype_id="1" />
+                                          </shiftl>
+                                          <const loc="d,118,48,118,49" name="32'h0" dtype_id="7" />
+                                          <const loc="d,118,48,118,49" name="32'h13" dtype_id="7" />
+                                        </sel>
+                                        <const loc="d,118,48,118,49" name="19'h1" dtype_id="5" />
+                                      </sub>
+                                      <varref loc="d,118,17,118,29" name="prescale_reg" dtype_id="5" />
+                                    </assigndly>
+                                    <assigndly loc="d,119,26,119,28" dtype_id="3">
+                                      <concat loc="d,119,37,119,38" dtype_id="3">
+                                        <varref loc="d,119,30,119,37" name="rxd_reg" dtype_id="2" />
+                                        <sel loc="d,119,47,119,48" dtype_id="8">
+                                          <varref loc="d,119,39,119,47" name="data_reg" dtype_id="3" />
+                                          <const loc="d,119,61,119,62" name="3'h1" dtype_id="9" />
+                                          <const loc="d,119,58,119,59" name="32'h7" dtype_id="7" />
+                                        </sel>
+                                      </concat>
+                                      <varref loc="d,119,17,119,25" name="data_reg" dtype_id="3" />
+                                    </assigndly>
+                                  </begin>
+                                </begin>
+                                <begin>
+                                  <if loc="d,120,22,120,24">
+                                    <eq loc="d,120,34,120,36" dtype_id="2">
+                                      <const loc="d,120,37,120,38" name="4'h1" dtype_id="6" />
+                                      <varref loc="d,120,26,120,33" name="bit_cnt" dtype_id="6" />
+                                    </eq>
+                                    <begin>
+                                      <begin loc="d,120,40,120,45">
+                                        <assigndly loc="d,121,25,121,27" dtype_id="6">
+                                          <sub loc="d,121,36,121,37" dtype_id="6">
+                                            <varref loc="d,121,28,121,35" name="bit_cnt" dtype_id="6" />
+                                            <const loc="d,121,36,121,37" name="4'h1" dtype_id="6" />
+                                          </sub>
+                                          <varref loc="d,121,17,121,24" name="bit_cnt" dtype_id="6" />
+                                        </assigndly>
+                                        <if loc="d,122,17,122,19">
+                                          <varref loc="d,122,21,122,28" name="rxd_reg" dtype_id="2" />
+                                          <begin>
+                                            <begin loc="d,122,30,122,35">
+                                              <assigndly loc="d,123,38,123,40" dtype_id="3">
+                                                <varref loc="d,123,41,123,49" name="data_reg" dtype_id="3" />
+                                                <varref loc="d,123,21,123,37" name="m_axis_tdata_reg" dtype_id="3" />
+                                              </assigndly>
+                                              <assigndly loc="d,124,39,124,41" dtype_id="2">
+                                                <const loc="d,124,42,124,43" name="1'h1" dtype_id="2" />
+                                                <varref loc="d,124,21,124,38" name="m_axis_tvalid_reg" dtype_id="2" />
+                                              </assigndly>
+                                              <assigndly loc="d,125,39,125,41" dtype_id="2">
+                                                <varref loc="d,125,42,125,59" name="m_axis_tvalid_reg" dtype_id="2" />
+                                                <varref loc="d,125,21,125,38" name="overrun_error_reg" dtype_id="2" />
+                                              </assigndly>
+                                            </begin>
+                                          </begin>
+                                          <begin>
+                                            <begin loc="d,126,26,126,31">
+                                              <assigndly loc="d,127,37,127,39" dtype_id="2">
+                                                <const loc="d,127,40,127,41" name="1'h1" dtype_id="2" />
+                                                <varref loc="d,127,21,127,36" name="frame_error_reg" dtype_id="2" />
+                                              </assigndly>
+                                            </begin>
+                                          </begin>
+                                        </if>
+                                      </begin>
+                                    </begin>
+                                  </if>
+                                </begin>
+                              </if>
+                            </begin>
+                          </if>
+                        </begin>
+                      </begin>
+                      <begin>
+                        <begin loc="d,130,18,130,23">
+                          <assigndly loc="d,131,22,131,24" dtype_id="2">
+                            <const loc="d,131,25,131,26" name="1'h0" dtype_id="2" />
+                            <varref loc="d,131,13,131,21" name="busy_reg" dtype_id="2" />
+                          </assigndly>
+                          <if loc="d,132,13,132,15">
+                            <not loc="d,132,17,132,18" dtype_id="2">
+                              <varref loc="d,132,18,132,25" name="rxd_reg" dtype_id="2" />
+                            </not>
+                            <begin>
+                              <begin loc="d,132,27,132,32">
+                                <assigndly loc="d,133,30,133,32" dtype_id="5">
+                                  <sub loc="d,133,48,133,49" dtype_id="5">
+                                    <sel loc="d,133,48,133,49" dtype_id="5">
+                                      <shiftl loc="d,133,43,133,45" dtype_id="7">
+                                        <extend loc="d,133,34,133,42" dtype_id="7" width="32" widthminv="16">
+                                          <varref loc="d,133,34,133,42" name="prescale" dtype_id="4" />
+                                        </extend>
+                                        <const loc="d,133,46,133,47" name="32'sh2" dtype_id="1" />
+                                      </shiftl>
+                                      <const loc="d,133,48,133,49" name="32'h0" dtype_id="7" />
+                                      <const loc="d,133,48,133,49" name="32'h13" dtype_id="7" />
+                                    </sel>
+                                    <const loc="d,133,48,133,49" name="19'h2" dtype_id="5" />
+                                  </sub>
+                                  <varref loc="d,133,17,133,29" name="prescale_reg" dtype_id="5" />
+                                </assigndly>
+                                <assigndly loc="d,134,25,134,27" dtype_id="6">
+                                  <const loc="d,134,38,134,39" name="4'ha" dtype_id="6" />
+                                  <varref loc="d,134,17,134,24" name="bit_cnt" dtype_id="6" />
+                                </assigndly>
+                                <assigndly loc="d,135,26,135,28" dtype_id="3">
+                                  <const loc="d,135,29,135,30" name="8'h0" dtype_id="3" />
+                                  <varref loc="d,135,17,135,25" name="data_reg" dtype_id="3" />
+                                </assigndly>
+                                <assigndly loc="d,136,26,136,28" dtype_id="2">
+                                  <const loc="d,136,29,136,30" name="1'h1" dtype_id="2" />
+                                  <varref loc="d,136,17,136,25" name="busy_reg" dtype_id="2" />
+                                </assigndly>
+                              </begin>
+                            </begin>
+                          </if>
+                        </begin>
+                      </begin>
+                    </if>
+                  </begin>
+                </if>
+              </begin>
+            </begin>
+          </if>
+        </begin>
+      </always>
+      <instance loc="e,29,20,29,27" name="u_cov_X" defName="cov_X" origName="u_cov_X">
+        <port loc="e,29,20,29,27" name="clk" direction="in" portIndex="0">
+          <varref loc="e,29,20,29,27" name="clk" dtype_id="2" />
+        </port>
+        <port loc="e,29,20,29,27" name="rst" direction="in" portIndex="0">
+          <varref loc="e,29,20,29,27" name="rst" dtype_id="2" />
+        </port>
+        <port loc="e,29,20,29,27" name="frame_error" direction="in" portIndex="0">
+          <varref loc="e,29,20,29,27" name="frame_error" dtype_id="2" />
+        </port>
+        <port loc="e,29,20,29,27" name="data_reg" direction="in" portIndex="0">
+          <varref loc="e,29,20,29,27" name="data_reg" dtype_id="3" />
+        </port>
+        <port loc="e,29,20,29,27" name="bit_cnt" direction="in" portIndex="0">
+          <varref loc="e,29,20,29,27" name="bit_cnt" dtype_id="6" />
+        </port>
+      </instance>
+      <contassign loc="d,79,21,79,22" dtype_id="3">
+        <varref loc="d,66,22,66,38" name="m_axis_tdata_reg" dtype_id="3" />
+        <varref loc="d,43,35,43,47" name="m_axis_tdata" dtype_id="3" />
+      </contassign>
+      <contassign loc="d,80,22,80,23" dtype_id="2">
+        <varref loc="d,67,5,67,22" name="m_axis_tvalid_reg" dtype_id="2" />
+        <varref loc="d,44,35,44,48" name="m_axis_tvalid" dtype_id="2" />
+      </contassign>
+      <contassign loc="d,82,13,82,14" dtype_id="2">
+        <varref loc="d,71,5,71,13" name="busy_reg" dtype_id="2" />
+        <varref loc="d,55,35,55,39" name="busy" dtype_id="2" />
+      </contassign>
+      <contassign loc="d,83,22,83,23" dtype_id="2">
+        <varref loc="d,72,5,72,22" name="overrun_error_reg" dtype_id="2" />
+        <varref loc="d,56,35,56,48" name="overrun_error" dtype_id="2" />
+      </contassign>
+      <contassign loc="d,84,20,84,21" dtype_id="2">
+        <varref loc="d,73,5,73,20" name="frame_error_reg" dtype_id="2" />
+        <varref loc="d,57,35,57,46" name="frame_error" dtype_id="2" />
+      </contassign>
+    </module>
+    <module loc="e,2,8,2,13" name="cov_X" origName="cov_X">
+      <var loc="e,2,30,2,31" name="P" dtype_id="10" vartype="int" origName="P" param="true">
+        <const loc="e,2,34,2,35" name="32'sh2" dtype_id="1" />
+      </var>
+      <var loc="e,3,15,3,18" name="clk" dtype_id="2" dir="input" pinIndex="1" vartype="logic" origName="clk" />
+      <var loc="e,3,32,3,35" name="rst" dtype_id="2" dir="input" pinIndex="2" vartype="logic" origName="rst" />
+      <var loc="e,3,49,3,60" name="frame_error" dtype_id="2" dir="input" pinIndex="3" vartype="logic" origName="frame_error" />
+      <var loc="e,3,80,3,88" name="data_reg" dtype_id="3" dir="input" pinIndex="4" vartype="logic" origName="data_reg" />
+      <var loc="e,4,21,4,28" name="bit_cnt" dtype_id="6" dir="input" pinIndex="5" vartype="logic" origName="bit_cnt" />
+      <var loc="e,6,18,6,19" name="N" dtype_id="10" vartype="int" origName="N" localparam="true">
+        <const loc="e,6,22,6,23" name="32'sh3" dtype_id="1" />
+      </var>
+      <var loc="e,7,15,7,20" name="state" dtype_id="11" vartype="logic" origName="state" />
+      <var loc="e,8,15,8,20" name="saved" dtype_id="3" vartype="logic" origName="saved" />
+      <var loc="e,9,9,9,13" name="seen" dtype_id="2" vartype="logic" origName="seen" />
+      <always loc="e,10,3,10,9">
+        <sentree loc="e,10,10,10,11">
+          <senitem loc="e,10,12,10,19" edgeType="POS">
+            <varref loc="e,10,20,10,23" name="clk" dtype_id="2" />
+          </senitem>
+        </sentree>
+        <begin loc="e,10,25,10,30">
+          <if loc="e,11,5,11,7">
+            <varref loc="e,11,9,11,12" name="rst" dtype_id="2" />
+            <begin>
+              <begin loc="e,11,14,11,19">
+                <assigndly loc="e,12,13,12,15" dtype_id="11">
+                  <const loc="e,12,16,12,17" name="2'h0" dtype_id="11" />
+                  <varref loc="e,12,7,12,12" name="state" dtype_id="11" />
+                </assigndly>
+                <assigndly loc="e,13,12,13,14" dtype_id="2">
+                  <const loc="e,13,15,13,16" name="1'h0" dtype_id="2" />
+                  <varref loc="e,13,7,13,11" name="seen" dtype_id="2" />
+                </assigndly>
+              </begin>
+            </begin>
+            <begin>
+              <begin loc="e,14,14,14,19">
+                <case loc="e,15,7,15,11">
+                  <varref loc="e,15,13,15,18" name="state" dtype_id="11" />
+                  <caseitem loc="e,16,13,16,14">
+                    <const loc="e,16,9,16,13" name="2'h0" dtype_id="11" />
+                    <if loc="e,16,15,16,17">
+                      <varref loc="e,16,19,16,30" name="frame_error" dtype_id="2" />
+                      <begin>
+                        <assigndly loc="e,16,38,16,40" dtype_id="11">
+                          <const loc="e,16,41,16,45" name="2'h1" dtype_id="11" />
+                          <varref loc="e,16,32,16,37" name="state" dtype_id="11" />
+                        </assigndly>
+                      </begin>
+                    </if>
+                  </caseitem>
+                  <caseitem loc="e,17,13,17,14">
+                    <const loc="e,17,9,17,13" name="2'h1" dtype_id="11" />
+                    <begin loc="e,17,15,17,20">
+                      <assigndly loc="e,18,17,18,19" dtype_id="3">
+                        <xor loc="e,18,51,18,52" dtype_id="3">
+                          <const loc="e,18,53,18,58" name="8'h55" dtype_id="3" />
+                          <concat loc="e,18,34,18,35" dtype_id="3">
+                            <sel loc="e,18,29,18,30" dtype_id="6">
+                              <varref loc="e,18,21,18,29" name="data_reg" dtype_id="3" />
+                              <const loc="e,18,32,18,33" name="3'h0" dtype_id="9" />
+                              <const loc="e,18,30,18,31" name="32'h4" dtype_id="7" />
+                            </sel>
+                            <sel loc="e,18,44,18,45" dtype_id="6">
+                              <varref loc="e,18,36,18,44" name="data_reg" dtype_id="3" />
+                              <const loc="e,18,47,18,48" name="3'h4" dtype_id="9" />
+                              <const loc="e,18,45,18,46" name="32'h4" dtype_id="7" />
+                            </sel>
+                          </concat>
+                        </xor>
+                        <varref loc="e,18,11,18,16" name="saved" dtype_id="3" />
+                      </assigndly>
+                      <assigndly loc="e,19,17,19,19" dtype_id="11">
+                        <add loc="e,19,26,19,27" dtype_id="11">
+                          <const loc="e,19,28,19,32" name="2'h1" dtype_id="11" />
+                          <varref loc="e,19,20,19,25" name="state" dtype_id="11" />
+                        </add>
+                        <varref loc="e,19,11,19,16" name="state" dtype_id="11" />
+                      </assigndly>
+                    </begin>
+                  </caseitem>
+                  <caseitem loc="e,21,9,21,16">
+                    <assigndly loc="e,21,24,21,26" dtype_id="11">
+                      <cond loc="e,21,65,21,66" dtype_id="11">
+                        <and loc="e,21,50,21,52" dtype_id="2">
+                          <eq loc="e,21,42,21,44" dtype_id="2">
+                            <const loc="e,21,45,21,49" name="4'ha" dtype_id="6" />
+                            <sel loc="e,21,36,21,37" dtype_id="6">
+                              <varref loc="e,21,28,21,36" name="data_reg" dtype_id="3" />
+                              <const loc="e,21,39,21,40" name="3'h0" dtype_id="9" />
+                              <const loc="e,21,37,21,38" name="32'h4" dtype_id="7" />
+                            </sel>
+                          </eq>
+                          <neq loc="e,21,59,21,61" dtype_id="2">
+                            <const loc="e,21,62,21,63" name="8'h0" dtype_id="3" />
+                            <varref loc="e,21,53,21,58" name="saved" dtype_id="3" />
+                          </neq>
+                        </and>
+                        <const loc="e,21,67,21,71" name="2'h0" dtype_id="11" />
+                        <sub loc="e,21,80,21,81" dtype_id="11">
+                          <varref loc="e,21,74,21,79" name="state" dtype_id="11" />
+                          <const loc="e,21,82,21,86" name="2'h1" dtype_id="11" />
+                        </sub>
+                      </cond>
+                      <varref loc="e,21,18,21,23" name="state" dtype_id="11" />
+                    </assigndly>
+                  </caseitem>
+                </case>
+                <if loc="e,23,7,23,9">
+                  <or loc="e,23,57,23,59" dtype_id="2">
+                    <or loc="e,23,30,23,32" dtype_id="2">
+                      <and loc="e,23,11,23,16" dtype_id="2">
+                        <not loc="e,23,11,23,16" dtype_id="2">
+                          <varref loc="e,23,11,23,16" name="_Vpast_0_0" dtype_id="2" />
+                        </not>
+                        <varref loc="e,23,17,23,28" name="frame_error" dtype_id="2" />
+                      </and>
+                      <and loc="e,23,44,23,46" dtype_id="2">
+                        <redor loc="e,23,34,23,35" dtype_id="2">
+                          <varref loc="e,23,35,23,43" name="data_reg" dtype_id="3" />
+                        </redor>
+                        <redand loc="e,23,47,23,48" dtype_id="2">
+                          <varref loc="e,23,48,23,55" name="bit_cnt" dtype_id="6" />
+                        </redand>
+                      </and>
+                    </or>
+                    <lte loc="e,23,69,23,71" dtype_id="2">
+                      <const loc="e,23,72,23,73" name="8'h3" dtype_id="3" />
+                      <varref loc="e,23,60,23,68" name="data_reg" dtype_id="3" />
+                    </lte>
+                  </or>
+                  <begin>
+                    <assigndly loc="e,23,80,23,82" dtype_id="2">
+                      <const loc="e,23,83,23,87" name="1'h1" dtype_id="2" />
+                      <varref loc="e,23,75,23,79" name="seen" dtype_id="2" />
+                    </assigndly>
+                  </begin>
+                </if>
+              </begin>
+            </begin>
+          </if>
+        </begin>
+      </always>
+      <begin loc="e,26,3,26,6" name="X_a">
+        <always loc="e,26,8,26,13">
+          <sentree loc="e,26,8,26,13">
+            <senitem loc="e,26,26,26,33" edgeType="POS">
+              <varref loc="e,26,34,26,37" name="clk" dtype_id="2" />
+            </senitem>
+          </sentree>
+          <if loc="e,26,8,26,13">
+            <and loc="e,26,52,26,55" dtype_id="2">
+              <not loc="e,26,52,26,55" dtype_id="2">
+                <varref loc="e,26,52,26,55" name="rst" dtype_id="2" />
+              </not>
+              <and loc="e,27,93,27,95" dtype_id="2">
+                <and loc="e,27,72,27,74" dtype_id="2">
+                  <and loc="e,27,46,27,48" dtype_id="2">
+                    <and loc="e,27,29,27,31" dtype_id="2">
+                      <varref loc="e,27,24,27,28" name="seen" dtype_id="2" />
+                      <eq loc="e,27,38,27,40" dtype_id="2">
+                        <const loc="e,27,41,27,45" name="2'h2" dtype_id="11" />
+                        <varref loc="e,27,32,27,37" name="state" dtype_id="11" />
+                      </eq>
+                    </and>
+                    <gt loc="e,27,68,27,69" dtype_id="2">
+                      <const loc="e,27,70,27,71" name="8'h2" dtype_id="3" />
+                      <varref loc="e,27,49,27,54" name="_Vpast_2_1" dtype_id="3" />
+                    </gt>
+                  </and>
+                  <neq loc="e,27,75,27,76" dtype_id="2">
+                    <varref loc="e,27,76,27,83" name="_Vpast_3_0" dtype_id="6" />
+                    <varref loc="e,27,84,27,91" name="bit_cnt" dtype_id="6" />
+                  </neq>
+                </and>
+                <not loc="e,27,96,27,97" dtype_id="2">
+                  <and loc="e,27,97,27,102" dtype_id="2">
+                    <varref loc="e,27,97,27,102" name="_Vpast_4_0" dtype_id="2" />
+                    <not loc="e,27,97,27,102" dtype_id="2">
+                      <varref loc="e,27,103,27,114" name="frame_error" dtype_id="2" />
+                    </not>
+                  </and>
+                </not>
+              </and>
+            </and>
+            <begin>
+              <coverinc loc="e,26,8,26,13" />
+            </begin>
+          </if>
+        </always>
+      </begin>
+      <coverdecl loc="e,26,8,26,13" />
+      <always loc="e,23,11,23,16">
+        <sentree loc="e,23,11,23,16">
+          <senitem loc="e,10,12,10,19" edgeType="POS">
+            <varref loc="e,10,20,10,23" name="clk" dtype_id="2" />
+          </senitem>
+        </sentree>
+        <assigndly loc="e,23,11,23,16" dtype_id="2">
+          <sampled loc="e,23,17,23,28" dtype_id="2">
+            <varref loc="e,23,17,23,28" name="frame_error" dtype_id="2" />
+          </sampled>
+          <varref loc="e,23,11,23,16" name="_Vpast_0_0" dtype_id="2" />
+        </assigndly>
+      </always>
+      <var loc="e,23,11,23,16" name="_Vpast_0_0" dtype_id="2" vartype="logic" origName="_Vpast_0_0" />
+      <always loc="e,27,49,27,54">
+        <sentree loc="e,27,49,27,54">
+          <senitem loc="e,26,26,26,33" edgeType="POS">
+            <varref loc="e,26,34,26,37" name="clk" dtype_id="2" />
+          </senitem>
+        </sentree>
+        <assigndly loc="e,27,49,27,54" dtype_id="3">
+          <sampled loc="e,27,55,27,63" dtype_id="3">
+            <varref loc="e,27,55,27,63" name="data_reg" dtype_id="3" />
+          </sampled>
+          <varref loc="e,27,49,27,54" name="_Vpast_1_0" dtype_id="3" />
+        </assigndly>
+        <assigndly loc="e,27,49,27,54" dtype_id="3">
+          <varref loc="e,27,49,27,54" name="_Vpast_1_0" dtype_id="3" />
+          <varref loc="e,27,49,27,54" name="_Vpast_2_1" dtype_id="3" />
+        </assigndly>
+      </always>
+      <var loc="e,27,49,27,54" name="_Vpast_1_0" dtype_id="3" vartype="logic" origName="_Vpast_1_0" />
+      <var loc="e,27,49,27,54" name="_Vpast_2_1" dtype_id="3" vartype="logic" origName="_Vpast_2_1" />
+      <always loc="e,27,76,27,83">
+        <sentree loc="e,27,76,27,83">
+          <senitem loc="e,26,26,26,33" edgeType="POS">
+            <varref loc="e,26,34,26,37" name="clk" dtype_id="2" />
+          </senitem>
+        </sentree>
+        <assigndly loc="e,27,76,27,83" dtype_id="6">
+          <sampled loc="e,27,84,27,91" dtype_id="6">
+            <varref loc="e,27,84,27,91" name="bit_cnt" dtype_id="6" />
+          </sampled>
+          <varref loc="e,27,76,27,83" name="_Vpast_3_0" dtype_id="6" />
+        </assigndly>
+      </always>
+      <var loc="e,27,76,27,83" name="_Vpast_3_0" dtype_id="6" vartype="logic" origName="_Vpast_3_0" />
+      <always loc="e,27,97,27,102">
+        <sentree loc="e,27,97,27,102">
+          <senitem loc="e,26,26,26,33" edgeType="POS">
+            <varref loc="e,26,34,26,37" name="clk" dtype_id="2" />
+          </senitem>
+        </sentree>
+        <assigndly loc="e,27,97,27,102" dtype_id="2">
+          <sampled loc="e,27,103,27,114" dtype_id="2">
+            <varref loc="e,27,103,27,114" name="frame_error" dtype_id="2" />
+          </sampled>
+          <varref loc="e,27,97,27,102" name="_Vpast_4_0" dtype_id="2" />
+        </assigndly>
+      </always>
+      <var loc="e,27,97,27,102" name="_Vpast_4_0" dtype_id="2" vartype="logic" origName="_Vpast_4_0" />
+    </module>
+    <package loc="a,0,0,0,0" name="$unit" origName="__024unit" />
+    <typetable loc="a,0,0,0,0">
+      <basicdtype loc="c,43,22,43,24" id="2" name="logic" />
+      <voiddtype loc="c,45,18,45,27" id="12" />
+      <basicdtype loc="e,2,26,2,29" id="10" name="int" left="31" right="0" signed="true" />
+      <basicdtype loc="e,7,3,7,8" id="11" name="logic" left="1" right="0" />
+      <basicdtype loc="e,18,29,18,30" id="9" name="logic" left="2" right="0" signed="true" />
+      <basicdtype loc="d,43,17,43,18" id="3" name="logic" left="7" right="0" />
+      <basicdtype loc="d,62,17,62,18" id="4" name="logic" left="15" right="0" />
+      <basicdtype loc="d,76,1,76,4" id="5" name="logic" left="18" right="0" />
+      <basicdtype loc="d,77,1,77,4" id="6" name="logic" left="3" right="0" />
+      <basicdtype loc="d,106,42,106,43" id="7" name="logic" left="31" right="0" />
+      <basicdtype loc="d,119,47,119,48" id="8" name="logic" left="6" right="0" />
+      <basicdtype loc="d,34,28,34,29" id="1" name="logic" left="31" right="0" signed="true" />
+    </typetable>
+  </netlist>
+</verilator_xml>

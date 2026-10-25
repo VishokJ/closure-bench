@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Gate one candidate plan item (closure_core/candidate.py) without touching designs/.
+
+Usage:  tools/gate_candidate <candidate_dir> [--design uart] [-j N] [--out result.json] [--offline]
+Prints one line per gate and writes the full result as JSON.
+Exit 0 if the candidate is accepted, 1 if rejected.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from closure_core import candidate  # noqa: E402
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="gate one candidate plan item")
+    ap.add_argument("candidate", type=Path)
+    ap.add_argument("--design", default="uart")
+    ap.add_argument("-j", type=int, default=4, help="parallel simulations")
+    ap.add_argument("--out", type=Path, help="result JSON (default: <candidate>/gates.json)")
+    ap.add_argument("--offline", action="store_true", help="do not download cited documents")
+    ap.add_argument("--cache", type=Path, default=ROOT / "results" / "check" / "mutation_cache.json")
+    args = ap.parse_args()
+
+    res = candidate.gate(ROOT / "designs" / args.design, args.candidate.resolve(),
+                         cache_path=args.cache.resolve(), j=args.j, offline=args.offline)
+    out = (args.out or args.candidate / "gates.json").resolve()
+    out.write_text(json.dumps(res, indent=2, default=str) + "\n")
+
+    sym = {True: "pass", False: "FAIL", None: "unverified", "n/a": "n/a"}
+    width = max(map(len, candidate.ORDER))
+    print(f"{res['item'] or args.candidate.name}")
+    for g in res["gates"]:
+        lines = (g["detail"] or "").splitlines() or [""]
+        print(f"  {g['gate']:<{width}}  {sym[g['ok']]:<10}  {lines[0]}")
+        for extra in lines[1:]:
+            print(f"  {'':<{width}}  {'':<10}  {extra}")
+    for g in res["skipped"]:
+        print(f"  {g:<{width}}  skipped")
+    print(f"\n{'ACCEPTED' if res['accepted'] else 'REJECTED at ' + res['failed_gate']}  (result: {out})")
+    return 0 if res["accepted"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
