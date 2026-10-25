@@ -1,11 +1,9 @@
-from check_module import check
+from closure_core import gates
 
 
 def run(corpus, kills=None):
-    out = {}
-    summary = check.duplicate_gate(corpus, ["A", "B"], kills or {},
-                                   lambda i, g, ok, d="": out.__setitem__(i, (ok, d)))
-    return out, summary
+    out, summary = gates.duplicate(corpus, ["A", "B"], kills or {})
+    return {i: (r.ok, r.detail) for i, r in out.items()}, summary
 
 
 def test_identical_signatures_fail():

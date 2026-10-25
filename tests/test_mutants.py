@@ -67,3 +67,12 @@ def test_r1_frame_error_stuck0_exists():
 def test_no_duplicate_mutants():
     ms = mutants.generate(RX, 86, 140)
     assert len({(m.line, m.mutated) for m in ms}) == len(ms)
+
+
+def test_cache_key_includes_platform(monkeypatch):
+    monkeypatch.setattr(mutants, "_toolchain", lambda: "Verilator 5.020")
+    rtl = {RX: RX.read_text()}
+    key = lambda: mutants.cache_key(rtl, "module tb; endmodule", "tb", 20.0)
+    base = key()
+    monkeypatch.setattr(mutants.platform, "machine", lambda: "other-arch")
+    assert key() != base

@@ -11,7 +11,8 @@ Status: grader, validity gates and the Prime eval adapter in place for the first
 - `third_party/verilog-uart/` pinned, unmodified design under test (see UPSTREAM.md)
 - `designs/uart/` design pack: baseline testbenches, coverage plan (`plan.yaml`),
   cited documents (`sources.yaml`), one cover file per item, gold testbenches, waivers
-- `closure_core/` simulation, coverage parsing, citation checks and the grader;
+- `closure_core/` simulation, coverage parsing, citation checks, mutants, gate logic
+  (`gates.py`) and the grader;
   plain Python with no verifiers dependency
 - `tools/check` validity suite: every plan item must pass every gate (citations,
   cover sync, baseline 0, gold 1, near-miss 0, determinism, value, duplicate).

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import platform
 import re
 import tempfile
 from dataclasses import dataclass, replace
@@ -154,23 +155,29 @@ def _toolchain() -> str:
     return sim.verilator_version()
 
 
+def cache_key(rtl: dict[Path, str], tb_text: str, top: str, run_timeout: float) -> str:
+    """Hash of every compiled input: (mutated) RTL, testbench, driver, flags,
+    toolchain, platform and run timeout. Covers are not compiled, so not hashed."""
+    return sha256(*(f"{p.name}\0{t}" for p, t in rtl.items()),
+                  top, tb_text, sim.SIM_MAIN.read_bytes(), " ".join(sim.VERILATOR_FLAGS),
+                  _toolchain(), platform.machine(), str(run_timeout))
+
+
 def simulate(design: Design, tb_text: str, top: str, mutant: Mutant | None = None, *,
              run_timeout: float = 20.0, cache: dict | None = None) -> dict:
     """Run one testbench against the RTL, optionally with one mutant applied.
 
+    Compiled without covers: a mutant's status depends only on the RTL and the
+    testbench, so cached results stay valid when covers are added or changed.
+
     Returns {"status": sim status, "modules": design modules the testbench
-    instantiates (from line coverage)}. Cached under a hash of every compiled
-    input, so a change to any RTL, cover, testbench, driver, flag or toolchain
-    invalidates the entry.
+    instantiates (from line coverage)}. Cached under cache_key().
     """
     rtl = {p: p.read_text() for p in design.rtl}
     if mutant:
         target = next(p for p in rtl if p.name == mutant.file)
         rtl[target] = apply(rtl[target], mutant)
-    key = sha256(*(f"{p.name}\0{t}" for p, t in rtl.items()),
-                 *(f"{c.name}\0{c.read_text()}" for c in design.covers),
-                 top, tb_text, sim.SIM_MAIN.read_bytes(), " ".join(sim.VERILATOR_FLAGS),
-                 _toolchain(), str(run_timeout))
+    key = cache_key(rtl, tb_text, top, run_timeout)
     if cache is not None and key in cache:
         return cache[key]
     with tempfile.TemporaryDirectory(prefix="cb-mut-") as d:
@@ -178,8 +185,8 @@ def simulate(design: Design, tb_text: str, top: str, mutant: Mutant | None = Non
         for p, t in rtl.items():
             (Path(d) / p.name).write_text(t)
             paths.append(Path(d) / p.name)
-        s = grader.simulate(replace(design, rtl=tuple(paths)), tb_text, top=top,
-                           run_timeout=run_timeout)
+        s = grader.simulate(replace(design, rtl=tuple(paths), covers=(), plan=()), tb_text,
+                            top=top, run_timeout=run_timeout)
     res = {"status": s.sim.status,
            "modules": sorted({p.module for p in s.points if p.kind == "v_line"})}
     if cache is not None:

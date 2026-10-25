@@ -30,6 +30,8 @@ class Design:
     pack: Path                  # designs/<name>/
     mutate: dict[Path, tuple[int, int]] = field(default_factory=dict)  # RTL file -> line range
     waivers: dict = field(default_factory=dict)  # waivers.yaml contents
+    golds: dict[str, Path] = field(default_factory=dict)  # plan ID -> gold/<ID>.sv, if present
+    near_misses: dict[str, tuple[Path, ...]] = field(default_factory=dict)  # near_miss/<ID>_*.sv
 
     def item(self, plan_id: str) -> PlanItem:
         for it in self.plan:
@@ -98,4 +100,7 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
         },
         mutate={resolve(f): (lo, hi) for f, (lo, hi) in spec.get("mutate", {}).items()},
         waivers=(yaml.safe_load((pack / spec["waivers"]).read_text()) or {}) if "waivers" in spec else {},
+        golds={it.id: g.resolve() for it in plan if (g := pack / "gold" / f"{it.id}.sv").is_file()},
+        near_misses={it.id: tuple(p.resolve() for p in sorted((pack / "near_miss").glob(f"{it.id}_*.sv")))
+                     for it in plan},
     )
