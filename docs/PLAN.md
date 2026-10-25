@@ -34,9 +34,9 @@ design pack ─► baseline ─► holes + mutant survivors ─► context pack
 | Design pack | pinned RTL, baseline TBs, `design.yaml`, `sources.yaml` + `sources.lock` | yes | built (UART) |
 | Baseline | `coverage.dat`, code holes | yes | built |
 | Grader | `closure_core.grader`: one function that decides the reward | yes | built |
-| Gates | `closure_core/gates.py`, run by `tools/check` | yes | built; `cover_policy` in progress |
+| Gates | `closure_core/gates.py`, run by `tools/check` | yes | built |
 | Mutation | fixed-operator mutants, kills per testbench | yes | built |
-| propose_plan | candidate items as bundles (cover, gold, near-misses, citations) | recorded and replayable | to build |
+| propose_plan | candidate items as bundles (cover, gold, near-misses, citations) | recorded and replayable | built; smoke run next |
 | Adapter | `environments/closure_bench`, one task per accepted item | n/a | built; R1 verified on Prime |
 | Pilot / harden | pass@1 per task with CIs, tier moves | seeded, reported with CIs | to run |
 | Red-team | exploit corpus, fixed vs open | yes | backlog in §10 |
@@ -68,7 +68,8 @@ agent's view; add it before the pilot.
 - Fixed Verilator 5.020 flags in one place (`closure_core/sim.py`), with
   `--x-assign 0 --x-initial 0` for determinism.
 - Statuses: `ok`, `compile_error`, `compile_timeout`, `timeout`,
-  `runtime_error` (`$fatal`, `$stop`, crash), `no_finish` (events ran out).
+  `runtime_error` (`$fatal`, `$stop`, crash), `no_finish` (events ran out),
+  `policy_violation` (see below).
   Only `ok` can score.
 - Coverage provenance: a functional point counts only if it comes from our
   cover file, in the plan's cover module, under the plan's label, at the
@@ -77,7 +78,7 @@ agent's view; add it before the pilot.
   module and drives it, scores 0 (both tested).
 - Logs go to files and only the tail is kept, so a testbench printing in a
   loop cannot exhaust grader memory.
-- Testbench policy (approved, not built): before simulating, `grade()` parses
+- Testbench policy: before simulating, `grade()` parses
   the submission and runs `policy.check_testbench`. Any violation (force,
   `$system`, `$c`, file I/O, hierarchical writes, instances placed inside a
   design module) gives status `policy_violation` and reward 0. A parse failure
@@ -127,7 +128,7 @@ stopping at the first failure.
 
 | Gate | Rule | Failure it catches |
 |---|---|---|
-| `cover_policy` (in progress) | cover file uses only allowed constructs (AST of `verilator --xml-only`), one `bind` to a design module with `.*` | a cover with logic of its own that fakes a hit or ends the run |
+| `cover_policy` | cover file uses only allowed constructs (AST of `verilator --xml-only`), one `bind` to a design module with `.*` | a cover with logic of its own that fakes a hit or ends the run |
 | `citations` | every source verifies (§5) | invented or misplaced evidence |
 | `cover_sync` | exactly one cover with the item's label, in the named module | plan and cover files out of sync |
 | `baseline` | no baseline testbench hits the item | free tasks |
@@ -160,7 +161,7 @@ timing items: a per-item label deciding whether they are required would be
 under optimization pressure from the repair loop (relabelling is the cheapest
 repair). Opt-outs are counted in the funnel.
 
-Random-stimulus probe (approved, not built): fixed-seed LFSR testbenches
+Random-stimulus probe: fixed-seed LFSR testbenches
 (`designs/uart/random/`) drive random data, bad stop bits, glitches, idle gaps,
 backpressure and prescale changes while idle. Items they hit are reported as
 `hit_by_random`, not rejected; they also join the duplicate corpus. A cheap,
@@ -332,11 +333,15 @@ Fixed (a dedicated test for each is part of the exploit corpus below):
   (bind-site placement check).
 - Output flood: logs go to files, tails only.
 - Missing `$finish`, `$fatal`, `$stop`, hangs, compile errors: all score 0.
+- Found by probes, fixed by the policy in `grade()` (tests/fixtures/attacks/,
+  each with its pre-fix score): `force` into the DUT (scored 1), hierarchical
+  write from the testbench (1), the same write from a module bound into
+  uart_rx (1), a bound module driving a DUT register through an output port
+  (1), redefining uart_rx or cov_R1 (0, but only because Verilator silently
+  keeps the first definition, which depends on compile order). `defparam`
+  into the DUT is allowed: it is equivalent to a `#()` override.
 
 Backlog:
-- Probes with the grader policy: a `bind` from the testbench into uart_rx that
-  drives an internal signal through an output port, `defparam` into the DUT,
-  and a testbench that redefines `uart_rx`.
 - `` `line `` directive to fake a cover's file path.
 - `$c()` inline C++, `force` or hierarchical writes into DUT internals,
   `$system`, file I/O, writing a fake `coverage.dat`, shadow modules,
