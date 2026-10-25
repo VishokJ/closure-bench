@@ -371,6 +371,11 @@ def new_run_dir(tag: str = "") -> Path:
 
 
 def _call(model, messages: list[dict], path: Path) -> str:
+    if path.exists():  # resume: the recorded response, if it answered these exact messages
+        rec = load(path)
+        if rec["messages"] != messages:
+            raise RuntimeError(f"{path}: recorded messages differ from the ones this code sends; cannot resume")
+        return rec["response"]["text"]
     resp = model(messages)
     dump(path, {"messages": messages, "params": model.params, "response": resp})
     return resp["text"]
@@ -449,16 +454,41 @@ def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
     (run_dir / "prompts").mkdir()
     for name, text in prompt_files().items():
         (run_dir / "prompts" / name).write_text(text)
+    return _flow(run_dir, model, executor, context)
 
+
+def resume(run_dir: Path, model, executor: Executor, parallel: int = 1) -> dict:
+    """Continue an interrupted run in place.
+
+    Re-runs the run's flow: every model call, gate and set result already
+    recorded is reused (a recorded model call only if this code sends the same
+    messages), so only the missing steps run. --replay afterwards checks the
+    whole run as for one that was never interrupted.
+    """
+    manifest = load(run_dir / "manifest.json")
+    if (run_dir / "summary.json").exists():
+        raise RuntimeError("the run finished (summary.json exists); nothing to resume")
+    if manifest["prompt_sha"] != prompt_sha():
+        raise RuntimeError("the prompt templates changed since the run started; cannot resume")
+    manifest.setdefault("resumed", []).append({"git": _git(), "parallel": parallel})
+    manifest["parallel"] = parallel
+    dump(run_dir / "manifest.json", manifest)
+    context = render_context(load(run_dir / "context_pack.json"), (PROMPTS / "rules.md").read_text())
+    return _flow(run_dir, model, executor, context)
+
+
+def _flow(run_dir: Path, model, executor: Executor, context: str) -> dict:
+    m = load(run_dir / "manifest.json")
+    max_candidates, parallel = m["max_candidates"], m["parallel"]
     cands, err = stage_a(run_dir, model, fill((PROMPTS / "enumerate.md").read_text(), context=context),
                          "stage_a", parse_candidates)
     cands = _number((cands or [])[:max_candidates], 1, 1)
     dump(run_dir / "candidates.json", {"passes": {"1": {"error": err}}, "candidates": cands, "unkillable": []})
-    if err or stage_a_only:
+    if err or m["stage_a_only"]:
         return finish(run_dir, executor)
     author_all(run_dir, model, executor, cands, context, parallel)
     set_stage(run_dir, executor, only={c["cid"] for c in cands})
-    if survivor_pass:
+    if m["survivor_pass"]:
         prompt, remaining = survivor_prompt(run_dir, context)
         res, err2 = stage_a(run_dir, model, prompt, "stage_a2", lambda text: parse_survivor_answer(text, remaining))
         new, unk = res or ([], [])
@@ -470,8 +500,8 @@ def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
         dump(run_dir / "candidates.json", rec)
         author_all(run_dir, model, executor, new, context, parallel)
         set_stage(run_dir, executor, only={c["cid"] for c in new})
-    if write:
-        write_accepted(run_dir, design_name)
+    if m["write"]:
+        write_accepted(run_dir, m["design"])
         dump(run_dir / "check.json", executor.check())
     return finish(run_dir, executor)
 
@@ -509,6 +539,8 @@ def author(run_dir: Path, model, executor: Executor, cand: dict, pid: str, conte
 
 def gate_response(cand_dir: Path, text: str, pid: str, executor: Executor, out: Path,
                   base: Path) -> dict:
+    if out.exists():  # resume: gate results are a function of the response and the base pack
+        return load(out)
     try:
         bundle = parse_bundle(text)
     except ParseError as e:
@@ -549,7 +581,7 @@ def set_stage(run_dir: Path, executor: Executor, base: Path | None = None,
             if rec.exists() and load(rec)["accepted"]:
                 candidate.add(setpack, cand)
             continue
-        if executor.gate(cand, rec, base=setpack)["accepted"]:
+        if (load(rec) if rec.exists() else executor.gate(cand, rec, base=setpack))["accepted"]:
             candidate.add(setpack, cand)
     shutil.rmtree(setpack)
 

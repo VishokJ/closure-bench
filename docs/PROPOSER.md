@@ -57,6 +57,14 @@ decision, every repair message sent back to the model, and the summary.
    candidate, prompt_sha, status: auto_accepted}`, are appended to the real
    pack, and the full `tools/check` runs.
 
+**Resume** (`--resume <run>`): an interrupted run continues in place with the
+model and sampling from its manifest. It re-runs the run's flow and reuses
+everything recorded: a model call only if this code sends exactly the recorded
+messages (otherwise it stops), gate and set results as recorded. Only the
+missing steps run, and `manifest.json` gets a `resumed` entry with the commit.
+It refuses a finished run or changed prompt templates. `--replay` then checks
+the whole run as for one that was never interrupted.
+
 Every gate in a run and in its replay uses `base_pack/`, a snapshot of the
 pack taken when the run starts, so a later change to `designs/` (including
 this run's own `--write`) cannot change a replayed decision.
@@ -141,6 +149,7 @@ tools/check                                                  # in the image firs
 tools/propose_plan --image "$IMAGE" --stage-a-only --tag smoke
 tools/propose_plan --image "$IMAGE" --stage-a-only --full-docs --tag smoke-full
 tools/propose_plan --image "$IMAGE" --write                  # the real run
+tools/propose_plan --image "$IMAGE" --resume runs/propose/<run_id>       # after a crash
 tools/propose_plan --image "$IMAGE" --replay runs/propose/<run_id>
 tools/propose_plan --image "$IMAGE" --write-from runs/propose/<run_id>   # refuses unless
 #   designs/ equals the run's base_pack and a replay reproduces every decision

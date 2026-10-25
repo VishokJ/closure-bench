@@ -170,11 +170,21 @@ def test_parse_survivor_answer():
 def test_scripted_run_and_replay(scratch):
     bad_yaml = STAGE_A.replace("sources: [{type: DOC, doc: pc16550d, page: 16}]",
                                "sources: [{type: BASE, point: {name: prescale[4]}}]")
+    def crash(messages):
+        raise ConnectionError("interrupted")
+
     model = propose.ScriptedModel([bad_yaml, STAGE_A, r1_bundle("  initial $finish;\n"), r1_bundle(), r1_bundle(),
-                                   survivor_answer, r1_bundle()])
+                                   survivor_answer, crash])
     ex = propose.Executor(image=None, j=8)
     run_dir = scratch / "run"
-    s = propose.run(run_dir, model, ex, base=empty_pack(scratch / "base"), survivor_pass=True)
+    # Interrupted in pass 2 Stage B; also lose one gate result and pass 1's set stage.
+    with pytest.raises(ConnectionError):
+        propose.run(run_dir, model, ex, base=empty_pack(scratch / "base"), survivor_pass=True)
+    (run_dir / "gates/c01/1.json").unlink()
+    shutil.rmtree(run_dir / "set")
+    # Resume reuses every recorded response: exactly one new model call (c04 attempt 0).
+    s = propose.resume(run_dir, propose.ScriptedModel([r1_bundle()]), ex)
+    assert len(json.loads((run_dir / "manifest.json").read_text())["resumed"]) == 1
     p1, p2 = s["passes"]["1"], s["passes"]["2"]
 
     # Stage A: the first answer is not YAML; one repair turn fixes it.
@@ -250,3 +260,33 @@ def test_author_all_parallel(scratch):
         files = sorted((scratch / "responses" / c["cid"]).glob("*.json"))
         assert len(files) == propose.RETRIES + 1
         assert all(json.loads(f.read_text())["response"]["text"] == f"no bundle for {c['title']}" for f in files)
+
+
+IMAGE_ARM = "docker.io/vishokjcs/closure-bench-toolchain@sha256:79661c70cb6e254e83aa326515b897219b8980448e39fe97b417bf70bf2f713c"
+
+
+def _have_image() -> bool:
+    import subprocess
+    return bool(shutil.which("docker")) and subprocess.run(
+        ["docker", "image", "inspect", IMAGE_ARM], capture_output=True).returncode == 0
+
+
+@pytest.mark.skipif(not _have_image(), reason="needs docker and the toolchain image (host only)")
+def test_cache_save_parallel_containers():
+    """-p runs gate containers at once; each is PID 1 and they share the mutation cache."""
+    import subprocess
+    d = propose.ROOT / ".cache" / "cache_race"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    try:
+        code = ("import sys; from pathlib import Path; from closure_core.gates import save_cache\n"
+                "for i in range(200): save_cache(Path('/repo/.cache/cache_race/c.json'), {sys.argv[1]: i})")
+        procs = [subprocess.Popen(["docker", "run", "--rm", "--network", "none", "-v", f"{propose.ROOT}:/repo",
+                                   "-w", "/repo", IMAGE_ARM, "python3", "-c", code, str(n)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for n in range(4)]
+        errs = [p.communicate()[1] for p in procs]
+        assert all(p.returncode == 0 for p in procs), errs
+        assert len(json.loads((d / "c.json").read_text())) == 1
+        assert not list(d.glob("*.tmp"))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)

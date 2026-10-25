@@ -50,6 +50,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from concurrent.futures import as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -309,6 +310,16 @@ def duplicate(corpus: dict[str, dict[str, int]], ids: list[str],
                  "same_mutant_kills": {i: v for i, v in same_kills.items() if v}}
 
 
+def save_cache(path: Path, cache: dict) -> None:
+    """Atomic: parallel gate runs (tools/propose_plan -p) share this file. A lost
+    update only costs a re-simulation; a torn read would crash a run. The temp
+    name is unique per call: every container is PID 1, so a pid suffix collides."""
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    with os.fdopen(fd, "w") as f:
+        f.write(json.dumps(dict(cache), indent=1, sort_keys=True) + "\n")
+    os.replace(tmp, path)
+
+
 def mutation_runs(design: Design, golds: dict[str, Path], pool, cache_path: Path) -> dict:
     """Run the mutants against the baselines, then the golds against the survivors.
 
@@ -325,12 +336,7 @@ def mutation_runs(design: Design, golds: dict[str, Path], pool, cache_path: Path
     run = lambda tb, m=None: pool.submit(mutants.simulate, design, *tbs[tb], m, cache=cache)
     orig = {tb: f.result() for tb, f in {tb: run(tb) for tb in tbs}.items()}
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    def save() -> None:
-        # Atomic: parallel gate runs (tools/propose_plan -p) share this file. A lost
-        # update only costs a re-simulation; a torn read would crash a run.
-        tmp = cache_path.with_name(f"{cache_path.name}.{os.getpid()}.tmp")
-        tmp.write_text(json.dumps(dict(cache), indent=1, sort_keys=True) + "\n")
-        os.replace(tmp, cache_path)
+    save = lambda: save_cache(cache_path, cache)
     status: dict[tuple[str, str], str] = {}
 
     def collect(futs: dict, phase: str) -> None:
