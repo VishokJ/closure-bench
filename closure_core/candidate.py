@@ -13,13 +13,15 @@ seconds and a repair turn gets feedback fast:
 
 Candidate directory:
   item.yaml        one plan entry: id, cover, cover_module, description, tier, sources
+                   (+ near_miss_waiver: a reason, only if there is no near-miss)
   cover.sv         module cov_<id> and its bind
   gold.sv          self-checking gold testbench (top `tb`)
-  near_miss/*.sv   optional near-miss testbenches
+  near_miss/*.sv   near-miss testbenches: at least one, unless near_miss_waiver
 """
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import tempfile
@@ -68,18 +70,23 @@ def check_format(cand: Path, existing_ids: set[str]) -> GateResult:
 def overlay(base_pack: Path, cand: Path, dest: Path) -> str:
     """Copy base_pack to dest and add the candidate to it; returns the item ID."""
     shutil.copytree(base_pack, dest)
+    return add(dest, cand)
+
+
+def add(pack: Path, cand: Path) -> str:
+    """Add a candidate to a pack in place (only ever an overlay or a run's own pack)."""
     item = yaml.safe_load((cand / "item.yaml").read_text())
     i = item["id"]
-    plan_path = dest / yaml.safe_load((dest / "design.yaml").read_text())["plan"]
+    plan_path = pack / yaml.safe_load((pack / "design.yaml").read_text())["plan"]
     plan = yaml.safe_load(plan_path.read_text())
     plan["items"] = [*(plan.get("items") or []), item]
     plan_path.write_text(yaml.safe_dump(plan, sort_keys=False))
-    shutil.copy(cand / "cover.sv", dest / "covers" / f"{i}.sv")
-    (dest / "gold").mkdir(exist_ok=True)
-    shutil.copy(cand / "gold.sv", dest / "gold" / f"{i}.sv")
-    (dest / "near_miss").mkdir(exist_ok=True)
+    shutil.copy(cand / "cover.sv", pack / "covers" / f"{i}.sv")
+    (pack / "gold").mkdir(exist_ok=True)
+    shutil.copy(cand / "gold.sv", pack / "gold" / f"{i}.sv")
+    (pack / "near_miss").mkdir(exist_ok=True)
     for p in sorted((cand / "near_miss").glob("*.sv")):
-        shutil.copy(p, dest / "near_miss" / f"{i}_{p.name}")
+        shutil.copy(p, pack / "near_miss" / f"{i}_{p.name}")
     return i
 
 
@@ -93,19 +100,27 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
         results.append(r)
         return r.ok in (True, "n/a")
 
+    pack_dir = ""
+
     def finish(item_id: str | None) -> dict:
         failed = next((r.gate for r in results if r.ok not in (True, "n/a")), None)
-        return {"item": item_id, "accepted": failed is None, "failed_gate": failed,
-                "gates": [asdict(r) for r in results], "skipped": ORDER[len(results):]}
+        res = {"item": item_id, "accepted": failed is None, "failed_gate": failed,
+               "gates": [asdict(r) for r in results], "skipped": ORDER[len(results):]}
+        # The overlay is a temp dir: normalise it so results are comparable across runs.
+        text = json.dumps(res, default=str)
+        return json.loads(text.replace(pack_dir, "<pack>") if pack_dir else text)
 
     if not ok(check_format(cand, {it.id for it in base.plan})):
         return finish(None)
     with tempfile.TemporaryDirectory(prefix="cb-overlay-") as d, ThreadPoolExecutor(j) as pool:
         i = overlay(base.pack, cand, Path(d) / "pack")
         design = load_design(Path(d) / "pack", repo_root=root)
+        pack_dir = str(design.pack)
         it = design.item(i)
         base_futs = {n: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
                      for n, b in design.baselines.items()}
+        rand_futs = {n: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
+                     for n, b in design.randoms.items()}
 
         if not ok(gates.cover_sync(it, gates.cover_labels(design))):
             return finish(i)
@@ -114,7 +129,8 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
         baselines = {n: f.result() for n, f in base_futs.items()}
         cites = gates.citations(design, it, citations.DocStore(design.pack, offline=offline),
                                 [p for s in baselines.values() for p in s.points])
-        if not ok(cites) or not ok(gates.baseline(it, baselines)):
+        randoms = {n: f.result() for n, f in rand_futs.items()}
+        if not ok(cites) or not ok(gates.baseline(it, baselines, randoms)):
             return finish(i)
 
         gold_path = design.golds[i]
@@ -122,7 +138,9 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
         sa, sb = (f.result() for f in [pool.submit(simulate, design, gold_path.read_text())
                                        for _ in range(2)])
         a, b = score(design, [i], sa), score(design, [i], sb)
-        if not ok(gates.gold(it, a, gold_pol.result())):
+        g = gates.gold(it, a, gold_pol.result())
+        g.data["holes_hit"] = sorted(set(gates.holes(baselines)) & gates.hit_points(sa))
+        if not ok(g):
             return finish(i)
 
         nms = design.near_misses.get(i, ())
@@ -136,7 +154,9 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
         if not ok(gates.determinism(a, b)):
             return finish(i)
 
-        mutation = gates.mutation_runs(design, {i: gold_path}, pool, cache_path)
+        # Every gold, not only the candidate's: only_gold_kills and same-kill reports
+        # then compare against the existing items too (cached after the first run).
+        mutation = gates.mutation_runs(design, design.golds, pool, cache_path)
         if not ok(gates.value(mutation["gold_kills"].get(i, []), mutation["only_gold_kills"].get(i, []),
                               cites.data["verified"])):
             return finish(i)
@@ -146,6 +166,7 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
         others += [(f"near_miss:{p.name}", p) for x, ps in design.near_misses.items() if x != i for p in ps]
         other_sims = {k: pool.submit(simulate, design, p.read_text()) for k, p in others}
         corpus = {f"baseline:{n}": s.plan_hits for n, s in baselines.items() if s.sim.status == "ok"}
+        corpus.update({f"random:{n}": s.plan_hits for n, s in randoms.items() if s.sim.status == "ok"})
         corpus[f"gold:{i}"] = sa.plan_hits
         corpus.update({f"near_miss:{n}": s.plan_hits for n, s in nm if s.sim.status == "ok"})
         corpus.update({k: s.plan_hits for k, f in other_sims.items() if (s := f.result()).sim.status == "ok"})

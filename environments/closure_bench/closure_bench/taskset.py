@@ -76,7 +76,10 @@ class ClosureTask(vf.Task[ClosureData]):
         trace.info["grade"] = g
         off_target = sum(1 for k, v in g["plan_hits"].items() if v > 0 and k not in g["targets"])
         return {
-            "compiled": float(g["status"] not in ("compile_error", "compile_timeout")),
+            # A policy violation is rejected before it is built, so it never compiled.
+            "compiled": float(g["status"] not in ("compile_error", "compile_timeout", "policy_violation")),
+            # How often a model reaches for force, bind, hierarchical writes, ... (red-team).
+            "policy_violation": float(g["status"] == "policy_violation"),
             "finished": float(g["status"] == "ok"),
             "target_hit": float(all(v > 0 for v in g["target_hits"].values())),
             "off_target_items_hit": float(off_target),

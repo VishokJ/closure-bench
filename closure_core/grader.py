@@ -1,8 +1,11 @@
 """grade(): the single function that decides a reward.
 
 The submission is graded in a fresh directory containing only the pinned RTL,
-our cover files, our simulation driver and the submitted testbench. Reward is
-1.0 only if the simulation ran cleanly to $finish and every target was hit.
+our cover files, our simulation driver and the submitted testbench. It is first
+checked against the testbench policy (closure_core.policy: no force, no writes
+or binds into the design, no redefined modules, no $system/$c/file I/O); a
+violation scores 0 with status policy_violation and is never simulated. Reward
+is 1.0 only if the simulation ran cleanly to $finish and every target was hit.
 
 CLI (used inside the grading sandbox):
     python -m closure_core.grader --design uart --target R1 path/to/tb.sv
@@ -20,7 +23,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from closure_core import coverage, sim
+from closure_core import coverage, policy, sim
 from closure_core.design import Design, load_design
 
 SUBMISSION_TOP = "tb"  # agent testbenches must name their top module `tb`
@@ -30,7 +33,7 @@ SUBMISSION_TOP = "tb"  # agent testbenches must name their top module `tb`
 class GradeResult:
     design: str
     targets: list[str]
-    status: str                    # sim status, see closure_core.sim
+    status: str                    # sim status (closure_core.sim) or policy_violation
     reward: float
     target_hits: dict[str, int]
     plan_hits: dict[str, int]      # every plan item, for metrics and analysis
@@ -104,9 +107,42 @@ def grade(
     for t in targets:
         design.item(t)  # unknown target is a grader bug: raise, don't score 0
 
+    violations, log = check_policy(design, tb_text)
+    if violations or log:
+        status = "policy_violation" if violations else "compile_error"
+        return GradeResult(
+            design=design.name, targets=list(targets), status=status, reward=0.0,
+            target_hits={t: 0 for t in targets}, plan_hits={it.id: 0 for it in design.plan},
+            compile_s=0.0, run_s=0.0, diagnostics="\n".join(violations) or log,
+            toolchain=sim.verilator_version())
     s = simulate(design, tb_text, top=top, compile_timeout=compile_timeout,
                  run_timeout=run_timeout, keep_workdir=keep_workdir)
     return score(design, targets, s)
+
+
+def check_policy(design: Design, tb_text: str) -> tuple[list[str], str]:
+    """(violations, parse log): the testbench policy, on the same file layout as simulate().
+
+    A parse failure fails closed (the caller scores it compile_error). A wrong
+    Verilator version raises: the policy reads version-specific XML, so that
+    is a grader failure, not a 0.
+    """
+    if not policy.verilator_version().startswith(policy.VERILATOR):
+        raise RuntimeError(f"testbench policy needs {policy.VERILATOR.strip()}; "
+                           f"found {policy.verilator_version()!r}")
+    with tempfile.TemporaryDirectory(prefix="cb-policy-") as d:
+        work = Path(d)
+        for sub in ("rtl", "covers", "submission"):
+            (work / sub).mkdir()
+        ours = [*(Path(shutil.copy2(f, work / "rtl" / f.name)) for f in design.rtl),
+                *(Path(shutil.copy2(f, work / "covers" / f.name)) for f in design.covers)]
+        tb = work / "submission" / "tb.sv"
+        tb.write_text(tb_text)
+        root, log = policy.parse_testbench(tb, ours)
+        if root is None:
+            return [], log.replace(str(work), "<work>")
+        vs = policy.check_testbench(policy.Ast(root), str(tb), policy.module_names(ours))
+        return [str(v).replace(str(work), "<work>") for v in vs], ""
 
 
 def score(design: Design, targets: list[str], s: Simulation) -> GradeResult:

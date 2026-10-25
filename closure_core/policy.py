@@ -16,13 +16,22 @@ One walker, two policies:
              u_cov_<ID>`, with every port connected to the same-named signal
              (what `.*` does; coverage.plan_hits assumes this placement).
 
-  testbench  denylist of dangerous constructs in agent testbenches (red-team;
-             not yet enforced by the grader): force/release, $system, $c,
-             file I/O, and hierarchical writes into the design. Testbenches
-             are legitimately rich, so only listed constructs are rejected.
-             Our own golds and near-misses get the same denylist; golds also
-             may not use assert/assume (inert without --assert) and must
-             call $fatal (check_gold).
+  testbench  denylist of dangerous constructs in testbenches, enforced by
+             grader.grade() before simulating (status policy_violation):
+             force/release, $system, $c, file I/O, hierarchical writes into
+             the design, any instance placed inside a module the testbench
+             does not define (bind; a bound module can drive a design
+             register through an output port), and redefining a design or
+             cover module. Testbenches are legitimately rich, so only listed
+             constructs are rejected; hierarchical reads and defparam (the
+             same as a #() override) are allowed. Our own golds and
+             near-misses get the same denylist; golds also may not use
+             assert/assume (inert without --assert) and must call $fatal
+             (check_gold).
+
+Verilator keeps the first definition of a module and drops later ones from
+the XML, so parse_testbench puts the testbench first: a redefinition is then
+the definition that survives, and is visible.
 
 The XML is Verilator 5.020's lowered AST. A cover property appears as a named
 begin holding a clocked always whose if-body has a coverinc; each $past,
@@ -41,6 +50,7 @@ do; whether it is hit too easily is the baseline gate's job (baseline = 0).
 
 from __future__ import annotations
 
+import re
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -205,6 +215,20 @@ def check_cover(ast: Ast, cover_file: str, item_id: str, rtl_files: list[str]) -
     return out
 
 
+MODULE_RE = re.compile(r"^\s*module\s+(\w+)", re.M)
+
+
+def module_names(paths: list[Path]) -> set[str]:
+    """Modules defined in our own files (RTL, covers): the names a testbench may not reuse."""
+    return {n for p in paths for n in MODULE_RE.findall(Path(p).read_text())}
+
+
+def parse_testbench(tb: Path | str, ours: list[Path | str], *, extra: tuple[str, ...] = (),
+                    cwd: Path | None = None) -> tuple[ET.Element | None, str]:
+    """xml_ast with the testbench first, so its redefinitions are the ones kept."""
+    return xml_ast([tb, *ours], extra=extra, cwd=cwd)
+
+
 def _testbench_check(node: ET.Element, parents: tuple[ET.Element, ...]) -> str | None:
     tag = node.tag
     if tag in TESTBENCH_DENIED:
@@ -218,12 +242,25 @@ def _testbench_check(node: ET.Element, parents: tuple[ET.Element, ...]) -> str |
     return None
 
 
-def check_testbench(ast: Ast, tb_file: str) -> list[Violation]:
-    """Testbench denylist over every module defined in tb_file."""
-    return [v for m in ast.defined_in(tb_file) for v in walk(ast, m, _testbench_check)]
+def check_testbench(ast: Ast, tb_file: str, reserved: set[str] = frozenset()) -> list[Violation]:
+    """Testbench denylist over every module defined in tb_file.
+
+    reserved: module names defined in our files (module_names); needs XML from
+    parse_testbench, else a redefinition is dropped before we can see it.
+    """
+    mods = ast.defined_in(tb_file)
+    out = [Violation(ast.where(m), "module", f"redefines design or cover module {m.get('name')!r}")
+           for m in mods if m.get("name") in reserved]
+    out += [v for m in mods for v in walk(ast, m, _testbench_check)]
+    names = {m.get("name") for m in mods}
+    out += [Violation(ast.where(i), "bind", f"instance {i.get('name')!r} ({i.get('defName')}) placed inside "
+                                            f"module {m.get('name')!r} (bind is not allowed in a testbench)")
+            for m in ast.modules if m.get("name") not in names
+            for i in m.iter("instance") if ast.file_of(i) == tb_file]
+    return out
 
 
-def check_gold(ast: Ast, tb_file: str) -> list[Violation]:
+def check_gold(ast: Ast, tb_file: str, reserved: set[str] = frozenset()) -> list[Violation]:
     """Our gold testbenches: the denylist, no assertions, and at least one $fatal.
 
     The grader compiles without --assert, so an assertion never fires and a
@@ -231,7 +268,7 @@ def check_gold(ast: Ast, tb_file: str) -> list[Violation]:
     where every assertion is an `if` guarded by a cexpr (assertOn()).
     """
     mods = ast.defined_in(tb_file)
-    out = check_testbench(ast, tb_file)
+    out = check_testbench(ast, tb_file, reserved)
     # One report per source line: `assert ... else $error` guards both parts.
     lines = dict.fromkeys(ast.where(n) for m in mods for n in m.iter("if") if len(n) and n[0].tag == "cexpr")
     out += [Violation(w, "assert", "assert/assume never fires in grading (no --assert); use if (...) $fatal")

@@ -26,6 +26,10 @@ Rules:
 - The testbench must end the simulation with $finish. A run that times out, stops
   without $finish, or ends with $fatal/$stop scores 0.
 - Do not modify the design or the coverage model; only your testbench is used.
+- Drive the design only through its ports. A testbench that uses force/release,
+  writes to signals inside the design, uses bind, redefines a design or coverage
+  module, or calls $system, $c or file I/O is rejected before simulation and
+  scores 0. Reading signals inside the design is allowed.
 """
 
 
@@ -89,5 +93,6 @@ def grader_bundle(design: Design) -> dict[str, bytes]:
     paths: list[Path] = [*core.glob("*.py"), core / "sim_main.cpp",
                          *sorted(design.pack.glob("*.yaml")),
                          *design.rtl, *design.covers,
-                         *(b["file"] for b in design.baselines.values())]
+                         *(b["file"] for b in design.baselines.values()),
+                         *(b["file"] for b in design.randoms.values())]  # load_design resolves them
     return {str(p.relative_to(root)): p.read_bytes() for p in paths}

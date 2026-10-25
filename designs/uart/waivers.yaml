@@ -4,3 +4,27 @@
 # stable mutant ID from closure_core/mutants.py. tools/check reports survivors
 # that no testbench kills and no waiver explains as unexplained holes.
 mutants: {}
+
+# holes: baseline coverage holes (0-hit RTL line/branch/toggle points) that are
+# deliberately not tasks. Point keys match closure_core/gates.point_key; `bits`
+# expands a vector toggle. IDs follow docs/PLAN.md section 4 (W4-W6 have no
+# coverage point and are recorded there only). Decided by a person, never by
+# the proposer. tools/check fails if a waived point is not a baseline hole.
+holes:
+  - id: W1
+    reason: "uart_rx.v:120 implicit else is unreachable: bit_cnt can only be 1 there"
+    points:
+      - {kind: v_branch, file: uart_rx.v, line: 120, name: else}
+  - id: W2
+    reason: "uart_tx.v:106 implicit else is unreachable, by the same argument as W1"
+    points:
+      - {kind: v_branch, file: uart_tx.v, line: 106, name: else}
+  - id: W3
+    reason: >-
+      High prescale bits never toggle in the baseline (prescale 5); trivially closed
+      by a large prescale, and covered by dedicated plan items instead (PLAN.md: R11, R12, T2, T3)
+    points:
+      - {kind: v_toggle, file: uart_rx.v, line: 62, name: prescale, bits: [6, 15]}
+      - {kind: v_toggle, file: uart_rx.v, line: 76, name: prescale_reg, bits: [6, 18]}
+      - {kind: v_toggle, file: uart_tx.v, line: 60, name: prescale, bits: [6, 15]}
+      - {kind: v_toggle, file: uart_tx.v, line: 70, name: prescale_reg, bits: [6, 18]}

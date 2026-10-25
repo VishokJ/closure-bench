@@ -15,6 +15,12 @@ baselines:
   rx: {top: tb_uart_rx, file: designs/uart/baseline/tb_uart_rx.sv}
   tx: {top: tb_uart_tx, file: designs/uart/baseline/tb_uart_tx.sv}
 
+# Fixed-seed random-stimulus testbenches: not a gate. tools/check reports the
+# items they hit (reachable by accident) and adds them to the duplicate corpus.
+random:
+  rx: {top: tb_rand_rx, file: designs/uart/random/tb_rand_rx.sv}
+  tx: {top: tb_rand_tx, file: designs/uart/random/tb_rand_tx.sv}
+
 # Mutation gate (tools/check): fixed-operator mutants of these line ranges,
 # the always blocks. Equivalent mutants are waived in waivers.yaml.
 mutate:

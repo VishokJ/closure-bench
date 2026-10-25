@@ -57,6 +57,8 @@ def main() -> int:
         # One simulation per baseline gives hits for every item at once.
         base_futs = {name: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
                      for name, b in design.baselines.items()}
+        rand_futs = {name: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
+                     for name, b in design.randoms.items()}
         gold_futs = {i: tuple(pool.submit(simulate, design, p.read_text()) for _ in range(2))
                      for i, p in golds.items()}
         near_futs = {it.id: [(p.name, pool.submit(simulate, design, p.read_text()))
@@ -67,12 +69,18 @@ def main() -> int:
                                for p in design.near_misses.get(it.id, ())} for it in items}
 
         baselines = {name: f.result() for name, f in base_futs.items()}
+        randoms = {name: f.result() for name, f in rand_futs.items()}
         base_points = [p for s in baselines.values() for p in s.points]
         corpus = {f"baseline:{n}": s.plan_hits for n, s in baselines.items() if s.sim.status == "ok"}
+        corpus.update({f"random:{n}": s.plan_hits for n, s in randoms.items() if s.sim.status == "ok"})
+        hole_list = gates.holes(baselines)
+        closed: dict[str, list[str]] = {}
 
         for it in items:
-            put(it.id, gates.baseline(it, baselines))
+            put(it.id, gates.baseline(it, baselines, randoms))
             sa, sb = (f.result() for f in gold_futs[it.id]) if it.id in gold_futs else (None, None)
+            if sa and sa.sim.status == "ok":
+                closed[it.id] = sorted(set(hole_list) & gates.hit_points(sa))
             a, b = (score(design, [it.id], s) if s else None for s in (sa, sb))
             if a and a.status == "ok":
                 corpus[f"gold:{it.id}"] = a.plan_hits
@@ -100,6 +108,17 @@ def main() -> int:
     value = {i: r["value"].data for i, r in res.items()}
     by_path = {p: sorted(i for i, v in value.items() if v["evidence"] == p)
                for p in ("mutant", "spec", "both", "none")}
+    opted_out = sorted(i for i, r in res.items() if r["near_miss"].data.get("opted_out"))
+    by_random = {i: r["baseline"].data["hit_by_random"] for i, r in res.items() if r["baseline"].data["hit_by_random"]}
+    rand_bad = [f"{n}: status {s.sim.status}" for n, s in randoms.items() if s.sim.status != "ok"]
+    waived = gates.waived_holes(design)
+    bad_hole_waivers = sorted(k for k in waived if k not in hole_list)
+    closed_any = set().union(*closed.values()) if closed else set()
+    open_holes = [k for k in hole_list if k not in waived]
+    holes = {"total": len(hole_list), "waived": len([k for k in hole_list if k in waived]),
+             "closed_by_golds": sorted(closed_any - set(waived)),
+             "remaining": sorted(set(open_holes) - closed_any),
+             "per_item": closed, "bad_waivers": bad_hole_waivers}
 
     # report
     sym = {True: "pass", False: "FAIL", None: "unverified", "n/a": "n/a"}
@@ -120,8 +139,19 @@ def main() -> int:
           f"baseline kills {m['baseline_killed']} ({m['baseline_score']}), "
           f"baseline + golds {m['baseline_plus_gold_score']}; "
           f"{len(m['waived'])} waived, {len(m['unexplained'])} unexplained survivors")
-    print("value evidence: " + ", ".join(f"{p} {len(v)}" for p, v in by_path.items())
-          + (f"; spec-only (always audited): {', '.join(by_path['spec'])}" if by_path["spec"] else ""))
+    print("value evidence: " + ", ".join(f"{p} {len(v)}" for p, v in by_path.items()))
+    audit = sorted(set(by_path["spec"]) | set(opted_out))
+    print(f"always audited: {', '.join(audit) or '-'} (spec-only value: {', '.join(by_path['spec']) or '-'}; "
+          f"near-miss opt-outs: {', '.join(opted_out) or '-'})")
+    print(f"hit by random stimulus: {', '.join(f'{i} {h}' for i, h in by_random.items()) or '-'}")
+    print(f"holes: {holes['total']} in the baseline, {holes['waived']} waived, "
+          f"{len(holes['closed_by_golds'])} closed by golds, {len(holes['remaining'])} remaining")
+    if rand_bad:
+        all_ok = False
+        print(f"FAIL  random testbenches did not run cleanly: {rand_bad}")
+    if bad_hole_waivers:
+        all_ok = False
+        print(f"FAIL  hole waivers on points that are not baseline holes: {bad_hole_waivers}")
     for i, js in duplicate["implies"].items():
         print(f"implies: gold {i} also hits {', '.join(js)}")
     if m["bad_waivers"]:
@@ -133,6 +163,8 @@ def main() -> int:
         {"design": design.name, "orphan_covers": orphans, "mutation": mutation,
          "duplicate": duplicate,
          "value": {"items": value, "by_evidence": by_path, "spec_only_audit": by_path["spec"]},
+         "audit": {"always": audit, "spec_only": by_path["spec"], "near_miss_opt_outs": opted_out},
+         "hit_by_random": by_random, "holes": holes,
          "items": {i: {g: {"ok": r.ok, "detail": r.detail} for g, r in gs.items()}
                    for i, gs in res.items()}},
         indent=2, default=str) + "\n")

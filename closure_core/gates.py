@@ -11,7 +11,10 @@ gates one at a time, cheapest first, stopping at the first failure.
                 cov_<ID>, one bind (closure_core/policy.py, on Verilator's AST)
   baseline      no baseline testbench hits the item (the task is not free)
   gold          the gold testbench scores 1 (the task is solvable)
-  near_miss     every near-miss testbench scores 0 (boundary is exact)
+  near_miss     at least one near-miss testbench, and every one scores 0 (the
+                boundary is exact); an item may instead give a
+                near_miss_waiver, a written reason why no near-miss is
+                meaningful, which passes and is always audited
   determinism   grading the gold twice gives an identical result
   value         evidence the item matters, either kind is enough:
                 mutant: the gold kills at least one mutant every baseline
@@ -22,12 +25,16 @@ gates one at a time, cheapest first, stopping at the first failure.
                 features or spec mismatches, so no kill is only absence of
                 evidence. Kills are computed for every item either way.
                 Spec-only items are always in the audit sample.
-  duplicate     some testbench we run (baseline, gold, near-miss) hits this item
+  duplicate     some testbench we run (baseline, random, gold, near-miss) hits this item
                 and not the other, for every other item compared. A signature
                 is the set of testbenches that hit an item; adding testbenches
                 can only split signatures, never merge them. Reported, not
                 enforced: implications (this gold also hits item X) and items
                 whose golds kill the same baseline-surviving mutants.
+
+Reported, not gates: which items the fixed-seed random testbenches hit
+(random_hits: reachable by accident), and the baseline coverage holes each
+gold closes (holes, waived_holes).
 
 No gate calls a model. Solvability from the agent's view is established by the
 pilot; items no pilot model solves get a fairness check (docs/PLAN.md §6).
@@ -113,20 +120,61 @@ def citations(design: Design, item: PlanItem, store: cit.DocStore,
                       {"verified": verified})
 
 
-def baseline(item: PlanItem, baselines: dict[str, Simulation]) -> GateResult:
+def baseline(item: PlanItem, baselines: dict[str, Simulation],
+             randoms: dict[str, Simulation] | None = None) -> GateResult:
     bad = [f"{n}: status {s.sim.status}" for n, s in baselines.items() if s.sim.status != "ok"]
     hit = [f"{n}: {s.plan_hits[item.id]} hits" for n, s in baselines.items() if s.plan_hits[item.id] > 0]
-    return GateResult("baseline", not bad and not hit, "; ".join(bad + hit))
+    rnd = random_hits(item, randoms or {})
+    note = [f"hit by random stimulus ({', '.join(f'{n}: {h}' for n, h in rnd.items())})"] if rnd else []
+    return GateResult("baseline", not bad and not hit, "; ".join(bad + hit + note), {"hit_by_random": rnd})
+
+
+def random_hits(item: PlanItem, randoms: dict[str, Simulation]) -> dict[str, int]:
+    """Hits per random testbench (status ok only): reported, never a failure."""
+    return {n: s.plan_hits[item.id] for n, s in randoms.items()
+            if s.sim.status == "ok" and s.plan_hits[item.id] > 0}
+
+
+CODE_KINDS = ("v_line", "v_branch", "v_toggle")
+
+
+def point_key(p) -> str:
+    return f"{p.kind} {Path(p.file).name}:{p.line} {p.name}"
+
+
+def holes(baselines: dict[str, Simulation]) -> list[str]:
+    """Design (RTL) line/branch/toggle points no baseline hits."""
+    best: dict[str, int] = {}
+    for s in baselines.values():
+        for p in s.points:
+            if p.kind in CODE_KINDS and "/rtl/" in p.file:
+                best[point_key(p)] = max(best.get(point_key(p), 0), p.hits)
+    return sorted(k for k, h in best.items() if h == 0)
+
+
+def hit_points(s: Simulation) -> set[str]:
+    return {point_key(p) for p in s.points if p.kind in CODE_KINDS and "/rtl/" in p.file and p.hits > 0}
+
+
+def waived_holes(design: Design) -> dict[str, str]:
+    """waivers.yaml holes: point key -> waiver ID. `bits: [lo, hi]` expands a vector toggle."""
+    out = {}
+    for w in design.waivers.get("holes", []) or []:
+        for p in w["points"]:
+            names = ([f"{p['name']}[{b}]" for b in range(p["bits"][0], p["bits"][1] + 1)]
+                     if "bits" in p else [p["name"]])
+            out.update({f"{p['kind']} {p['file']}:{p['line']} {n}": w["id"] for n in names})
+    return out
 
 
 def testbench_policy(design: Design, tb: Path, *, gold: bool) -> list[str]:
     """Policy violations of one of our testbenches (gold or near-miss)."""
-    rtl = [str(p) for p in design.rtl]
-    root, log = policy.xml_ast([*rtl, str(tb)], extra=policy.TESTBENCH_FLAGS)
+    ours = [*design.rtl, *design.covers]
+    root, log = policy.parse_testbench(tb, ours, extra=policy.TESTBENCH_FLAGS)
     if root is None:
         return [f"verilator --xml-only failed:\n{log[-1500:]}"]
     check = policy.check_gold if gold else policy.check_testbench
-    return [str(v) for v in check(policy.Ast(root), str(tb))]
+    return [str(v) for v in check(policy.Ast(root), str(tb), policy.module_names(ours))]
 
 
 def gold(item: PlanItem, a: GradeResult | None, violations: list[str] = ()) -> GateResult:
@@ -165,7 +213,13 @@ def near_miss(item: PlanItem, results: list[tuple[str, GradeResult]],
               violations: dict[str, list[str]] | None = None,
               overlap: dict[str, float | None] | None = None) -> GateResult:
     if not results:
-        return GateResult("near_miss", "n/a")
+        if item.near_miss_waiver:
+            return GateResult("near_miss", True, f"opted out (audited): {item.near_miss_waiver}",
+                              {"opted_out": item.near_miss_waiver})
+        return GateResult("near_miss", False, "no near-miss testbench; add one, or a near_miss_waiver "
+                                              "with the reason no near-miss is meaningful")
+    if item.near_miss_waiver:
+        return GateResult("near_miss", False, "near_miss_waiver given but near-miss testbenches exist")
     bad = [f"{n}: policy: {'; '.join(v)}" for n, v in (violations or {}).items() if v]
     wrong = [f"{n}: status {r.status}, hits {r.target_hits[item.id]}"
              for n, r in results if r.status != "ok" or r.target_hits[item.id] != 0]
@@ -189,8 +243,9 @@ def value(kills: list[str], only: list[str], verified: list[tuple[dict, bool | N
     README sources with role: requirement count; RTL and BASE say what the
     design does, not what it must do.
     """
-    spec = [source_label(s) for s, ok in verified
+    reqs = [s for s, ok in verified
             if s.get("role") == "requirement" and s["type"] in REQUIREMENT_TYPES and ok is True]
+    spec = [source_label(s) for s in reqs]
     evidence = {(True, True): "both", (True, False): "mutant",
                 (False, True): "spec", (False, False): "none"}[(bool(kills), bool(spec))]
     return GateResult(
@@ -198,7 +253,13 @@ def value(kills: list[str], only: list[str], verified: list[tuple[dict, bool | N
         f"evidence {evidence}; kills {len(kills)} baseline survivors"
         + (f" ({len(only)} only by this gold: {', '.join(only)})" if only else "")
         + f"; requirements: {'; '.join(spec) or '-'}",
-        {"evidence": evidence, "kills": kills, "only_by_this_gold": only, "requirements": spec})
+        {"evidence": evidence, "kills": kills, "only_by_this_gold": only, "requirements": spec,
+         "requirement_keys": [requirement_key(s) for s in reqs]})
+
+
+def requirement_key(src: dict) -> str:
+    """One cited requirement sentence: where it is and its anchor."""
+    return f'{source_label(src)} "{src.get("anchor", "")}"'
 
 
 def duplicate(corpus: dict[str, dict[str, int]], ids: list[str],

@@ -10,3 +10,5 @@ results/
 .DS_Store
 *.egg-info/
 .cache/
+# Proposer runs: only the run that produced the shipped plan is committed (add a !runs/propose/<id>/ line)
+runs/propose/*

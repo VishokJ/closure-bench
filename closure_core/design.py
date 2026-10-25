@@ -17,6 +17,7 @@ class PlanItem:
     tier: str            # predicted tier until calibration replaces it
     sources: tuple[dict, ...] = field(default_factory=tuple)  # role: evidence (default) | requirement
     provenance: dict = field(default_factory=dict)
+    near_miss_waiver: str | None = None  # why no near-miss is meaningful; audited
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class Design:
     waivers: dict = field(default_factory=dict)  # waivers.yaml contents
     golds: dict[str, Path] = field(default_factory=dict)  # plan ID -> gold/<ID>.sv, if present
     near_misses: dict[str, tuple[Path, ...]] = field(default_factory=dict)  # near_miss/<ID>_*.sv
+    randoms: dict[str, dict] = field(default_factory=dict)  # fixed-seed random TBs, like baselines
 
     def item(self, plan_id: str) -> PlanItem:
         for it in self.plan:
@@ -76,6 +78,7 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
             tier=it["tier"],
             sources=tuple(it.get("sources", [])),
             provenance=dict(it.get("provenance", {})),
+            near_miss_waiver=(str(it["near_miss_waiver"]).strip() or None) if it.get("near_miss_waiver") else None,
         )
         for it in plan_spec["items"]
     )
@@ -98,6 +101,7 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
             k: {"top": v["top"], "file": resolve(v["file"])}
             for k, v in spec.get("baselines", {}).items()
         },
+        randoms={k: {"top": v["top"], "file": resolve(v["file"])} for k, v in spec.get("random", {}).items()},
         mutate={resolve(f): (lo, hi) for f, (lo, hi) in spec.get("mutate", {}).items()},
         waivers=(yaml.safe_load((pack / spec["waivers"]).read_text()) or {}) if "waivers" in spec else {},
         golds={it.id: g.resolve() for it in plan if (g := pack / "gold" / f"{it.id}.sv").is_file()},

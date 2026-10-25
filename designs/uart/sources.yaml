@@ -1,12 +1,28 @@
 # External documents cited by plan.yaml. Not vendored (copyrighted); tools/check
 # downloads each one to a local cache, pins its SHA-256 in sources.lock on first
 # download, and verifies the hash and the cited anchors on every later run.
+#
+# context_pages: the only pages whose extracted text goes to the plan proposer
+# (tools/propose_plan). A human relevance choice, kept to what is cited or
+# citable: more pages cost tokens on every call without making new items more
+# likely. Each page states why it is included.
 documents:
   pc16550d:
     title: "PC16550D Universal Asynchronous Receiver/Transmitter with FIFOs"
     publisher: "National Semiconductor, June 1995 (TL/C/8652)"
     url: "https://pdos.csail.mit.edu/6.828/2018/readings/hardware/PC16550D.pdf"
+    context_pages:
+      - page: 1
+        reason: "Features list: false start bit detection, complete status reporting"
+      - page: 16
+        reason: "s8.4 Line Status Register: overrun (bit 1), framing error (bit 3), break (bit 4)"
   axis:
     title: "AMBA AXI-Stream Protocol Specification, ARM IHI 0051B, Issue B"
     publisher: "Arm, April 2021"
     url: "https://documentation-service.arm.com/static/64819f1516f0f201aa6b963c"
+    context_pages:
+      - page: 18
+        reason: "s2.2 handshake rules (transfer needs TVALID and TREADY; TVALID held until
+          the handshake) and s2.2.1 (data unchanged while TVALID waits)"
+      - page: 28
+        reason: "s2.8 clock and reset: inputs sampled on the rising edge; TVALID low during reset"

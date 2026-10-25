@@ -29,6 +29,8 @@ def r1_candidate(d: Path, i: str = "P1") -> Path:
     (d / "item.yaml").write_text(yaml.safe_dump(item, sort_keys=False))
     (d / "cover.sv").write_text((PACK / "covers" / "R1.sv").read_text().replace("R1", i))
     shutil.copy(PACK / "gold" / "R1.sv", d / "gold.sv")
+    (d / "near_miss").mkdir()
+    shutil.copy(PACK / "near_miss" / "R1_good_stop.sv", d / "near_miss" / "good_stop.sv")
     return d
 
 
@@ -37,7 +39,7 @@ def empty_pack(d: Path) -> Path:
     shutil.copytree(PACK, d)
     plan = yaml.safe_load((d / "plan.yaml").read_text())
     (d / "plan.yaml").write_text(yaml.safe_dump({**plan, "items": []}, sort_keys=False))
-    for f in [*(d / "covers").glob("*.sv"), *(d / "gold").glob("*.sv")]:
+    for f in [*(d / "covers").glob("*.sv"), *(d / "gold").glob("*.sv"), *(d / "near_miss").glob("*.sv")]:
         f.unlink()
     return d
 
@@ -139,12 +141,7 @@ def test_copy_of_r1_fails_at_duplicate(tmp_path):
 
 @needs_sim
 def test_near_miss_overlap_is_reported(tmp_path):
-    cand = r1_candidate(tmp_path / "c")
-    g = (cand / "gold.sv").read_text()
-    (cand / "near_miss").mkdir()
-    # A good frame: same path except the stop bit, so it misses the frame error.
-    (cand / "near_miss" / "good_stop.sv").write_text(
-        g.replace("send_frame(8'h55, 1'b0);", "send_frame(8'h55, 1'b1);").replace(FATAL, ""))
+    cand = r1_candidate(tmp_path / "c")  # has good_stop: same path except the stop bit
     # Does nothing: passes the near-miss gate vacuously.
     (cand / "near_miss" / "idle.sv").write_text("module tb; initial $finish; endmodule\n")
     res = run(tmp_path, cand)
@@ -153,3 +150,28 @@ def test_near_miss_overlap_is_reported(tmp_path):
     overlap = nm["data"]["overlap"]
     assert nm["data"]["low_overlap"] == ["P1_idle.sv"]
     assert overlap["P1_good_stop.sv"] > overlap["P1_idle.sv"]
+
+
+@needs_sim
+def test_near_miss_required_unless_waived(tmp_path):
+    cand = r1_candidate(tmp_path / "c")
+    shutil.rmtree(cand / "near_miss")
+    res = run(tmp_path, cand)
+    assert res["failed_gate"] == "near_miss" and "no near-miss" in gate_of(res, "near_miss")["detail"]
+
+    item = yaml.safe_load((cand / "item.yaml").read_text())
+    item["near_miss_waiver"] = "test: no meaningful near-miss"
+    (cand / "item.yaml").write_text(yaml.safe_dump(item, sort_keys=False))
+    (tmp_path / "w").mkdir()
+    res = run(tmp_path / "w", cand)
+    nm = gate_of(res, "near_miss")
+    assert nm["ok"] is True and nm["data"]["opted_out"] == "test: no meaningful near-miss"
+
+
+def test_near_miss_waiver_with_near_misses_fails():
+    from closure_core.design import PlanItem
+    from closure_core.gates import near_miss
+    from closure_core.grader import GradeResult
+    it = PlanItem("P1", "P1_x", "cov_P1", "d", "T0", near_miss_waiver="why")
+    r = GradeResult("uart", ["P1"], "ok", 0.0, {"P1": 0}, {"P1": 0}, 0, 0, "")
+    assert near_miss(it, [("a.sv", r)]).ok is False
