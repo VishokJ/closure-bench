@@ -1,0 +1,46 @@
+# R1 slice with the bash harness: the agent gets a shell in its sandbox with
+# Verilator and /workspace/run.sh (our grader on a testbench of its choice), and
+# writes /workspace/submission/tb.sv. Grading is unchanged: a fresh, offline,
+# isolated Prime sandbox with only submission/ restored. Run from the repo root
+# with the venv from the README activated:
+#   vf-eval @ configs/slice_r1_bash.toml
+model = "openai/gpt-5-mini"   # any Prime Inference model; override with -m
+group_size = 3                # rollouts per task (-r)
+
+[sampling]
+temperature = 1.0
+max_tokens = 16000            # per model response
+
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+[monitors]
+prime = "None"
+
+[[source]]
+[source.env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+# Must match the harness id below: it selects the prompt and installs run.sh.
+harness = "bash"
+# Agent wall clock (s); ~9 s per simulation. A timed-out run is still graded
+# on whatever submission/tb.sv holds.
+agent_timeout = 1200
+# Stated in the prompt; must equal [source.env.agent] max_turns (checked at setup).
+max_turns = 40
+
+[source.env.agent]
+# Cost guard: each turn re-sends the growing context, so tokens (not wall
+# clock) are the runaway risk. A capped run still finalizes and is graded;
+# the budget metric records turns, turn_cap_hit and tokens per rollout.
+max_turns = 40               # = taskset max_turns above
+
+[source.env.agent.harness]
+id = "bash"
+# verifiers defaults kept: edit tool on, web search off, auto context compaction.
+
+[source.env.agent.runtime]
+type = "prime"
+
+[source.env.agent.scoring]
+mode = "isolated"
