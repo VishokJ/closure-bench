@@ -1,0 +1,30 @@
+# First end-to-end slice: one task (R1), null harness (single reply, no tools),
+# isolated grading in a fresh Prime sandbox. Run from the repo root with the
+# venv from the README activated:
+#   vf-eval @ configs/slice_r1.toml
+model = "openai/gpt-5-mini"   # any Prime Inference model; override with -m
+group_size = 3                # rollouts per task (-r)
+
+[sampling]
+temperature = 1.0
+max_tokens = 16000
+
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+[monitors]
+prime = "None"
+
+[[source]]
+[source.env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+
+[source.env.agent.harness]
+id = "null"
+
+[source.env.agent.runtime]
+type = "prime"
+
+[source.env.agent.scoring]
+mode = "isolated"

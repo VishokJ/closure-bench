@@ -1,0 +1,18 @@
+[project]
+name = "closure-bench"
+version = "0.1.0"
+description = "Coverage-closure benchmark: verifiers v1 adapter around closure_core"
+requires-python = ">=3.11"
+dependencies = ["verifiers", "closure-core"]
+
+[tool.uv.sources]
+closure-core = { path = "../..", editable = true }
+# Pinned: verifiers.v1 changes daily; this is the commit the adapter was built against.
+verifiers = { git = "https://github.com/PrimeIntellect-ai/verifiers", rev = "9f0f03a" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["closure_bench"]
