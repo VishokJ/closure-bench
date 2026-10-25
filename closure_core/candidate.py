@@ -36,7 +36,7 @@ from closure_core.design import find_repo_root, load_design
 from closure_core.gates import GateResult
 from closure_core.grader import score, simulate
 
-ORDER = ["format", "cover_sync", "cover_policy", "citations", "baseline", "gold", "near_miss",
+ORDER = ["format", "cover_sync", "cover_policy", "description_sync", "citations", "baseline", "gold", "near_miss",
          "determinism", "value", "duplicate"]
 REQUIRED = ("id", "cover", "cover_module", "description", "tier", "sources")
 ID_RE = re.compile(r"^[A-Z][A-Za-z0-9]*$")
@@ -124,7 +124,8 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
 
         if not ok(gates.cover_sync(it, gates.cover_labels(design))):
             return finish(i)
-        if not ok(gates.cover_policy(design, it)):
+        parsed = gates.parse_cover(design, it)
+        if not ok(gates.cover_policy(design, it, parsed)) or not ok(gates.description_sync(design, it, parsed)):
             return finish(i)
         baselines = {n: f.result() for n, f in base_futs.items()}
         cites = gates.citations(design, it, citations.DocStore(design.pack, offline=offline),

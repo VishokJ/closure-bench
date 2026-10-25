@@ -7,6 +7,7 @@ on its own and is rejected at the set stage as a duplicate of c01.
 """
 
 import json
+import re
 import shutil
 import uuid
 
@@ -110,9 +111,14 @@ def test_progress_counts_only_what_the_run_adds():
     before = {"survivors": ["m1", "m2", "m3"], "killed_by_plan": ["m1"],
               "holes": ["h1", "h2", "h3", "w1"], "waived_holes": ["w1"], "closed_by_plan": ["h1"],
               "requirements_by_plan": ["r1"]}
-    p = propose.progress(before, [_res(kills=["m1", "m2"], holes=["h1", "h2", "w1"], reqs=["r1", "r2"]),
-                                  _res(kills=["m2", "base_killed"])])
-    assert p["mutants"] == {"baseline_survivors": 3, "killed_by_plan": 1, "killed_by_run": ["m2"], "remaining": 1}
+    p = propose.progress(before, {"c01": _res(kills=["m1", "m2"], holes=["h1", "h2", "w1"], reqs=["r1", "r2"]),
+                                  "c02": _res(kills=["m2", "m3", "base_killed"])})
+    m = p["mutants"]
+    assert (m["baseline_survivors"], m["killed_by_plan"], m["killed_by_run"], m["remaining"]) == (3, 1, ["m2", "m3"], 0)
+    # m1 was already killed by the plan; m2 is killed by both candidates, m3 only by c02.
+    assert m["per_candidate"] == {"c01": {"kills": 1, "only_this_candidate": 0},
+                                  "c02": {"kills": 2, "only_this_candidate": 1}}
+    assert m["shared"] == {"m2": ["c01", "c02"]}
     assert p["holes"] == {"baseline": 4, "waived": 1, "closed_by_plan": 1, "closed_by_run": ["h2"],
                           "remaining": ["h3"]}
     assert p["requirements"] == {"cited_by_plan": 1, "new_in_run": ["r2"]}
@@ -136,26 +142,58 @@ def empty_pack(d):
     return d
 
 
+def survivor_answer(messages):
+    """Pass 2: target the first survivor listed with a new task, call the rest unkillable."""
+    ids = re.findall(r"^- (\S+:\d+:\w+:\d+)  \(", messages[0]["content"], re.M)
+    unk = "\n".join(f'- {{mutant: "{m}", reason: "scripted"}}' for m in ids[1:])
+    return (f"<candidates>\n- title: frame error a third time\n  kind: task\n  target_module: uart_rx\n"
+            f"  behaviour: same again\n  why_baseline_misses: same\n  targets: [\"{ids[0]}\"]\n"
+            f"  sources: [{{type: DOC, doc: pc16550d, page: 16}}]\n</candidates>\n<unkillable>\n{unk}\n</unkillable>\n")
+
+
+def test_parse_survivor_answer():
+    ok = ('<candidates>\n- {title: a, kind: task, targets: ["m1"]}\n</candidates>\n'
+          '<unkillable>\n- {mutant: "m2", reason: "equivalent"}\n</unkillable>')
+    cands, unk = propose.parse_survivor_answer(ok, ["m1", "m2"])
+    assert cands[0]["targets"] == ["m1"] and unk == [{"mutant": "m2", "reason": "equivalent"}]
+    for survivors, msg in [(["m1", "m2", "m3"], "not addressed: ['m3']"), (["m1"], "not remaining survivors: ['m2']")]:
+        with pytest.raises(propose.ParseError, match=re.escape(msg)):
+            propose.parse_survivor_answer(ok, survivors)
+    both = ok.replace('mutant: "m2"', 'mutant: "m1"')
+    with pytest.raises(propose.ParseError, match="both targeted and called unkillable"):
+        propose.parse_survivor_answer(both, ["m1"])
+    with pytest.raises(propose.ParseError, match="no targets"):
+        propose.parse_survivor_answer(ok.replace('targets: ["m1"]', "x: 1"), ["m2"])
+
+
 @needs_sim
 def test_scripted_run_and_replay(scratch):
-    model = propose.ScriptedModel([STAGE_A, r1_bundle("  initial $finish;\n"), r1_bundle(), r1_bundle()])
+    bad_yaml = STAGE_A.replace("sources: [{type: DOC, doc: pc16550d, page: 16}]",
+                               "sources: [{type: BASE, point: {name: prescale[4]}}]")
+    model = propose.ScriptedModel([bad_yaml, STAGE_A, r1_bundle("  initial $finish;\n"), r1_bundle(), r1_bundle(),
+                                   survivor_answer, r1_bundle()])
     ex = propose.Executor(image=None, j=8)
     run_dir = scratch / "run"
-    s = propose.run(run_dir, model, ex, base=empty_pack(scratch / "base"))
+    s = propose.run(run_dir, model, ex, base=empty_pack(scratch / "base"), survivor_pass=True)
+    p1, p2 = s["passes"]["1"], s["passes"]["2"]
 
-    assert s["proposed"] == {"tasks": 2, "waivers": 1}
+    # Stage A: the first answer is not YAML; one repair turn fixes it.
+    assert p1["stage_a"]["attempts"] == 2 and p1["stage_a"]["error"] is None
+    rep = json.loads((run_dir / "responses/stage_a/1.json").read_text())["messages"][-1]["content"]
+    assert "not valid YAML" in rep
+    assert s["proposed"] == {"tasks": 3, "waivers": 1, "by_pass": {"1": 2, "2": 1}}
     assert [w["cid"] for w in s["waiver_proposals"]] == ["c03"]
     assert json.loads((run_dir / "gates/c01/0.json").read_text())["failed_gate"] == "cover_policy"
-    assert s["repair"] == {"failed_first_attempt": 1, "repaired": 1, "rate": 1.0}
-    assert s["rejected_at"] == {} and s["rejected_at_set"] == {"c02": "duplicate"}
-    assert s["accepted"] == ["c01"]
+    assert p1["repair"] == {"failed_first_attempt": 1, "repaired": 1, "rate": 1.0}
+    assert p1["rejected_at"] == {} and p1["rejected_at_set"] == {"c02": "duplicate"}
+    assert p1["accepted"] == ["c01"] and s["accepted"] == ["c01"]
     assert s["cites_outside_context_pages"] == ["c02"]       # pc16550d p17 is not a context page
-    first = {f["gate"]: f["passed"] for f in s["funnel_first_attempt"]}
+    first = {f["gate"]: f["passed"] for f in p1["funnel_first_attempt"]}
     assert (first["proposed"], first["cover_sync"], first["cover_policy"], first["duplicate"]) == (2, 2, 1, 1)
-    nm = next(f for f in s["funnel_final"] if f["gate"] == "near_miss")
+    nm = next(f for f in p1["funnel_final"] if f["gate"] == "near_miss")
     assert (nm["passed"], nm["opted_out"]) == (2, 0)
     assert s["hit_by_random"] == {"c01": {"rx": 101}}      # frame errors happen by accident
-    prog = s["progress"]                                    # base pack is empty: R1's effect is the run's
+    prog = p1["progress"]                                   # base pack is empty: R1's effect is the run's
     assert prog["mutants"]["killed_by_plan"] == 0 and prog["mutants"]["killed_by_run"]
     assert "v_branch uart_rx.v:122 else" in prog["holes"]["closed_by_run"]
     assert prog["holes"]["waived"] == 48 and prog["requirements"]["cited_by_plan"] == 0
@@ -163,7 +201,18 @@ def test_scripted_run_and_replay(scratch):
     repair = json.loads((run_dir / "responses/c01/1.json").read_text())["messages"][-1]["content"]
     assert "cover_policy" in repair and "initial is not allowed" in repair
 
+    # Pass 2: sees the survivors pass 1 left; c04 (R1 again) passes alone, fails the set stage,
+    # and its gold does not kill the survivor it claimed.
+    sp = s["survivor_pass"]
+    assert sp["remaining_before"] == prog["mutants"]["remaining"] and len(sp["unkillable"]) == sp["remaining_before"] - 1
+    assert p2["rejected_at"] == {} and p2["rejected_at_set"] == {"c04": "duplicate"} and p2["accepted"] == []
+    assert sp["targets_killed"] == {"c04": []}
+    assert p2["progress"]["mutants"]["killed_by_plan"] == prog["mutants"]["killed_by_run"].__len__()
+    assert s["progress_total"]["mutants"]["killed_by_run"] == prog["mutants"]["killed_by_run"]
+
     assert propose.replay(run_dir, ex) == []
+    # --write-from refuses: the run gated against an empty pack, not designs/uart.
+    assert propose.write_from(run_dir, ex) == ["designs/uart differs from the run's base_pack; re-run the proposer"]
 
     # Replay must notice a recorded decision it cannot reproduce.
     g = run_dir / "gates/c02/0.json"
@@ -171,3 +220,33 @@ def test_scripted_run_and_replay(scratch):
     rec["accepted"] = False
     g.write_text(json.dumps(rec))
     assert "c02 attempt 0: gate result differs" in propose.replay(run_dir, ex)
+
+
+def test_author_all_parallel(scratch):
+    """Concurrent Stage B: each conversation stays under its own cid."""
+    import threading
+    import time
+
+    class Echo:
+        params = {"model": "echo", "temperature": 0, "max_tokens": 0}
+        lock, live, peak = threading.Lock(), 0, 0
+
+        def __call__(self, messages):
+            with self.lock:
+                self.live += 1
+                self.peak = max(self.peak, self.live)
+            time.sleep(0.05)
+            with self.lock:
+                self.live -= 1
+            title = re.search(r"title: (t\d)", messages[0]["content"]).group(1)
+            return {"text": f"no bundle for {title}", "finish_reason": "stop", "id": "e", "model": "e",
+                    "usage": None, "seconds": 0}
+
+    cands = [{"cid": f"c0{n}", "pass": 1, "title": f"t{n}", "kind": "task"} for n in range(1, 5)]
+    model = Echo()
+    propose.author_all(scratch, model, None, cands, "ctx", parallel=3)
+    assert model.peak == 3
+    for c in cands:
+        files = sorted((scratch / "responses" / c["cid"]).glob("*.json"))
+        assert len(files) == propose.RETRIES + 1
+        assert all(json.loads(f.read_text())["response"]["text"] == f"no bundle for {c['title']}" for f in files)

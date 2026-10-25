@@ -129,6 +129,7 @@ stopping at the first failure.
 | Gate | Rule | Failure it catches |
 |---|---|---|
 | `cover_policy` | cover file uses only allowed constructs (AST of `verilator --xml-only`), one `bind` to a design module with `.*` | a cover with logic of its own that fakes a hit or ends the run |
+| `description_sync` | every design signal and sized/hex constant the description names is read by the cover (same AST; a declared but unread port does not count) | a description that promises more than the grader checks |
 | `citations` | every source verifies (§5) | invented or misplaced evidence |
 | `cover_sync` | exactly one cover with the item's label, in the named module | plan and cover files out of sync |
 | `baseline` | no baseline testbench hits the item | free tasks |

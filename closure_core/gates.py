@@ -9,6 +9,10 @@ gates one at a time, cheapest first, stopping at the first failure.
   cover_sync    exactly one cover with the item's label, in the module the plan names
   cover_policy  the cover file only observes: allowlisted constructs, one module
                 cov_<ID>, one bind (closure_core/policy.py, on Verilator's AST)
+  description_sync  every design signal and sized/hex constant the description
+                names is read by the cover (a port declared but never read
+                does not count): the description cannot promise what the
+                grader does not check. Names and constants only.
   baseline      no baseline testbench hits the item (the task is not free)
   gold          the gold testbench scores 1 (the task is solvable)
   near_miss     at least one near-miss testbench, and every one scores 0 (the
@@ -43,6 +47,7 @@ pilot; items no pilot model solves get a fairness check (docs/PLAN.md §6).
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from concurrent.futures import as_completed
@@ -86,14 +91,31 @@ def cover_sync(item: PlanItem, labels: dict[str, list[str]]) -> GateResult:
     return GateResult("cover_sync", ok, "" if ok else f"label {item.cover!r} found in modules {mods}")
 
 
-def cover_policy(design: Design, item: PlanItem) -> GateResult:
-    cover = str(design.pack / "covers" / f"{item.id}.sv")
-    rtl = [str(p) for p in design.rtl]
-    root, log = policy.xml_ast([*rtl, cover])
-    if root is None:
+def parse_cover(design: Design, item: PlanItem) -> tuple[policy.Ast | None, str]:
+    """One parse of the RTL and the item's cover, shared by cover_policy and description_sync."""
+    root, log = policy.xml_ast([*map(str, design.rtl), str(design.pack / "covers" / f"{item.id}.sv")])
+    return (policy.Ast(root) if root is not None else None), log
+
+
+def cover_policy(design: Design, item: PlanItem, parsed: tuple | None = None) -> GateResult:
+    ast, log = parsed or parse_cover(design, item)
+    if ast is None:
         return GateResult("cover_policy", False, f"verilator --xml-only failed:\n{log[-1500:]}")
-    vs = policy.check_cover(policy.Ast(root), cover, item.id, rtl)
+    rtl = [str(p) for p in design.rtl]
+    vs = policy.check_cover(ast, str(design.pack / "covers" / f"{item.id}.sv"), item.id, rtl)
     return GateResult("cover_policy", not vs, "\n".join(map(str, vs)), {"violations": [str(v) for v in vs]})
+
+
+def description_sync(design: Design, item: PlanItem, parsed: tuple | None = None) -> GateResult:
+    """Every design signal and sized/hex constant the description names is read by the cover."""
+    ast, log = parsed or parse_cover(design, item)
+    if ast is None:
+        return GateResult("description_sync", False, f"verilator --xml-only failed:\n{log[-1500:]}")
+    missing = policy.check_description(ast, str(design.pack / "covers" / f"{item.id}.sv"), item.id,
+                                       [str(p) for p in design.rtl], item.description)
+    return GateResult("description_sync", not missing, "\n".join(
+        f"the description names {x} but the cover does not check it; either check it in the cover "
+        f"or remove it from the description" for x in missing), {"missing": missing})
 
 
 def citations(design: Design, item: PlanItem, store: cit.DocStore,
@@ -303,7 +325,12 @@ def mutation_runs(design: Design, golds: dict[str, Path], pool, cache_path: Path
     run = lambda tb, m=None: pool.submit(mutants.simulate, design, *tbs[tb], m, cache=cache)
     orig = {tb: f.result() for tb, f in {tb: run(tb) for tb in tbs}.items()}
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    save = lambda: cache_path.write_text(json.dumps(dict(cache), indent=1, sort_keys=True) + "\n")
+    def save() -> None:
+        # Atomic: parallel gate runs (tools/propose_plan -p) share this file. A lost
+        # update only costs a re-simulation; a torn read would crash a run.
+        tmp = cache_path.with_name(f"{cache_path.name}.{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(dict(cache), indent=1, sort_keys=True) + "\n")
+        os.replace(tmp, cache_path)
     status: dict[tuple[str, str], str] = {}
 
     def collect(futs: dict, phase: str) -> None:

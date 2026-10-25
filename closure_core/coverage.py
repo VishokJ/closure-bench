@@ -86,4 +86,12 @@ def plan_hits(points: list[CoverPoint], design: Design, cover_files: list[Path])
                     and p.hier.endswith(suffix)
                     and p.hier[: -len(suffix)] in scopes.get(target, set())):
                 hits[it.id] += p.hits
+            elif (p.kind == "v_user" and str(Path(p.file).resolve()) in trusted
+                    and p.module == it.cover_module and p.name == it.cover and p.hier.endswith(suffix)
+                    and any(p.hier[: -len(suffix)] in hs for m, hs in scopes.items()
+                            if m.startswith(f"{target}__"))):
+                # Our cover inside a parameter-specialised copy of the target: the
+                # testbench policy rejects overrides, so reaching this is a grader bug.
+                raise ValueError(f"{it.id}: cover in a parameter-specialised {target}; covers assume "
+                                 f"the default parameters (policy should have rejected this testbench)")
     return hits

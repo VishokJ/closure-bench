@@ -26,4 +26,7 @@ Answer with one block and nothing after it:
   sources:              # what you would cite (verified later)
     - {type: DOC, doc: pc16550d, page: 16}
     - {type: RTL, file: third_party/verilog-uart/rtl/uart_rx.v, lines: [120, 127]}
+    - {type: BASE, point: {kind: v_toggle, file: uart_rx.v, line: 62, name: "prescale[4]"}}
 </candidates>
+
+Quote any value that contains brackets, colons or commas, as in `"prescale[4]"`.

@@ -22,9 +22,14 @@ One walker, two policies:
              the design, any instance placed inside a module the testbench
              does not define (bind; a bound module can drive a design
              register through an output port), and redefining a design or
-             cover module. Testbenches are legitimately rich, so only listed
-             constructs are rejected; hierarchical reads and defparam (the
-             same as a #() override) are allowed. Our own golds and
+             cover module, and any parameter override on a design module
+             (#() or defparam, at any depth) that changes a value: covers are
+             bound without parameters and may assume the defaults. Verilator
+             compiles an override as a renamed copy (uart_rx__D9, origName
+             uart_rx), so that is what is checked; an override equal to the
+             default makes no copy and passes. Testbenches are legitimately
+             rich, so only listed constructs are rejected; hierarchical reads
+             are allowed. Our own golds and
              near-misses get the same denylist; golds also may not use
              assert/assume (inert without --assert) and must call $fatal
              (check_gold).
@@ -71,7 +76,10 @@ COVER_STATEMENTS = {"var", "always", "sentree", "senitem", "begin", "if", "case"
                     "assigndly", "coverinc", "coverdecl"}
 # Pure expression nodes seen in accepted covers (tests/fixtures/policy).
 COVER_EXPRESSIONS = {"varref", "const", "sampled", "not", "and", "or", "xor", "redor", "redand",
-                     "eq", "neq", "gt", "lte", "add", "sub", "sel", "cond", "extend", "concat"}
+                     "eq", "neq", "add", "sub", "sel", "cond", "extend", "concat",
+                     # Every relational form (ok_compare): which one a comparison lowers to
+                     # depends on constant folding and operand order, not on what was written.
+                     "lt", "lte", "gt", "gte", "lts", "ltes", "gts", "gtes", "extends"}
 COVER_ALLOWED = COVER_STATEMENTS | COVER_EXPRESSIONS
 
 TESTBENCH_DENIED = {
@@ -229,6 +237,52 @@ def parse_testbench(tb: Path | str, ours: list[Path | str], *, extra: tuple[str,
     return xml_ast([tb, *ours], extra=extra, cwd=cwd)
 
 
+# Constants a description may name: sized or based Verilog literals and 0x hex.
+# Plain decimals ("prescale 5", "19 clocks") are ignored: too often stimulus or prose.
+DESC_LITERAL = re.compile(r"(?<![\w'])(\d*)'[sS]?([hHdDbBoO])([0-9a-fA-F_]+)\b|\b0[xX]([0-9a-fA-F_]+)\b")
+DESC_IDENT = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
+BASES = {"h": 16, "d": 10, "b": 2, "o": 8}
+
+
+def literal_value(text: str) -> int | None:
+    """Value of a Verilog literal as Verilator writes it in the XML (8'ha5, 32'sh3); None if not one."""
+    m = re.fullmatch(r"\d*'s?([hdbo])([0-9a-fA-F_]+)", text.strip(), re.I)
+    return int(m.group(2).replace("_", ""), BASES[m.group(1).lower()]) if m else None
+
+
+def description_refs(description: str, signals: set[str]) -> tuple[list[str], dict[str, int]]:
+    """(design signal names, {literal text: value}) a plan description mentions."""
+    names = sorted({w for w in DESC_IDENT.findall(description) if w in signals})
+    lits = {}
+    for m in DESC_LITERAL.finditer(description):
+        digits, base = (m.group(3), m.group(2).lower()) if m.group(2) else (m.group(4), "h")
+        lits[m.group(0)] = int(digits.replace("_", ""), BASES[base])
+    return names, lits
+
+
+def check_description(ast: Ast, cover_file: str, item_id: str, rtl_files: list[str],
+                      description: str) -> list[str]:
+    """Names and constants the description mentions that the cover never reads.
+
+    A design signal counts only if the cover reads it through an input port of
+    the same name (connected by .* to that signal); a declared port that is
+    never read does not count, nor does a local register that shares a name.
+    A constant counts if a const with that value appears in the cover module.
+    """
+    cover = next((m for m in ast.defined_in(cover_file) if m.get("name") == f"cov_{item_id}"), None)
+    targets = {m.get("name") for m in ast.modules if ast.file_of(m) in rtl_files
+               for i in m.iter("instance") if ast.file_of(i) == cover_file}
+    signals = {v.get("name") for m in ast.modules if m.get("name") in targets
+               for v in m if v.tag == "var" and not (v.get("param") or v.get("localparam"))}
+    names, lits = description_refs(description, signals)
+    if cover is None:
+        return [*names, *lits]
+    inputs = {v.get("name") for v in cover if v.tag == "var" and v.get("dir") == "input"}
+    read = {n.get("name") for n in cover.iter("varref")} & inputs
+    values = {literal_value(c.get("name") or "") for c in cover.iter("const")}
+    return [n for n in names if n not in read] + [t for t, v in lits.items() if v not in values]
+
+
 def _testbench_check(node: ET.Element, parents: tuple[ET.Element, ...]) -> str | None:
     tag = node.tag
     if tag in TESTBENCH_DENIED:
@@ -257,6 +311,16 @@ def check_testbench(ast: Ast, tb_file: str, reserved: set[str] = frozenset()) ->
                                             f"module {m.get('name')!r} (bind is not allowed in a testbench)")
             for m in ast.modules if m.get("name") not in names
             for i in m.iter("instance") if ast.file_of(i) == tb_file]
+    # Parameter overrides: a specialised copy of one of our modules.
+    special = {m.get("name"): m.get("origName") for m in ast.modules
+               if m.get("origName") in reserved and m.get("name") != m.get("origName")}
+    flagged = [i for m in mods for i in m.iter("instance") if i.get("defName") in special]
+    out += [Violation(ast.where(i), "parameter", f"instance {i.get('name')!r} overrides a parameter of "
+                                                 f"{special[i.get('defName')]!r}; use the default parameters")
+            for i in flagged]
+    if special and not flagged:  # e.g. a defparam reaching an instance inside the design
+        out.append(Violation(tb_file, "parameter", f"parameters of {sorted(set(special.values()))} are overridden; "
+                                                   f"use the default parameters"))
     return out
 
 

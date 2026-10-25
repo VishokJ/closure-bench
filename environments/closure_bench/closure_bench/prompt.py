@@ -26,10 +26,11 @@ Rules:
 - The testbench must end the simulation with $finish. A run that times out, stops
   without $finish, or ends with $fatal/$stop scores 0.
 - Do not modify the design or the coverage model; only your testbench is used.
-- Drive the design only through its ports. A testbench that uses force/release,
-  writes to signals inside the design, uses bind, redefines a design or coverage
-  module, or calls $system, $c or file I/O is rejected before simulation and
-  scores 0. Reading signals inside the design is allowed.
+- Drive the design only through its ports, and instantiate it with its default
+  parameters. A testbench that uses force/release, writes to signals inside the
+  design, uses bind, redefines a design or coverage module, overrides a design
+  parameter (#() or defparam), or calls $system, $c or file I/O is rejected
+  before simulation and scores 0. Reading signals inside the design is allowed.
 """
 
 

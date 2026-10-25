@@ -12,6 +12,12 @@ rejected with the reason.
 - **Plan entry.** One-line `description` an engineer could act on (what must
   happen, not how to make it happen), a predicted `tier` (T0 easy, T1 medium,
   T2 hard: cycle-exact or narrow window, T3 multi-step), and `sources`.
+  The description restates the cover condition in one or two plain sentences
+  and names every signal and value the cover checks. It claims nothing the
+  cover doesn't check: stimulus details (which word was pending first, the
+  prescale you used) belong in the gold, not the description. Every design
+  signal name and every sized or hex constant (8'h3C, 0x3C) in the description
+  must be read by the cover; this is checked.
 - **Cover file.** One module `cov_ITEM` with one cover property labelled
   `ITEM_<short_name>`, and exactly one `bind <design module> cov_ITEM u_cov_ITEM (.*);`.
   Write the literal token `ITEM`; the tool assigns the real ID.
@@ -55,6 +61,8 @@ Covers run inside every future grading run, so they may only observe.
   `$c` or file I/O.
 - End with `$finish`. A run that times out, ends without `$finish`, or calls
   `$fatal`/`$stop` scores 0.
+- Instantiate the design with its default parameters (overrides are rejected);
+  covers may rely on the defaults, e.g. DATA_WIDTH = 8.
 - Verilator runs `<=` inside initial blocks and tasks as blocking. Drive and
   sample on the falling clock edge to avoid races with the design.
 

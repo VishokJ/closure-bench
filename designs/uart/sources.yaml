@@ -14,6 +14,9 @@ documents:
     context_pages:
       - page: 1
         reason: "Features list: false start bit detection, complete status reporting"
+      - page: 12
+        reason: "s6.0 pin descriptions: SOUT is set to the marking (logic 1) state on a Master
+          Reset (txd idle in reset); the only requirement for that among these pages"
       - page: 16
         reason: "s8.4 Line Status Register: overrun (bit 1), framing error (bit 3), break (bit 4)"
   axis:

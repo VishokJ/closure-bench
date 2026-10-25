@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 from closure_core import citations, gates, load_design  # noqa: E402
 from closure_core.grader import score, simulate  # noqa: E402
 
-ORDER = ["citations", "cover_sync", "cover_policy", "baseline", "gold", "near_miss", "determinism", "value", "duplicate"]
+ORDER = ["citations", "cover_sync", "cover_policy", "description_sync", "baseline", "gold", "near_miss", "determinism", "value", "duplicate"]
 
 
 def main() -> int:
@@ -50,7 +50,9 @@ def main() -> int:
     orphans = sorted(set(labels) - {it.cover for it in design.plan})
     for it in items:
         put(it.id, gates.cover_sync(it, labels))
-        put(it.id, gates.cover_policy(design, it))
+        parsed = gates.parse_cover(design, it)
+        put(it.id, gates.cover_policy(design, it, parsed))
+        put(it.id, gates.description_sync(design, it, parsed))
 
     golds = {it.id: design.golds[it.id] for it in items if it.id in design.golds}
     with ThreadPoolExecutor(args.j) as pool:

@@ -1,4 +1,4 @@
-// Allowed: defparam on the DUT is the same as a #() override.
+// Pre-fix: allowed. Now rejected: defparam changes DATA_WIDTH (covers assume the default).
 `timescale 1ns / 1ps
 module tb;
   logic clk = 0; always #4 clk = ~clk;

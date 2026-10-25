@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -24,6 +25,12 @@ RTL = "third_party/verilog-uart/rtl/uart_rx.v"
 COVER_CASES = {
     "ok_r1": ("R1", []),
     "ok_tracking": ("X", []),
+    "ok_compare": ("X", []),     # every relational node; smoke run c01 was rejected for lt
+    # Accepted covers from proposer smoke run 20261025T213446Z (see DESC_CASES).
+    "desc_c01": ("P1", []),
+    "desc_c02": ("P2", []),
+    "desc_c03": ("P3", []),
+    "desc_c03_unused": ("P3", []),
     "ok_trivial": ("X", []),     # passes by design; baseline = 0 rejects it
     "ok_vacuous": ("X", []),     # passes by design; baseline = 0 rejects it
     "bad_initializer": ("X", ["initialstatic is not allowed"]),
@@ -43,6 +50,18 @@ COVER_CASES = {
     "bad_bind_name": ("X", ["as u_cov_X"]),
     "bad_bind_ports": ("X", ["'frame_error' is not connected"]),
 }
+# description_sync: case -> (item ID, plan description, names/constants the cover does not read).
+# Descriptions are the smoke run's (runs/propose/20261025T213446Z-smoke), verbatim.
+DESC_CASES = {
+    # "with prescale 5" is stimulus; the cover reads rxd_reg, not rxd.
+    "desc_c01": ("P1", 'Drive a low glitch on rxd that is high again when the receiver samples the middle of the start bit (with prescale 5, low for 19 clocks). The receiver must reject it as a false start and return to idle without asserting m_axis_tvalid or frame_error. A following well-formed 0xA5 frame must then be received correctly.', ["prescale", "rxd"]),
+    "desc_c02": ("P2", "With m_axis_tready held low and word 8'h3C still pending on m_axis_tdata, a second well-formed frame 8'hA5 arrives; when its stop bit is sampled, overrun_error pulses for exactly one cycle while m_axis_tvalid stays high (tdata then shows 8'hA5).", ["8'h3C"]),   # the pending word is not checked
+    "desc_c03": ("P3", "uart_rx with a received word still pending (m_axis_tvalid high, tready low): the sink accepts it on exactly the clock edge where the next frame's stop bit is sampled high. The new word must then sit on m_axis_tdata with m_axis_tvalid high, and overrun_error pulses for exactly one cycle (the RTL treats a read on the same edge as not read in time).", ["overrun_error"]),
+    # A port added but never read does not count.
+    "desc_c03_unused": ("P3", "uart_rx with a received word still pending (m_axis_tvalid high, tready low): the sink accepts it on exactly the clock edge where the next frame's stop bit is sampled high. The new word must then sit on m_axis_tdata with m_axis_tvalid high, and overrun_error pulses for exactly one cycle (the RTL treats a read on the same edge as not read in time).", ["overrun_error"]),
+}
+R1_DESCRIPTION = ("The receiver flags a frame error: a frame ends with the stop bit low, "
+                  "so frame_error pulses and the word is discarded.")
 # case -> XML tags flagged
 TB_CASES = {
     "tb_ok": [],
@@ -74,6 +93,27 @@ def test_cover_policy(case):
     assert len(got) == len(expected), got
     for want in expected:
         assert any(want in g for g in got), (want, got)
+
+
+@pytest.mark.parametrize("case", DESC_CASES)
+def test_description_sync(case):
+    item, description, missing = DESC_CASES[case]
+    got = policy.check_description(_ast(case), str(FIX / f"{case}.sv"), item, [RTL], description)
+    assert got == missing
+
+
+def test_description_sync_r1():
+    plan = yaml.safe_load((ROOT / "designs/uart/plan.yaml").read_text())
+    assert next(i for i in plan["items"] if i["id"] == "R1")["description"] == R1_DESCRIPTION
+    assert policy.check_description(_ast("ok_r1"), str(FIX / "ok_r1.sv"), "R1", [RTL], R1_DESCRIPTION) == []
+
+
+def test_description_literals():
+    names, lits = policy.description_refs("busy, 8'h3C, 0x3c, 'hA5, 4'd10, 4'b1010, prescale 5, 19 clocks",
+                                          {"busy", "prescale"})
+    assert names == ["busy", "prescale"]
+    assert lits == {"8'h3C": 0x3C, "0x3c": 0x3C, "'hA5": 0xA5, "4'd10": 10, "4'b1010": 10}
+    assert [policy.literal_value(x) for x in ("8'ha5", "32'sh3", "4'ha", "1'h0", "x")] == [0xA5, 3, 10, 0, None]
 
 
 @pytest.mark.parametrize("case", TB_CASES)
