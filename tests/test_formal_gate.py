@@ -342,6 +342,22 @@ def test_witness_key_includes_the_tools_version(pack, monkeypatch):
     assert gates.witness_key(pack, "cover") != a
 
 
+# `yosys -V` in the two manifests of the pipeline image (OSS CAD Suite 2026-10-09).
+YOSYS_ARM64 = "Yosys 0.69+272 (git sha1 230fb23f8, Release, GNU /usr/bin/aarch64-linux-gnu-g++ 15.2.0)"
+YOSYS_X86_64 = "Yosys 0.69+272 (git sha1 230fb23f8, Release, Clang /usr/bin/clang++ 21.1.8)"
+
+
+def test_witness_key_is_the_same_on_arm64_and_x86_64(pack, monkeypatch):
+    keys = {}
+    for arch, v in {"arm64": YOSYS_ARM64, "x86_64": YOSYS_X86_64,
+                    "other revision": YOSYS_X86_64.replace("230fb23f8", "230fb23f9")}.items():
+        monkeypatch.setattr(gates, "formal_version", lambda v=v: v)
+        keys[arch] = gates.witness_key(pack, "cover")
+    assert keys["arm64"] == keys["x86_64"] != keys["other revision"]
+    assert gates.tools_release(YOSYS_ARM64) == "Yosys 0.69+272 (git sha1 230fb23f8)"
+    assert gates.tools_release("yosys, some other format") == "yosys, some other format"
+
+
 # --- format, value and composed near-misses: pure ---------------------------------------
 
 def test_format_rejects_reach_header_in_own_gold(tmp_path):

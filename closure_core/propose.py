@@ -31,6 +31,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -386,6 +387,11 @@ class Executor:
     def __init__(self, image: str | None = IMAGE, j: int | None = None):
         self.image, self.j = image, j or default_jobs()
 
+    @property
+    def label(self) -> str:
+        """Recorded in the manifest, per run and per gated candidate."""
+        return f"docker:{self.image}" if self.image else "local"
+
     def run(self, argv: list[str]) -> subprocess.CompletedProcess:
         if self.image:
             cache = Path.home() / ".cache" / "closure-bench"
@@ -537,7 +543,7 @@ def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
     rules = (PROMPTS / "rules.md").read_text()
     context = render_context(pack, rules, target_only)
     dump(run_dir / "manifest.json", {
-        "run_id": run_dir.name, "git": _git(), "image": executor.image or "local",
+        "run_id": run_dir.name, "git": _git(), "image": executor.image or "local", "executor": executor.label,
         "toolchain": pack["toolchain"], "model": model.params, "retries": RETRIES,
         "prompt_sha": prompt_sha(), "context_pack_sha": sha256((run_dir / "context_pack.json").read_text()),
         "full_docs": full_docs, "max_candidates": max_candidates, "stage_a_only": stage_a_only,
@@ -564,7 +570,8 @@ def resume(run_dir: Path, model, executor: Executor, parallel: int = 1) -> dict:
         raise RuntimeError("the run finished (summary.json exists); nothing to resume")
     if manifest["prompt_sha"] != prompt_sha():
         raise RuntimeError("the prompt templates changed since the run started; cannot resume")
-    manifest.setdefault("resumed", []).append({"git": _git(), "parallel": parallel, "retried_infra": aborted})
+    manifest.setdefault("resumed", []).append({"git": _git(), "parallel": parallel, "retried_infra": aborted,
+                                               "executor": executor.label})
     shutil.rmtree(run_dir / "infra", ignore_errors=True)  # an abort is written again if it recurs
     (run_dir / "summary.json").unlink(missing_ok=True)
     manifest["parallel"] = parallel
@@ -642,10 +649,13 @@ def author(run_dir: Path, model, executor: Executor, cand: dict, pid: str, conte
                                                  candidate=yaml.safe_dump(shown, sort_keys=False).strip())}]
     for attempt in range(RETRIES + 1):
         text = _call(model, messages, run_dir / "responses" / cid / f"{attempt}.json")
+        out = run_dir / "gates" / cid / f"{attempt}.json"
+        fresh = not out.exists()
         try:
             res = gate_response(run_dir / "candidates" / cid / str(attempt), text, pid, executor,
-                                run_dir / "gates" / cid / f"{attempt}.json", run_dir / "base_pack",
-                                target_only, formal)
+                                out, run_dir / "base_pack", target_only, formal)
+            if fresh:
+                record_executor(run_dir, cid, str(attempt), executor)
         except InfraError as e:  # not a decision: stop this candidate, count nothing, resume retries it
             dump(run_dir / "infra" / f"{cid}.json", {"stage": "author", "attempt": attempt, "error": str(e)})
             return
@@ -653,6 +663,22 @@ def author(run_dir: Path, model, executor: Executor, cand: dict, pid: str, conte
             return
         messages = [*messages, {"role": "assistant", "content": text},
                     {"role": "user", "content": repair_message(res)}]
+
+
+_MANIFEST = threading.Lock()
+
+
+def record_executor(run_dir: Path, cid: str, step: str, executor: Executor) -> None:
+    """manifest.json executors: cid -> {attempt or "set": executor label}, for every gate
+    this process ran (a resume or another executor may have decided the others).
+    A replay's work directory has no manifest: replays are not recorded."""
+    path = run_dir / "manifest.json"
+    if not path.exists():
+        return
+    with _MANIFEST:
+        m = load(path)
+        m.setdefault("executors", {}).setdefault(cid, {})[step] = executor.label
+        dump(path, m)
 
 
 def gate_response(cand_dir: Path, text: str, pid: str, executor: Executor, out: Path,
@@ -717,7 +743,11 @@ def set_stage(run_dir: Path, executor: Executor, base: Path | None = None,
         if not rec.exists() and rt and reset_timing >= RESET_TIMING_CAP:
             dump(rec, cap_rejection(fa[1]["item"]))
         try:
-            res = load(rec) if rec.exists() else executor.gate(cand, rec, base=setpack, formal=formal)
+            if rec.exists():
+                res = load(rec)
+            else:
+                res = executor.gate(cand, rec, base=setpack, formal=formal)
+                record_executor(run_dir, c["cid"], "set", executor)
         except InfraError as e:
             # Later candidates are gated against this pack: skipping one would change their
             # duplicate decisions, so the run stops here and --resume continues in order.

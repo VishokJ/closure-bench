@@ -84,6 +84,33 @@ decision. In mutation runs a second run timeout on a mutant is still a kill
 Cost: a testbench that really hangs is aborted, not repaired. Parallelism
 defaults to cores - 2 (`-j`) to keep timeouts rare.
 
+**Prime executor** (`--executor prime --concurrency N`,
+`closure_core/prime_executor.py`): every gate run, context pack and
+`tools/check` call gets a fresh Prime sandbox from the pinned pipeline image
+(the multi-platform index `propose.IMAGE`), with networking off before anything
+is uploaded, at most N at once; Stage B's `-p` defaults to N. Only `run` is
+replaced, so the tools get the same arguments as in Docker, from the same
+`/repo`. The upload is one tarball: `closure_core`, `tools`, `designs`,
+`third_party` from the working tree, the run paths the arguments name
+(candidate, base pack, the run's whole witness cache: a key includes the Yosys
+release, which the host cannot compute), the mutation cache and the cited PDFs.
+The witness key uses the Yosys version and source revision without the build
+info (`gates.tools_release`), so a witness solved on arm64 is reused on x86_64
+and the other way round. Back
+come the result, new witness entries (an existing one is never overwritten) and
+new mutation-cache entries (merged), so the set stage and replay reuse them. A
+sandbox failure (create, upload, run, download, the 3600 s run timeout) is
+retried once in a fresh sandbox, then is an `InfraError` as above; exit code 2
+from the tool is one too, without a sandbox retry (the tool has retried its own
+timeouts). The formal-timeout lock is per sandbox: one solve per sandbox, never
+contended. `manifest.json` records the run's executor, each resume's, and under
+`executors` the one that gated each candidate attempt and set-stage result.
+Mutation-cache keys include the machine (`platform.machine()`), so arm64
+entries from a Mac do not help an x86_64 sandbox: until one Prime call has
+merged its entries back (`tools/prime_smoke` does), every sandbox reaching the
+`value` gate runs the baseline mutants itself. Replay and `--resume` work with
+either executor.
+
 Every gate in a run and in its replay uses `base_pack/`, a snapshot of the
 pack taken when the run starts, so a later change to `designs/` (including
 this run's own `--write`) cannot change a replayed decision.
@@ -248,6 +275,8 @@ tools/check                                                  # in the image firs
 tools/propose_plan --image "$IMAGE" --stage-a-only --tag smoke
 tools/propose_plan --image "$IMAGE" --stage-a-only --full-docs --tag smoke-full
 tools/propose_plan --image "$IMAGE" --write                  # the real run
+tools/prime_smoke --docker "$IMAGE"    # gold-less R1 on Prime and in Docker: timings, solve times, same gates.json
+tools/propose_plan --executor prime --concurrency 16 --target-only     # gate in Prime sandboxes
 tools/propose_plan --image "$IMAGE" --resume runs/propose/<run_id>       # after a crash
 tools/propose_plan --image "$IMAGE" --replay runs/propose/<run_id>
 tools/propose_plan --image "$IMAGE" --write-from runs/propose/<run_id>   # refuses unless

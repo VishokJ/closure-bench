@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""One gold-less R1 through the formal gate on Prime: a smoke test of the Prime
+executor (closure_core/prime_executor.py), and its per-call numbers.
+
+Builds runs/propose/<stamp>-prime-smoke/ like a proposer run: base_pack is designs/uart
+with no plan items (so R1, renamed P1, is new rather than its own duplicate),
+and the candidate is R1 without its gold, so formal has to find one. Gates it in
+one Prime sandbox and, with --docker IMAGE, in local Docker too, each with its
+own empty witness cache so both really solve. Prints the per-call timings
+(create, upload, run, download, teardown; image_cached false means create
+included the first-use image build), the formal solve time on each, and whether
+the two gates.json agree.
+
+Runs on the host with Prime credentials (bills the key owner):
+  set -a; source .env; set +a
+  tools/prime_smoke [--docker docker.io/vishokjcs/closure-bench-toolchain@sha256:af43...]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import sys
+import time
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from closure_core import propose  # noqa: E402
+from closure_core.infra import InfraError  # noqa: E402
+from closure_core.prime_executor import PrimeExecutor  # noqa: E402
+
+PACK = ROOT / "designs" / "uart"
+
+
+def base_pack(dest: Path) -> Path:
+    shutil.copytree(PACK, dest)
+    plan = yaml.safe_load((dest / "plan.yaml").read_text())
+    (dest / "plan.yaml").write_text(yaml.safe_dump({**plan, "items": []}, sort_keys=False))
+    (dest / "multi.yaml").write_text("multi: []\n")
+    for f in [*(dest / "covers").glob("*.sv"), *(dest / "gold").glob("*.sv"), *(dest / "near_miss").glob("*.sv")]:
+        f.unlink()
+    return dest
+
+
+def gold_less_r1(dest: Path) -> Path:
+    item = next(x for x in yaml.safe_load((PACK / "plan.yaml").read_text())["items"] if x["id"] == "R1")
+    item.update(id="P1", cover="P1_frame_error", cover_module="cov_P1")
+    (dest / "near_miss").mkdir(parents=True)
+    (dest / "item.yaml").write_text(yaml.safe_dump(item, sort_keys=False))
+    (dest / "cover.sv").write_text((PACK / "covers" / "R1.sv").read_text().replace("R1", "P1"))
+    shutil.copy(PACK / "near_miss" / "R1_good_stop.sv", dest / "near_miss" / "good_stop.sv")
+    return dest
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="gold-less R1 through the formal gate on Prime")
+    ap.add_argument("--docker", metavar="IMAGE", help="also gate it in local Docker with this image, and compare")
+    args = ap.parse_args()
+
+    run_dir = propose.new_run_dir("prime-smoke")
+    base = base_pack(run_dir / "base_pack")
+    cand = gold_less_r1(run_dir / "candidates" / "c01" / "0")
+    prime = PrimeExecutor(propose.IMAGE, concurrency=1)
+    executors = {"prime": prime} | ({"docker": propose.Executor(args.docker)} if args.docker else {})
+    results = {}
+    for name, ex in executors.items():
+        formal = {"cache": run_dir / f"formal_{name}", "min_frames": None, "require_mechanism": False}
+        t = time.monotonic()
+        try:
+            res = ex.gate(cand, run_dir / f"gates_{name}.json", base, formal)
+        except InfraError as e:
+            print(f"{name}: INFRASTRUCTURE ERROR: {e}")
+            return 2
+        wall = round(time.monotonic() - t, 1)
+        w = [json.loads(p.read_text()) for p in sorted(formal["cache"].glob("*.json"))]
+        results[name] = res
+        print(f"\n{name}: {'ACCEPTED' if res['accepted'] else 'REJECTED at ' + str(res['failed_gate'])}, "
+              f"wall {wall} s")
+        for x in w:
+            print(f"  formal: {x.get('status')}, depth {x.get('depth')}, input_changes {x.get('input_changes')} "
+                  f"(exact {x.get('input_changes_exact')}), solve_s {x.get('solve_s')}, total_s {x.get('total_s')}"
+                  f"{', retried' if x.get('retried') else ''}")
+    for c in prime.calls:
+        print("\nprime call: " + ", ".join(f"{k} {v}" for k, v in c.items()))
+    if "docker" in results:
+        same = results["prime"] == results["docker"]
+        print(f"\ngates.json prime vs docker: {'IDENTICAL' if same else 'DIFFERENT'}")
+        if not same:
+            for gp, gd in zip(results["prime"]["gates"], results["docker"]["gates"]):
+                if gp != gd:
+                    print(f"  {gp['gate']}: prime {json.dumps(gp['data'])[:400]}\n"
+                          f"  {'':{len(gp['gate'])}}  docker {json.dumps(gd['data'])[:400]}")
+    print(f"\nrun: {run_dir.relative_to(ROOT)}")
+    return 0 if all(r["accepted"] for r in results.values()) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

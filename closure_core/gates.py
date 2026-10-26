@@ -431,16 +431,28 @@ def formal_version() -> str | None:
     return out
 
 
+_YOSYS_RELEASE = re.compile(r"^(Yosys \S+ \(git sha1 [0-9a-f]+)")
+
+
+def tools_release(version: str | None) -> str | None:
+    """`yosys -V` without its build info: the version and source revision, the same
+    for every architecture of one OSS CAD Suite release (arm64 says GNU g++, x86_64
+    Clang). An unrecognised string is kept whole: a distinct key, never a false hit."""
+    m = _YOSYS_RELEASE.match(version or "")
+    return m.group(1) + ")" if m else version
+
+
 def witness_key(design: Design, cover_text: str) -> str:
     """What a witness depends on: the cover, the RTL, the whole formal environment
-    (assumptions, bound, timeout) and the formal tools' version.
+    (assumptions, bound, timeout) and the formal tools' release (tools_release), so a
+    witness solved on arm64 is reused on x86_64 and the other way round.
 
     Not the rest of the pack, so the set stage (a different pack, same design)
     reuses the witness found for the candidate alone.
     """
     return hashlib.sha256(json.dumps({
         "cover": cover_text, "rtl": {q.name: q.read_text() for q in design.rtl},
-        "formal": formal_files(design), "tools": formal_version(),
+        "formal": formal_files(design), "tools": tools_release(formal_version()),
     }, sort_keys=True).encode()).hexdigest()
 
 

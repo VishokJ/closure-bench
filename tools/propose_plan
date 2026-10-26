@@ -6,6 +6,7 @@ simulation runs in the toolchain image with networking off.
 
   tools/propose_plan [--stage-a-only] [--full-docs] [--write] [--max-candidates N]
   tools/propose_plan --target-only [--min-frames F]   # covers only; formal finds the gold (no survivor pass)
+  tools/propose_plan --executor prime --concurrency N  # gate in Prime sandboxes, N at once
   tools/propose_plan --replay runs/propose/<run_id>      # no model calls
   tools/propose_plan --summarize runs/propose/<run_id>   # recompute summary.json
   tools/propose_plan --write-from runs/propose/<run_id>  # write its accepted items into designs/
@@ -46,17 +47,28 @@ def main() -> int:
                          f"(default with --target-only: {propose.TARGET_MIN_FRAMES}, i.e. two frames)")
     ap.add_argument("--tag", default="", help="suffix for the run directory name")
     ap.add_argument("--image", default=os.environ.get("CLOSURE_BENCH_IMAGE", propose.IMAGE),
-                    help="toolchain image (on Apple silicon pass the arm64 manifest digest)")
+                    help="toolchain image for the docker executor (on Apple silicon pass the arm64 manifest "
+                         "digest); the prime executor always uses the pinned index propose.IMAGE")
+    ap.add_argument("--executor", choices=("docker", "prime"), default="docker",
+                    help="where gate runs happen: local Docker (default) or one Prime sandbox per call")
+    ap.add_argument("--concurrency", type=int, default=8, help="prime: sandboxes at once")
     ap.add_argument("--local", action="store_true", help="use the local Verilator instead of the image")
     ap.add_argument("-j", type=int, default=default_jobs(),
                     help="parallel simulations per gate run (default: cores - 2)")
-    ap.add_argument("-p", type=int, default=4, help="Stage B candidates at a time (model calls overlap)")
+    ap.add_argument("-p", type=int, help="Stage B candidates at a time (model calls overlap); "
+                                         "default 4, with --executor prime --concurrency")
     ap.add_argument("--replay", type=Path)
     ap.add_argument("--summarize", type=Path)
     ap.add_argument("--write-from", type=Path, help="write a finished run's accepted items (replays it first)")
     ap.add_argument("--resume", type=Path, help="continue an interrupted run (same model and sampling, from its manifest)")
     args = ap.parse_args()
-    executor = propose.Executor(None if args.local else args.image, j=args.j)
+    if args.executor == "prime":
+        from closure_core.prime_executor import PrimeExecutor
+        executor = PrimeExecutor(propose.IMAGE, concurrency=args.concurrency)
+        args.p = args.p or args.concurrency
+    else:
+        executor = propose.Executor(None if args.local else args.image, j=args.j)
+        args.p = args.p or 4
 
     if args.summarize:  # measures the plan's progress first if the run left it out (target-only)
         s = propose.finish(args.summarize.resolve(), executor)

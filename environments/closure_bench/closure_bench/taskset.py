@@ -39,6 +39,8 @@ SUBMISSION = prompt.SUBMISSION
 GRADER_ROOT = "/grader"
 MAX_TB_BYTES = 1_000_000
 # Toolchain image pinned by digest (built from docker/toolchain, tag verilator-5.020).
+# Verilator only, on purpose: the pipeline image (closure_core.propose.IMAGE) adds formal
+# tools, which an agent must not have (tests/test_images.py).
 DEFAULT_IMAGE = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
 # Agent wall clock per harness. bash: room for a few dozen ~9 s simulations
 # plus model time; null is a single reply.
