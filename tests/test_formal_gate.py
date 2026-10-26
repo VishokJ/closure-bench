@@ -283,6 +283,37 @@ def test_cover_errors_are_cached_rejections(pack, tmp_path, monkeypatch, exc, st
     assert len(list((tmp_path / "w").glob("*.json"))) == 1
 
 
+def test_shared_store_hit_is_copied_into_the_run(pack, tmp_path, monkeypatch):
+    """A witness another run solved is reused without solving, and the run keeps a copy."""
+    calls = fake_formal(monkeypatch, reach())
+    cover, run, store = tmp_path / "c.sv", tmp_path / "run", tmp_path / "store"
+    cover.write_text("x")
+    w = gates.witness(pack, cover, tmp_path / "other_run", store)
+    assert len(calls) == 1 and [p.stem for p in store.glob("*.json")] == [w["key"]]
+    assert gates.witness(pack, cover, run, store) == w and len(calls) == 1  # from the store
+    assert json.loads((run / f"{w['key']}.json").read_text()) == json.loads((store / f"{w['key']}.json").read_text())
+    (store / f"{w['key']}.json").unlink()
+    assert gates.witness(pack, cover, run, store) == w and len(calls) == 1  # the run's copy, for replay
+
+
+def test_shared_store_skips_timeouts_and_keeps_entries(pack, tmp_path, monkeypatch):
+    fake_formal(monkeypatch, [{"status": "timeout"}, {"status": "timeout"}, reach()])
+    cover, store = tmp_path / "c.sv", tmp_path / "store"
+    cover.write_text("x")
+    assert gates.witness(pack, cover, tmp_path / "run1", store)["status"] == "timeout"
+    assert not list(store.glob("*.json"))  # machine- and load-dependent: never shared
+    w = gates.witness(pack, cover, tmp_path / "run2", store)  # another run solves it again
+    assert w["status"] == "reachable" and len(list(store.glob("*.json"))) == 1
+    assert not gates.store_witness(store, w["key"], {"status": "unreachable"})  # never overwritten
+    assert json.loads((store / f"{w['key']}.json").read_text())["status"] == "reachable"
+
+
+def test_witness_store_is_split_by_the_engine(tmp_path):
+    import hashlib
+    engine = (Path(gates.__file__).with_name("formal.py")).read_bytes()
+    assert gates.witness_store(tmp_path) == tmp_path / hashlib.sha256(engine).hexdigest()[:16]
+
+
 def other_process_can_solve(lock: Path) -> bool:
     """Can another process take the formal lock shared right now (start a solve)?"""
     probe = ("import fcntl, sys\nf = open(sys.argv[1], 'a+')\n"

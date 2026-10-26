@@ -38,8 +38,10 @@ Answer with these two blocks and nothing after them:
 - title: short name
   kind: task
   target_module: uart_rx
-  behaviour: what must happen, in one or two sentences
-  why_baseline_misses: one sentence
+  behaviour: >-
+    what must happen, in one or two sentences
+  why_baseline_misses: >-
+    one sentence
   targets: ["uart_rx.v:133:inc:0", "uart_rx.v:133:dec:0"]
   sources:
     - {type: RTL, file: third_party/verilog-uart/rtl/uart_rx.v, lines: [130, 134]}

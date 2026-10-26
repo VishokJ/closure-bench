@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Merge mutation caches (e.g. old per-worktree results/check/mutation_cache.json)
+into the shared one, gates.MUTATION_CACHE, under its lock; an existing entry is
+never overwritten. Runs on the host: it only reads and writes JSON.
+
+Usage:  tools/merge_mutation_cache SRC.json ... [--into FILE]
+Prints, per source, its entries, how many were new and how many disagree with an
+entry already there (the same key with a different result: should be 0, since
+a key hashes every compiled input). Exit 1 if any disagree.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from closure_core import gates  # noqa: E402
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="merge mutation caches into the shared one")
+    ap.add_argument("sources", type=Path, nargs="+")
+    ap.add_argument("--into", type=Path, default=gates.MUTATION_CACHE)
+    args = ap.parse_args()
+    before = len(json.loads(args.into.read_text())) if args.into.exists() else 0
+    print(f"{args.into}: {before} entries before")
+    conflicts = 0
+    for src in args.sources:
+        theirs = json.loads(src.read_text())
+        ours = json.loads(args.into.read_text()) if args.into.exists() else {}
+        differ = sum(k in ours and ours[k] != v for k, v in theirs.items())
+        conflicts += differ
+        added = gates.merge_cache(args.into, theirs)
+        print(f"{src}: {len(theirs)} entries, {added} new, {differ} disagree")
+    print(f"{args.into}: {len(json.loads(args.into.read_text()))} entries after")
+    return 1 if conflicts else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -5,6 +5,7 @@ Runs in the pipeline image (closure_core.propose.IMAGE).
 
 Usage:  tools/gate_candidate <candidate_dir> [--design uart | --base PACK] [-j N] [--out result.json] [--offline]
                              [--witness-cache DIR] [--min-frames F] [--require-mechanism]
+                             [--mutation-cache FILE] [--witness-store DIR | --no-witness-store]
 Prints one line per gate and writes the full result as JSON.
 Exit 0 if the candidate is accepted, 1 if rejected, 2 on an infrastructure error
 (formal tools, or a simulation timing out twice): no result written, not a decision.
@@ -20,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from closure_core import candidate, infra  # noqa: E402
+from closure_core import candidate, gates, infra  # noqa: E402
 
 
 def main() -> int:
@@ -31,9 +32,15 @@ def main() -> int:
     ap.add_argument("-j", type=int, default=infra.default_jobs(), help="parallel simulations (default: cores - 2)")
     ap.add_argument("--out", type=Path, help="result JSON (default: <candidate>/gates.json)")
     ap.add_argument("--offline", action="store_true", help="do not download cited documents")
-    ap.add_argument("--cache", type=Path, default=ROOT / "results" / "check" / "mutation_cache.json")
+    ap.add_argument("--mutation-cache", "--cache", dest="cache", type=Path, default=gates.MUTATION_CACHE,
+                    help=f"mutant simulation results, shared and merged (default {gates.MUTATION_CACHE})")
     ap.add_argument("--witness-cache", type=Path, default=ROOT / "results" / "check" / "witnesses",
                     help="formal witnesses by key (a proposer run passes its own)")
+    store = ap.add_mutually_exclusive_group()
+    store.add_argument("--witness-store", type=Path, default=gates.witness_store(),
+                       help="shared witness store, looked up after --witness-cache (default: "
+                            f"{gates.WITNESSES}/<formal.py hash>)")
+    store.add_argument("--no-witness-store", action="store_true", help="solve without the shared store")
     ap.add_argument("--min-frames", type=float, help="reject target witnesses shorter than this many frames")
     ap.add_argument("--require-mechanism", action="store_true",
                     help="item.yaml must declare at least two difficulty mechanisms (target-only proposer runs)")
@@ -44,7 +51,9 @@ def main() -> int:
         res = candidate.gate(base, args.candidate.resolve(),
                              cache_path=args.cache.resolve(), j=args.j, offline=args.offline,
                              witness_cache=args.witness_cache.resolve(), min_frames=args.min_frames,
-                             require_mechanism=args.require_mechanism)
+                             require_mechanism=args.require_mechanism,
+                             witness_store=None if args.no_witness_store or not args.witness_store
+                             else args.witness_store.resolve())
     except infra.InfraError as e:
         print(f"INFRASTRUCTURE ERROR (no decision recorded): {e}", file=sys.stderr)
         return 2

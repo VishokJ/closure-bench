@@ -5,11 +5,12 @@ Runs every gate in closure_core/gates.py (see its docstring for what each
 checks) on every selected item, in parallel, and prints a full report.
 Duplicates are compared among the selected items only.
 
-Mutant results are cached in results/check/mutation_cache.json.
+Mutant results are cached in the shared ~/.cache/closure-bench/mutation_cache.json
+(gates.MUTATION_CACHE; --mutation-cache overrides it).
 
 Runs in the pipeline image (closure_core.propose.IMAGE), like every gate.
 
-Usage:  tools/check [--design uart] [--item R1 ...] [--offline] [-j N]
+Usage:  tools/check [--design uart] [--item R1 ...] [--offline] [-j N] [--mutation-cache FILE]
 Exit 0 only if every gate passes for every selected item.
 """
 
@@ -38,6 +39,7 @@ def main() -> int:
     ap.add_argument("--offline", action="store_true", help="do not download cited documents")
     ap.add_argument("-j", type=int, default=default_jobs(), help="parallel simulations (default: cores - 2)")
     ap.add_argument("--report", type=Path, default=ROOT / "results" / "check" / "report.json")
+    ap.add_argument("--mutation-cache", type=Path, default=gates.MUTATION_CACHE)
     args = ap.parse_args()
     report = args.report.resolve()
 
@@ -102,7 +104,7 @@ def main() -> int:
                 {n: f.result() for n, f in near_policy[it.id].items()},
                 {n: gates.line_overlap(sa, s) for n, s in nm} if sa else None))
 
-        mutation = gates.mutation_runs(design, golds, pool, report.with_name("mutation_cache.json"))
+        mutation = gates.mutation_runs(design, golds, pool, args.mutation_cache.resolve())
 
     dups, duplicate = gates.duplicate(corpus, [it.id for it in items], mutation["gold_kills"])
     for i, r in dups.items():

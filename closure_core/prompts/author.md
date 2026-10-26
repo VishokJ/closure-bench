@@ -14,11 +14,15 @@ Write the complete bundle for this candidate:
 
 Follow the authoring rules above exactly. Use the literal token ITEM wherever
 the item ID goes (module cov_ITEM, instance u_cov_ITEM, label ITEM_<name>).
+Write `description` as a folded block scalar (`>-`, then the text indented on
+the following lines), as below, so colons and quotes in it need no escaping.
+
 Answer with these blocks and nothing else, one near_miss block per near-miss
 testbench (at least one, unless the plan has a near_miss_waiver):
 
 <plan>
-description: ...
+description: >-
+  what must happen, in one or two sentences
 tier: T1
 cover: ITEM_<name>
 sources:

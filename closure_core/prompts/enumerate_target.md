@@ -12,3 +12,12 @@ two distinct mechanisms, listed as `mechanism: [a, b]` in its entry, from:
   produce by accident.
 - `reset_timing`: a condition timed against reset. At most two targets
   listing it are accepted per run; prefer the others.
+
+## How many (this run)
+
+List exactly {n} distinct task targets; in this run that replaces "prefer
+fewer" above. Spread them over the design: some bind to `uart_rx` and some to
+`uart_tx`, and no pair of mechanisms (say `sequence` and `data`) appears
+together in more than 4 targets. If you cannot find {n} that are distinct and
+well sourced, list fewer rather than near-duplicates. Waiver proposals do not
+count toward {n}.

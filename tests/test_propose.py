@@ -157,6 +157,79 @@ def test_parse_bundle_target_only():
         propose.parse_bundle(target_bundle())  # the default mode still needs a gold
 
 
+# c04's repair in run 20261026T071534Z-hard: an unquoted colon in a plain description.
+COLON_DESC = ("Two consecutive frames each carry a glitch inside a data bit (bit_cnt from 2 to 9): the "
+              "synchronised input rxd_reg toggles and toggles back, and m_axis_tdata is 8'hA5.")
+
+
+def colon_bundle(description_yaml: str) -> str:
+    text = target_bundle()
+    plan = text[text.index("<plan>\n") + 7:text.index("</plan>")]
+    old = next(line for line in plan.splitlines() if line.startswith("description:"))
+    rest = plan.split("\n")
+    i = rest.index(old)
+    while rest[i + 1].startswith(" "):  # drop the old value's continuation lines
+        del rest[i + 1]
+    rest[i] = description_yaml
+    return text.replace(plan, "\n".join(rest))
+
+
+def test_description_block_scalar_with_colons():
+    b = propose.parse_bundle(colon_bundle("description: >-\n  " + COLON_DESC.replace(": the ", ":\n  the ")),
+                             target_only=True)
+    assert b["plan"]["description"] == COLON_DESC and b["yaml_fallback"] is False
+
+
+def test_description_unquoted_colon_is_quoted_once():
+    text = colon_bundle("description: " + COLON_DESC)
+    with pytest.raises(yaml.YAMLError):
+        yaml.safe_load(text[text.index("<plan>") + 7:text.index("</plan>")])
+    b = propose.parse_bundle(text, target_only=True)
+    assert b["plan"]["description"] == COLON_DESC and b["yaml_fallback"] is True
+    assert b["plan"]["cover"] == "ITEM_frame_error" and b["plan"]["sources"]  # nothing else changed
+    # A plain value continued on indented lines is folded, as YAML would.
+    wrapped = colon_bundle("description: " + COLON_DESC.replace(" the synchronised", "\n  the synchronised"))
+    assert propose.parse_bundle(wrapped, target_only=True)["plan"]["description"] == COLON_DESC
+
+
+def test_description_fallback_reports_the_original_error():
+    bad = colon_bundle("description: " + COLON_DESC).replace("tier: T", "tier: [T", 1)
+    with pytest.raises(propose.ParseError, match="<plan> is not valid YAML: mapping values are not allowed"):
+        propose.parse_bundle(bad, target_only=True)
+
+
+def test_gate_response_records_yaml_fallback(tmp_path):
+    class Fake:
+        def gate(self, cand, out, base=None, formal=None):
+            res = {"item": "P1", "accepted": True, "failed_gate": None, "skipped": [],
+                   "gates": [{"gate": "format", "ok": True, "detail": "", "data": {}}]}
+            propose.dump(out, res)
+            return res
+
+    for desc, flag in (("description: " + COLON_DESC, True), ("description: >-\n  plain words", False)):
+        out = tmp_path / f"{flag}.json"
+        res = propose.gate_response(tmp_path / f"c{flag}", colon_bundle(desc), "P1", Fake(), out, tmp_path, True)
+        data = res["gates"][0]["data"]
+        assert data == ({"yaml_fallback": True} if flag else {}) and json.loads(out.read_text()) == res
+        assert propose.gate_response(tmp_path / f"c{flag}", "", "P1", None, out, tmp_path) == res  # resume
+
+
+def test_target_stage_a_asks_for_n():
+    prompt = propose.enumerate_prompt("CTX", target_only=True, n=7)
+    assert "List exactly 7 distinct task targets" in prompt and "{n}" not in prompt
+    assert "`uart_rx`" in prompt and "`uart_tx`" in prompt and "more than 4 targets" in prompt
+    assert "exactly" not in propose.enumerate_prompt("CTX", n=7)
+
+
+def test_first_candidates_keeps_n_tasks_and_every_waiver():
+    cands = [{"title": f"t{i}", "kind": "task"} for i in range(5)]
+    cands.insert(2, {"title": "w0", "kind": "waiver"})
+    cands.append({"title": "w1", "kind": "waiver"})
+    assert [c["title"] for c in propose.first_candidates(cands, 3, True)] == ["t0", "t1", "w0", "t2", "w1"]
+    assert propose.first_candidates(cands, 10, True) == cands  # fewer is fine
+    assert [c["title"] for c in propose.first_candidates(cands, 3, False)] == ["t0", "t1", "w0"]  # unchanged
+
+
 def test_write_candidate_target_only(tmp_path):
     propose.write_candidate(propose.parse_bundle(target_bundle(), target_only=True), "P3", tmp_path / "c")
     assert not (tmp_path / "c" / "gold.sv").exists()
@@ -389,6 +462,84 @@ def test_scripted_target_only_run_and_replay(scratch):
     assert propose.replay(run_dir, propose.Executor(image=None, j=2)) == []
 
 
+@needs_sim
+def test_seeded_run_and_replay(scratch):
+    """A target-only run seeded from a recorded one: each seed's latest bundle is attempt 0
+    with no model call, gated with this run's settings (here its good twin has become
+    unreachable), repaired in a conversation that starts from the seeded bundle; Stage A
+    sees the seeds and its first N new tasks follow them; all share the set stage."""
+    fatal = 'if (!saw_frame_error) $fatal(1, "frame_error never pulsed");'
+    stim = {"status": "reachable", "tb_text": (PACK / "gold" / "R1.sv").read_text().replace(fatal, ""),
+            "depth": 120, "input_changes": 22}
+    good = {"status": "reachable", "tb_text": (PACK / "near_miss" / "R1_good_stop.sv").read_text(),
+            "depth": 121, "input_changes": 22}
+    base = empty_pack(scratch / "base")
+    (base / "formal").mkdir(exist_ok=True)
+    (base / "formal" / "formal.yaml").write_text("engine: abc bmc3\nbound: 300\ntimeout: 900\nminimize_timeout: 120\ntops: {}\n")
+    (base / "formal" / "env_rx.sv").write_text("module formal_rx; endmodule\n")
+    bad = target_bundle(TWIN_GOOD.replace("twin_good_stop", "twin_bad"))
+    src = scratch / "src"  # c01: bad twin, repaired (latest attempt 1); c02: accepted at attempt 0
+    propose.run(src, propose.ScriptedModel([STAGE_A_TARGET, bad, target_bundle(), target_bundle()]),
+                SeedingExecutor({"frame_error": stim, "twin_bad": {"status": "unreachable"}, "twin_good_stop": good}),
+                base=base, target_only=True)
+    before = {str(q.relative_to(src)): q.read_bytes() for q in src.rglob("*") if q.is_file()}
+
+    late = target_bundle(TWIN_GOOD.replace("twin_good_stop", "twin_late"))
+
+    def stage_a(messages):
+        a = messages[0]["content"]
+        assert "## Already proposed; list different targets" in a
+        assert "- frame error: frame_error pulses on a low stop bit" in a and "List exactly 1 distinct" in a
+        return STAGE_A_TARGET
+
+    def repair(messages):
+        assert len(messages) == 3 and messages[1]["role"] == "assistant"
+        assert "<twin>" in messages[1]["content"] and "ITEM_twin_good_stop" in messages[1]["content"]
+        assert "`formal`" in messages[2]["content"] and "boundary not exact" in messages[2]["content"]
+        return late
+
+    def fresh(messages):
+        assert len(messages) == 1
+        return late
+
+    model = propose.ScriptedModel([stage_a, repair, repair, fresh])
+    run_dir = scratch / "run"
+    s = propose.run(run_dir, model, SeedingExecutor({"frame_error": stim, "twin_good_stop": {"status": "unreachable"},
+                                                     "twin_late": good}),
+                    base=base, target_only=True, max_candidates=1, seed_from=src)
+    assert model.texts == []  # no model call for a seeded attempt 0
+    assert {str(q.relative_to(src)): q.read_bytes() for q in src.rglob("*") if q.is_file()} == before  # read-only
+    assert (run_dir / "seed" / "src" / "candidates.json").exists()  # copied in
+    m = json.loads((run_dir / "manifest.json").read_text())
+    assert m["seed"] == "seed/src" and m["seed_from"] == str(src.resolve())
+
+    cands = json.loads((run_dir / "candidates.json").read_text())["candidates"]
+    assert [(c["cid"], c["kind"], c.get("seeded")) for c in cands] == [
+        ("c01", "task", {"run": "src", "cid": "c01", "attempt": 1}),
+        ("c02", "task", {"run": "src", "cid": "c02", "attempt": 0}),
+        ("c03", "task", None), ("c04", "waiver", None)]  # the first N=1 new task, and the waiver
+    seed0 = json.loads((run_dir / "responses/c01/0.json").read_text())
+    assert seed0["seeded"] == cands[0]["seeded"] and seed0["params"] is None
+    assert seed0["response"]["text"] == propose.seed_bundle_text(run_dir, m, cands[0])
+    assert json.loads((run_dir / "gates/c01/0.json").read_text())["failed_gate"] == "formal"
+    assert s["seeded"] == {"c01": cands[0]["seeded"], "c02": cands[1]["seeded"]} and s["seed_skipped"] == []
+    p1 = s["passes"]["1"]
+    assert p1["accepted"] == ["c01"] and p1["rejected_at_set"] == {"c02": "duplicate", "c03": "duplicate"}
+    assert p1["repair"] == {"failed_first_attempt": 2, "repaired": 2, "rate": 1.0}
+
+    assert propose.replay(run_dir, propose.Executor(image=None, j=2)) == []
+    (run_dir / "seed/src/candidates/c01/1/twin.sv").write_text(TWIN_GOOD.replace("twin_good_stop", "twin_x"))
+    assert "c01 attempt 0: seeded bundle differs" in propose.replay(run_dir, propose.Executor(image=None, j=2))
+
+
+def test_seed_needs_target_only(scratch):
+    (scratch / "src").mkdir(parents=True)
+    (scratch / "src" / "manifest.json").write_text(json.dumps({"target_only": False}))
+    with pytest.raises(ValueError, match="--seed-from needs --target-only"):
+        propose.run(scratch / "run", None, None, target_only=True, seed_from=scratch / "src")
+    assert not (scratch / "run").exists()
+
+
 def test_author_all_parallel(scratch):
     """Concurrent Stage B: each conversation stays under its own cid."""
     import threading
@@ -417,6 +568,31 @@ def test_author_all_parallel(scratch):
         files = sorted((scratch / "responses" / c["cid"]).glob("*.json"))
         assert len(files) == propose.RETRIES + 1
         assert all(json.loads(f.read_text())["response"]["text"] == f"no bundle for {c['title']}" for f in files)
+
+
+def test_merge_cache_never_overwrites_and_loses_nothing(tmp_path):
+    """Runs and worktrees share one mutation cache: concurrent merges (processes and
+    threads) keep every entry, and an existing entry is never replaced."""
+    import subprocess
+    import sys
+    import threading
+    from closure_core import gates
+    c = tmp_path / "c.json"
+    assert gates.merge_cache(c, {"a": 1}) == 1
+    assert gates.merge_cache(c, {"a": 2, "b": 3}) == 1
+    assert json.loads(c.read_text()) == {"a": 1, "b": 3}
+    code = ("import sys; from pathlib import Path; from closure_core.gates import merge_cache\n"
+            "for i in range(50): merge_cache(Path(sys.argv[1]), {f'{sys.argv[2]}:{i}': i})")
+    procs = [subprocess.Popen([sys.executable, "-c", code, str(c), f"p{n}"], cwd=propose.ROOT) for n in range(4)]
+    threads = [threading.Thread(target=lambda n=n: [gates.merge_cache(c, {f"t{n}:{i}": i}) for i in range(50)])
+               for n in range(4)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    assert all(p.wait() == 0 for p in procs)
+    assert len(json.loads(c.read_text())) == 2 + 400
+    assert not list(tmp_path.glob("*.tmp"))
 
 
 # arm64 manifest of propose.IMAGE (the pipeline image), for local Docker on Apple silicon.

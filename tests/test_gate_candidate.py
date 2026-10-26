@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from closure_core import candidate, policy
+from closure_core import candidate, gates, policy
 from closure_core.design import find_repo_root
 
 ROOT = find_repo_root()
@@ -55,7 +55,7 @@ def tree_hash(d: Path) -> str:
 
 def run(tmp_path: Path, cand: Path, base: Path | None = None, **kw) -> dict:
     cache = tmp_path / "mutation_cache.json"
-    shared = ROOT / "results" / "check" / "mutation_cache.json"
+    shared = gates.MUTATION_CACHE
     if shared.exists() and not cache.exists():
         shutil.copy(shared, cache)  # reuse cached baseline runs; never write the shared cache
     before = tree_hash(ROOT / "designs")

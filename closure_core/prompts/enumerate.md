@@ -21,12 +21,16 @@ Answer with one block and nothing after it:
 - title: short name
   kind: task            # or: waiver
   target_module: uart_rx  # the design module the cover binds to
-  behaviour: what must happen, in one or two sentences
-  why_baseline_misses: one sentence
+  behaviour: >-
+    what must happen, in one or two sentences
+  why_baseline_misses: >-
+    one sentence
   sources:              # what you would cite (verified later)
     - {type: DOC, doc: pc16550d, page: 16}
     - {type: RTL, file: third_party/verilog-uart/rtl/uart_rx.v, lines: [120, 127]}
     - {type: BASE, point: {kind: v_toggle, file: uart_rx.v, line: 62, name: "prescale[4]"}}
 </candidates>
 
-Quote any value that contains brackets, colons or commas, as in `"prescale[4]"`.
+Write `behaviour` and `why_baseline_misses` as folded block scalars (`>-`), as
+above. Quote any other value that contains brackets, colons or commas, as in
+`"prescale[4]"`.

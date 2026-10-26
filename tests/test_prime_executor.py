@@ -21,9 +21,9 @@ from pathlib import Path
 
 import pytest
 
-from closure_core import propose
+from closure_core import gates, propose
 from closure_core.infra import InfraError
-from closure_core.prime_executor import DOCS, MUTATION_CACHE, ROOT_IN_SANDBOX, PrimeExecutor
+from closure_core.prime_executor import DOCS, MUTATION_CACHE, ROOT_IN_SANDBOX, WITNESSES, PrimeExecutor
 
 from test_formal_gate import WITNESS, add_formal_env, seed, stimulus
 from test_gate_candidate import ROOT, empty_pack, needs_sim, r1_candidate
@@ -94,7 +94,8 @@ class FakeRuntime:
 
 def executor(sandbox: FakeSandbox, tmp: Path, **kw) -> PrimeExecutor:
     return PrimeExecutor(concurrency=kw.pop("concurrency", 2), provision=sandbox,
-                         mutation_cache=tmp / "mutation_cache.json", docs=tmp / "docs", **kw)
+                         mutation_cache=tmp / "mutation_cache.json", witness_store=tmp / "store", docs=tmp / "docs",
+                         **kw)
 
 
 def setup_run(scratch: Path):
@@ -110,7 +111,7 @@ def setup_run(scratch: Path):
 
 def stub_tool(seen: dict):
     """Records what the sandbox had, then writes a result, a new witness, a changed old
-    witness and a new mutation-cache entry."""
+    witness, a new mutation-cache entry and new and changed witness-store entries."""
     def tool(root: Path, argv: list[str]):
         rel = lambda flag: root / argv[argv.index(flag) + 1]  # noqa: E731
         seen["files"] = {str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()}
@@ -120,6 +121,10 @@ def stub_tool(seen: dict):
         (rel("--witness-cache") / "new.json").write_text('{"status": "reachable"}\n')
         (rel("--witness-cache") / "old.json").write_text('{"status": "changed in the sandbox"}\n')
         (root / MUTATION_CACHE).write_text(json.dumps({**seen["mutation"], "k2": {"status": "ok"}}))
+        store = root / str(gates.witness_store(Path(WITNESSES)))
+        store.mkdir(parents=True, exist_ok=True)
+        (store / "s2.json").write_text('{"status": "reachable"}\n')
+        (store / "s1.json").write_text('{"status": "changed in the sandbox"}\n')
         rel("--out").parent.mkdir(parents=True, exist_ok=True)
         rel("--out").write_text(json.dumps({"accepted": True, "item": "P1"}))
         return 0, "ACCEPTED", ""
@@ -131,6 +136,8 @@ def test_round_trip(scratch, tmp_path):
     (tmp_path / "mutation_cache.json").write_text(json.dumps({"k1": {"status": "ok"}}))
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "pc16550d.pdf").write_bytes(b"%PDF")
+    (tmp_path / "store").mkdir()
+    (tmp_path / "store" / "s1.json").write_text('{"status": "unreachable"}\n')
     seen = {}
     sbx = FakeSandbox(tmp_path / "sbx", stub_tool(seen))
     ex = executor(sbx, tmp_path)
@@ -146,10 +153,13 @@ def test_round_trip(scratch, tmp_path):
     assert "third_party/verilog-uart/rtl/uart_rx.v" in files and "tools/gate_candidate" in files
     assert not any("__pycache__" in f for f in files)
     assert seen["mutation"] == {"k1": {"status": "ok"}}
+    assert f"{gates.witness_store(Path(WITNESSES))}/s1.json" in files  # the shared store, for this formal.py
     # New witness downloaded; an existing one is never overwritten; mutation entries merged.
     assert json.loads((wc / "new.json").read_text()) == {"status": "reachable"}
     assert json.loads((wc / "old.json").read_text()) == {"status": "unreachable"}
     assert json.loads((tmp_path / "mutation_cache.json").read_text()) == {"k1": {"status": "ok"}, "k2": {"status": "ok"}}
+    assert {p.name: json.loads(p.read_text())["status"] for p in (tmp_path / "store").glob("*.json")} == \
+        {"s1.json": "unreachable", "s2.json": "reachable"}  # merged, never overwritten
     assert sbx.created == 1 and sbx.active == 0  # torn down
     assert ex.calls[0]["exit"] == 0 and ex.calls[0]["upload_bytes"] > 0
 
@@ -264,9 +274,8 @@ def test_same_gates_json_as_local(scratch, tmp_path):
     base = add_formal_env(empty_pack(scratch / "base_pack"))
     for name in ("local", "prime"):
         seed(scratch / f"formal_{name}", base, cand, {"P1_frame_error": {**WITNESS, "tb_text": stimulus()}})
-    shared = ROOT / MUTATION_CACHE
-    if shared.exists():
-        shutil.copy(shared, tmp_path / "mutation_cache.json")
+    if gates.MUTATION_CACHE.exists():
+        shutil.copy(gates.MUTATION_CACHE, tmp_path / "mutation_cache.json")
     opts = lambda n: {"cache": scratch / f"formal_{n}", "min_frames": None, "require_mechanism": False}  # noqa: E731
     local = propose.Executor(image=None, j=2).gate(cand, scratch / "local.json", base, opts("local"))
     prime = executor(FakeSandbox(tmp_path / "sbx"), tmp_path).gate(cand, scratch / "prime.json", base,

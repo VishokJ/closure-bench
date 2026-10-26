@@ -29,15 +29,32 @@ decision, every repair message sent back to the model, and the summary.
    (`kind: waiver`). Waivers are recorded, never accepted automatically. The
    answer is parsed strictly; on a parse failure the conversation continues
    with the error, at most 2 retries, recorded and replayed like Stage B.
+   With `--target-only` the prompt asks for exactly N task targets
+   (N = `--max-candidates`), spread over `uart_rx` and `uart_tx`, with no
+   pair of mechanisms shared by more than 4 (asked, not gated); fewer are
+   accepted, and of more only the first N tasks are kept, with every waiver
+   proposal.
 3. **Stage B**: one conversation per task candidate writes the bundle, with the
    token `ITEM` where the ID goes; the tool assigns provisional IDs (`P<n>`).
+   The prompts ask for `description: >-` (a block scalar), so a colon in it
+   is harmless; if the `<plan>` block still is not valid YAML, it is parsed
+   once more with only a plain `description:` value quoted, and if that
+   parses it is used and the `format` gate's data records
+   `yaml_fallback: true`; otherwise the original error is the rejection.
    Each attempt is gated by `tools/gate_candidate` in the image with networking
    off (model-written SystemVerilog runs there). On a failure the conversation
    continues with the failing gate and its detail (including log tails), at
    most 2 retries. `-p N` (default 4) runs N conversations at once; each is
    recorded under its own candidate ID and the set stage runs afterwards in ID
-   order, so decisions do not depend on which finishes first. Parallel gate
-   runs share the mutation cache, which is written atomically.
+   order, so decisions do not depend on which finishes first. Every gate run,
+   in every run and worktree on the machine, shares one mutation cache,
+   `~/.cache/closure-bench/mutation_cache.json` (`gates.MUTATION_CACHE`, next
+   to the cited PDFs; `--mutation-cache` overrides it in `gate_candidate`,
+   `context_pack` and `check`): a write merges new entries under a lock
+   (`lockf` on `<file>.lock`) and never overwrites one. A key hashes every
+   compiled input, so an entry is valid wherever it was computed.
+   `tools/merge_mutation_cache SRC...` merges old per-worktree caches
+   (`results/check/mutation_cache.json`) into it.
 4. **Set stage**: individually accepted candidates are gated again, in order,
    against a cumulative pack, so two duplicates from the same run cannot both
    be accepted.
@@ -56,6 +73,25 @@ decision, every repair message sent back to the model, and the summary.
    on `uart_rx`, `T<n>` for `uart_tx`) and provenance `{proposed_by, run_id,
    candidate, prompt_sha, status: auto_accepted}`, are appended to the real
    pack, and the full `tools/check` runs.
+
+**Seed** (`--target-only --seed-from <run>`): a new run starts from an earlier
+target-only run's candidates. The source run is copied to `seed/<run_id>/`
+(read-only: only the copy is read afterwards, so the run and its replay do not
+depend on the source). Every task candidate with a bundle on disk becomes
+`c01`, `c02`, ... with its latest bundle (`item.yaml`, `cover.sv`, `twin.sv`;
+the last attempt directory, gated or not) as attempt 0: a recorded response
+with the source ID replaced by `ITEM`, `seeded: {run, cid, attempt}` and no
+model call. It is gated with this run's settings and base pack; on a failure
+the repair conversation starts with the usual Stage B prompt, the seeded
+bundle as the assistant's answer and the gate's repair message. Stage A lists
+the seeded titles and behaviours under "Already proposed; list different
+targets" (`prompts/seeded.md`); its N new targets are numbered after the seeds,
+and all share the set stage, seeds first. Candidates without a bundle are
+listed in `summary.seed_skipped`; `summary.seeded` maps each seeded cid to its
+provenance. Witnesses are not copied from the source: they are found again
+(or in the shared store) under this run's formal environment. Replay rebuilds
+the seed list from the copy and checks the Stage A prompt and every seeded
+attempt 0 against it.
 
 **Resume** (`--resume <run>`): an interrupted run continues in place with the
 model and sampling from its manifest. It re-runs the run's flow and reuses
@@ -93,12 +129,14 @@ replaced, so the tools get the same arguments as in Docker, from the same
 `/repo`. The upload is one tarball: `closure_core`, `tools`, `designs`,
 `third_party` from the working tree, the run paths the arguments name
 (candidate, base pack, the run's whole witness cache: a key includes the Yosys
-release, which the host cannot compute), the mutation cache and the cited PDFs.
+release, which the host cannot compute), the shared mutation cache and witness
+store, and the cited PDFs.
 The witness key uses the Yosys version and source revision without the build
 info (`gates.tools_release`), so a witness solved on arm64 is reused on x86_64
 and the other way round. Back
 come the result, new witness entries (an existing one is never overwritten) and
-new mutation-cache entries (merged), so the set stage and replay reuse them. A
+new mutation-cache and witness-store entries (merged), so the set stage, replay
+and later runs reuse them. A
 sandbox failure (create, upload, run, download, the 3600 s run timeout) is
 retried once in a fresh sandbox, then is an `InfraError` as above; exit code 2
 from the tool is one too, without a sandbox retry (the tool has retried its own
@@ -106,10 +144,9 @@ timeouts). The formal-timeout lock is per sandbox: one solve per sandbox, never
 contended. `manifest.json` records the run's executor, each resume's, and under
 `executors` the one that gated each candidate attempt and set-stage result.
 Mutation-cache keys include the machine (`platform.machine()`), so arm64
-entries from a Mac do not help an x86_64 sandbox: until one Prime call has
-merged its entries back (`tools/prime_smoke` does), every sandbox reaching the
-`value` gate runs the baseline mutants itself. Replay and `--resume` work with
-either executor.
+entries from a Mac do not help an x86_64 sandbox; the cache is shared, so the
+x86_64 entries any Prime call merged back, from any run or worktree, serve
+every later sandbox. Replay and `--resume` work with either executor.
 
 Every gate in a run and in its replay uses `base_pack/`, a snapshot of the
 pack taken when the run starts, so a later change to `designs/` (including
@@ -202,7 +239,16 @@ of the formal environment, and repair turns get the formal gate's detail.
 The survivor pass is off in this mode: no reach gold can kill a survivor.
 Witnesses are cached in `runs/propose/<run_id>/formal/<key>.json`, keyed by
 the cover, the RTL, the whole formal folder and the Yosys version, so the
-set stage and `--replay` reuse them instead of re-solving.
+set stage and `--replay` reuse them instead of re-solving. Across runs and
+worktrees, `gate_candidate` also looks them up in a shared store,
+`~/.cache/closure-bench/witnesses/<engine>/<key>.json` (`gates.witness_store`;
+`--no-witness-store` turns it off), after the run's own cache: a hit is copied
+into the run's `formal/`, so the run still holds every witness it used and its
+replay needs no store. `<engine>` is a hash of `closure_core/formal.py`: the
+key leaves the engine's code out, so a changed engine gets a fresh store
+rather than old witnesses. Every solved outcome goes into the store except a
+timeout, which depends on the machine and its load: another run solves it
+again.
 
 Every target in this mode declares `mechanism: [a, b, ...]`: at least two
 distinct difficulty mechanisms, at Stage A and in the plan entry. The
@@ -232,6 +278,7 @@ so `--min-frames F` (witness length in frames) is the measured difficulty signal
 | `formal/<key>.json` | formal witnesses (status, testbench, depth, input changes) |
 | `gates/<cid>/<attempt>.json` | every gate result for that attempt |
 | `set/<cid>.json` | set-stage result |
+| `seed/<run_id>/` | `--seed-from`: the copy of the run the seeds come from |
 | `infra/<cid>.json` | infrastructure abort (stage, attempt, error); removed by `--resume` |
 | `written.json`, `check.json` | with `--write`: final IDs, `tools/check` outcome |
 | `summary.json` | below |
@@ -292,6 +339,7 @@ tools/propose_plan --image "$IMAGE" --stage-a-only --full-docs --tag smoke-full
 tools/propose_plan --image "$IMAGE" --write                  # the real run
 tools/prime_smoke --docker "$IMAGE"    # gold-less R1 on Prime and in Docker: timings, solve times, same gates.json
 tools/propose_plan --executor prime --concurrency 16 --target-only     # gate in Prime sandboxes
+tools/propose_plan --executor prime --concurrency 16 --target-only --seed-from runs/propose/<run_id>
 tools/propose_plan --image "$IMAGE" --resume runs/propose/<run_id>       # after a crash
 tools/propose_plan --image "$IMAGE" --replay runs/propose/<run_id>
 tools/propose_plan --image "$IMAGE" --write-from runs/propose/<run_id>   # refuses unless

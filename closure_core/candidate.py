@@ -114,11 +114,13 @@ def add(pack: Path, cand: Path, reach_gold: str | None = None, twin_near_miss: s
 
 def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: bool = False,
          witness_cache: Path | None = None, min_frames: float | None = None,
-         require_mechanism: bool = False) -> dict:
+         require_mechanism: bool = False, witness_store: Path | None = None) -> dict:
     """Run the gates on one candidate; stops at the first failure.
 
     witness_cache: directory of formal witnesses by key (gates.witness); a run
     keeps its own, so a replay reuses every witness instead of re-solving.
+    witness_store: the shared witness store (gates.witness_store), looked up after
+    witness_cache and filled by every solve; None: solve without it.
     min_frames: reject target witnesses shorter than this many frames (hardening;
     the frame length comes from the pack's formal.yaml).
     require_mechanism: item.yaml must declare at least gates.MIN_MECHANISMS distinct
@@ -181,7 +183,8 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
             # Named as the repo path the proposer sees, also when the base is a run's snapshot.
             kw = {"assumptions": f"designs/{base.name}/{gates.FORMAL_DIR}/", "bound": bound,
                   "min_frames": min_frames, "frame_cycles": st["frame_cycles"]}
-            w = None if has_gold else gates.witness(design, design.pack / "covers" / f"{i}.sv", witness_cache)
+            w = None if has_gold else gates.witness(design, design.pack / "covers" / f"{i}.sv", witness_cache,
+                                                   witness_store)
             # A measurement, not a decision: how much of the witness is protocol activity.
             probe = (pool.submit(gates.active_frames, design, w, st["frame_cycles"], st["active_signal"])
                      if w and w["status"] == "reachable" and w.get("tb_text") and st["frame_cycles"]
@@ -190,7 +193,7 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
             tw = None
             if fr.ok in (True, "n/a") and twin:  # the twin only once the target is settled
                 tv = gates.twin_policy(design, twin, i)
-                tw = None if tv else gates.witness(design, twin, witness_cache)
+                tw = None if tv else gates.witness(design, twin, witness_cache, witness_store)
                 fr = gates.formal(it, w, tw, twin_violations=tv, **kw)
             if probe:
                 fr.data.update(probe.result())

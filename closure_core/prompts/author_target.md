@@ -44,12 +44,16 @@ A formal witness only reaches the behaviour and checks nothing, so it kills
 no mutants: the item's value must come from a `DOC` or `README` source with
 `role: requirement`.
 
+Write `description` as a folded block scalar (`>-`, then the text indented on
+the following lines), as below, so colons and quotes in it need no escaping.
+
 Use the literal token ITEM wherever the item ID goes (module cov_ITEM,
 instance u_cov_ITEM, label ITEM_<name>). Answer with these blocks and nothing
 else (the twin block is optional):
 
 <plan>
-description: ...
+description: >-
+  what must happen, in one or two sentences
 tier: T1
 mechanism: [boundary, data]
 cover: ITEM_<name>

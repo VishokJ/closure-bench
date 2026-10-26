@@ -8,11 +8,13 @@ Each call:
   create   a sandbox from the pipeline image, then networking off
   upload   one tarball: the repo code (closure_core, tools, designs, third_party
            from the working tree), every run path the argv names (candidate,
-           base pack, the run's witness cache), the mutation cache and the cited
+           base pack, the run's witness cache), the shared mutation cache and
+           witness store (gates.MUTATION_CACHE, gates.witness_store) and the cited
            PDFs (the sandbox cannot download them)
   run      the argv, from the repo root at ROOT_IN_SANDBOX (/repo, as in Docker)
-  download the --out file, new witness-cache entries and new mutation-cache
-           entries, into the local files the set stage and replay read
+  download the --out file, new witness-cache entries, new mutation-cache and
+           witness-store entries, into the local files the set stage and replay
+           read and the shared caches (merged, never overwriting an entry)
   teardown always
 
 The whole witness cache is uploaded, not just the entries for this candidate's
@@ -46,13 +48,16 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from closure_core import gates
 from closure_core.infra import InfraError
 from closure_core.propose import IMAGE, ROOT, Executor
 
 ROOT_IN_SANDBOX = "/repo"
 CODE = ("closure_core", "tools", "designs", "third_party")
-MUTATION_CACHE = "results/check/mutation_cache.json"  # gate_candidate's and context_pack's default --cache
-DOCS = ".home/.cache/closure-bench/docs"  # under the sandbox repo root; HOME is set to match
+# Under the sandbox repo root; HOME is set to match, so these are gates.CACHE_DIR there.
+MUTATION_CACHE = ".home/.cache/closure-bench/mutation_cache.json"
+WITNESSES = ".home/.cache/closure-bench/witnesses"
+DOCS = ".home/.cache/closure-bench/docs"
 SKIP = ("__pycache__", ".formal.lock")
 CPU, MEMORY_GB, DISK_GB = 4, 8, 10
 RUN_TIMEOUT = 3600.0  # gate_candidate wall clock; the formal budget alone is up to 2 x 900 s
@@ -79,7 +84,8 @@ class PrimeExecutor(Executor):
 
     def __init__(self, image: str = IMAGE, concurrency: int = 8, *, cpu: int = CPU, memory: float = MEMORY_GB,
                  disk: float = DISK_GB, timeout: float = RUN_TIMEOUT, provision=None,
-                 mutation_cache: Path | None = None, docs: Path | None = None, root: str = ROOT_IN_SANDBOX):
+                 mutation_cache: Path | None = None, witness_store: Path | None = None, docs: Path | None = None,
+                 root: str = ROOT_IN_SANDBOX):
         """provision: async context manager factory yielding a runtime (write/run/read);
         default a Prime sandbox. Tests pass a fake, with `root` a local directory."""
         if provision is None:
@@ -87,7 +93,11 @@ class PrimeExecutor(Executor):
         super().__init__(image, j=cpu)
         self.concurrency, self.cpu, self.memory, self.disk, self.timeout = concurrency, cpu, memory, disk, timeout
         self.provision = provision or self._prime
-        self.mutation_cache = mutation_cache or ROOT / MUTATION_CACHE
+        self.mutation_cache = mutation_cache or gates.MUTATION_CACHE
+        self.witness_store = witness_store or gates.witness_store()
+        # The sandbox's store for the same formal.py (uploaded from this working tree).
+        store = gates.witness_store(Path(WITNESSES))
+        self.store_arc = str(store) if store else None
         self.docs = docs or Path.home() / ".cache" / "closure-bench" / "docs"
         self.root = root
         self.calls: list[dict] = []  # per call: seconds per phase, sizes, image_cached, machine
@@ -133,6 +143,9 @@ class PrimeExecutor(Executor):
                 tar.add(p, arcname=str(p.relative_to(ROOT)), filter=lambda t: None if _skip(Path(t.name)) else t)
             if self.mutation_cache.exists():
                 tar.add(self.mutation_cache, arcname=MUTATION_CACHE)
+            if self.store_arc and self.witness_store and self.witness_store.is_dir():
+                for w in sorted(self.witness_store.glob("*.json")):
+                    tar.add(w, arcname=f"{self.store_arc}/{w.name}")
             for pdf in sorted(self.docs.glob("*.pdf")) if self.docs.is_dir() else ():
                 tar.add(pdf, arcname=f"{DOCS}/{pdf.name}")
         return buf.getvalue()
@@ -161,7 +174,8 @@ class PrimeExecutor(Executor):
             lap("run")
             # Whatever exists of the outputs, also after a failure: witness and mutation
             # entries are decisions computed before it, which the local executor keeps too.
-            outs = [x for x in (_flag(argv, "--out"), _flag(argv, "--witness-cache"), MUTATION_CACHE) if x]
+            outs = [x for x in (_flag(argv, "--out"), _flag(argv, "--witness-cache"), MUTATION_CACHE,
+                                self.store_arc) if x]
             pack = await rt.run(["sh", "-c", 'cd "$1" && shift && uname -m && ls -d -- "$@" 2>/dev/null '
                                  '| tar czf .cb-down.tgz --exclude=.formal.lock -T -', "sh", r, *outs], {})
             if pack.exit_code != 0:
@@ -178,7 +192,8 @@ class PrimeExecutor(Executor):
 
     def _apply(self, argv: list[str], data: bytes) -> None:
         """Write the downloaded outputs into the local run: the result, new witness
-        entries (never overwriting one), new mutation-cache entries (merged)."""
+        entries (never overwriting one); and into the shared caches: new mutation-cache
+        and witness-store entries (merged)."""
         out, wc = _flag(argv, "--out"), _flag(argv, "--witness-cache")
         with tempfile.TemporaryDirectory() as d, tarfile.open(fileobj=io.BytesIO(data)) as tar:
             tar.extractall(d, filter="data")
@@ -195,13 +210,7 @@ class PrimeExecutor(Executor):
                         tmp.write_bytes(w.read_bytes())
                         os.replace(tmp, dest)
             if (got / MUTATION_CACHE).is_file():
-                self._merge_mutation_cache(json.loads((got / MUTATION_CACHE).read_text()))
-
-    def _merge_mutation_cache(self, theirs: dict) -> None:
-        from closure_core.gates import save_cache
-        with self._merge:
-            ours = json.loads(self.mutation_cache.read_text()) if self.mutation_cache.exists() else {}
-            new = {k: v for k, v in theirs.items() if k not in ours}
-            if new:
-                self.mutation_cache.parent.mkdir(parents=True, exist_ok=True)
-                save_cache(self.mutation_cache, {**ours, **new})
+                gates.merge_cache(self.mutation_cache, json.loads((got / MUTATION_CACHE).read_text()))
+            if self.store_arc and self.witness_store and (got / self.store_arc).is_dir():
+                for w in sorted((got / self.store_arc).glob("*.json")):
+                    gates.store_witness(self.witness_store, w.stem, json.loads(w.read_text()))

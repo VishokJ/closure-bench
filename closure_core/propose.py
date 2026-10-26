@@ -12,6 +12,8 @@ accept/reject decisions, repair messages and summary.
             at most RETRIES times. With target_only the model writes only the
             plan entry, the cover and an optional twin cover; formal finds the
             gold (gates.formal), and its witnesses are recorded under formal/
+  Seed      (optional) every task candidate of an earlier run, its latest bundle
+            as attempt 0 without a model call; Stage A is told to list others
   Set       individually accepted candidates are gated again in order against
             a cumulative pack, so two duplicates from the same run cannot
             both be accepted
@@ -152,8 +154,7 @@ def progress_before(design: Design, sims: dict | None = None, *, cache_path: Pat
         if sims is None:
             sims = {n: f.result() for n, f in {n: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
                                                for n, b in design.baselines.items()}.items()}
-        mutation = gates.mutation_runs(design, design.golds, pool,
-                                       cache_path or ROOT / "results" / "check" / "mutation_cache.json")
+        mutation = gates.mutation_runs(design, design.golds, pool, cache_path or gates.MUTATION_CACHE)
         gold_sims = {i: f.result() for i, f in {i: pool.submit(simulate, design, p.read_text())
                                                  for i, p in design.golds.items()}.items()}
     hole_keys = gates.holes(sims)
@@ -301,10 +302,18 @@ def parse_bundle(text: str, target_only: bool = False) -> dict:
                          "witness is the near-miss")
     if len(found["twin"]) > 1:
         raise ParseError("at most one <twin> block")
+    fallback = False
     try:
         plan = yaml.safe_load(found["plan"][0][1])
     except yaml.YAMLError as e:
-        raise ParseError(f"<plan> is not valid YAML: {e}") from None
+        # The usual cause is a colon in a plain description; quoting it is the only fix tried.
+        quoted = _quote_description(found["plan"][0][1])
+        try:
+            if quoted is None:
+                raise e
+            plan, fallback = yaml.safe_load(quoted), True
+        except yaml.YAMLError:
+            raise ParseError(f"<plan> is not valid YAML: {e}") from None
     if not isinstance(plan, dict):
         raise ParseError("<plan> must be a YAML mapping")
     near = {}
@@ -315,7 +324,23 @@ def parse_bundle(text: str, target_only: bool = False) -> dict:
         near[name] = body
     one = lambda t: found[t][0][1] + "\n" if found[t] else None
     return {"plan": plan, "cover": one("cover"), "gold": one("gold"), "twin": one("twin"),
-            "near_miss": {n: b + "\n" for n, b in near.items()}}
+            "near_miss": {n: b + "\n" for n, b in near.items()}, "yaml_fallback": fallback}
+
+
+def _quote_description(text: str) -> str | None:
+    """The <plan> text with only a plain (unquoted, not block) description value
+    double-quoted, its continuation lines folded in; None if there is none."""
+    lines = text.split("\n")
+    for n, line in enumerate(lines):
+        m = re.match(r"([ \t]*)description:[ \t]+(\S.*)$", line)
+        if not m or m.group(2)[0] in "\"'>|":
+            continue
+        end = n + 1  # a plain scalar continues on more-indented lines
+        while end < len(lines) and lines[end].strip() and len(lines[end]) - len(lines[end].lstrip()) > len(m.group(1)):
+            end += 1
+        value = " ".join(x.strip() for x in [m.group(2), *lines[n + 1:end]])
+        return "\n".join([*lines[:n], f"{m.group(1)}description: {json.dumps(value)}", *lines[end:]])
+    return None
 
 
 def substitute(text: str, old: str, new: str) -> str:
@@ -524,7 +549,8 @@ def survivor_prompt(run_dir: Path, context: str) -> tuple[str, list[str]]:
 def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
         max_candidates: int = 20, stage_a_only: bool = False, full_docs: bool = False,
         write: bool = False, base: Path | None = None, survivor_pass: bool = False,
-        parallel: int = 1, target_only: bool = False, min_frames: float | None = None) -> dict:
+        parallel: int = 1, target_only: bool = False, min_frames: float | None = None,
+        seed_from: Path | None = None) -> dict:
     """base: the pack to gate against (default designs/<design_name>; tests pass another).
 
     survivor_pass: after pass 1 and its set stage, a second Stage A sees the
@@ -534,9 +560,17 @@ def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
     The survivor pass is off in this mode: a reach gold kills no mutant.
     min_frames: the formal gate's minimum target witness length in frames (bound,
     timeout and the frame length come from the pack's formal/formal.yaml).
+    seed_from: an earlier target-only run, copied into seed/<its id>; its task
+    candidates are seeded (seed_candidates).
     """
     survivor_pass = survivor_pass and not target_only
+    if seed_from and not (target_only and load(seed_from / "manifest.json").get("target_only")):
+        raise ValueError("--seed-from needs --target-only, and a target-only run to seed from")
     run_dir.mkdir(parents=True)
+    seed = None
+    if seed_from:  # a copy, so the run and its replay never read the source again
+        seed = f"{SEED_DIR}/{seed_from.name}"
+        shutil.copytree(seed_from, run_dir / seed, ignore=shutil.ignore_patterns("replay", "setpack"))
     # Every gate in this run, and in its replay, uses this snapshot of the pack.
     shutil.copytree(base or ROOT / "designs" / design_name, run_dir / "base_pack")
     # Target-only: no mutation sweep at startup (no survivor pass to show it to); finish() measures it.
@@ -550,7 +584,8 @@ def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
         "prompt_sha": prompt_sha(), "context_pack_sha": sha256((run_dir / "context_pack.json").read_text()),
         "full_docs": full_docs, "max_candidates": max_candidates, "stage_a_only": stage_a_only,
         "write": write, "design": design_name, "survivor_pass": survivor_pass, "parallel": parallel,
-        "target_only": target_only, "min_frames": min_frames})
+        "target_only": target_only, "min_frames": min_frames,
+        **({"seed": seed, "seed_from": str(seed_from.resolve())} if seed else {})})
     (run_dir / "prompts").mkdir()
     for name, text in prompt_files().items():
         (run_dir / "prompts" / name).write_text(text)
@@ -583,9 +618,25 @@ def resume(run_dir: Path, model, executor: Executor, parallel: int = 1) -> dict:
     return _flow(run_dir, model, executor, context)
 
 
-def enumerate_prompt(context: str, target_only: bool = False) -> str:
+def enumerate_prompt(context: str, target_only: bool = False, n: int = 20, seeded: list[dict] = ()) -> str:
+    """target_only: also the mechanism rules and a request for exactly n targets.
+    seeded: candidates seeded from an earlier run, listed so the model proposes others."""
     prompt = fill((PROMPTS / "enumerate.md").read_text(), context=context)
-    return prompt + "\n" + (PROMPTS / "enumerate_target.md").read_text() if target_only else prompt
+    if target_only:
+        prompt += "\n" + fill((PROMPTS / "enumerate_target.md").read_text(), n=str(n))
+    if seeded:
+        listed = "\n".join(f"- {c.get('title')}: {' '.join(str(c.get('behaviour', '')).split())}" for c in seeded)
+        prompt += "\n" + fill((PROMPTS / "seeded.md").read_text(), seeded=listed)
+    return prompt
+
+
+def first_candidates(cands: list[dict], n: int, target_only: bool) -> list[dict]:
+    """Pass 1's candidates, at most n. Target-only: the first n tasks and every waiver
+    proposal, in order (the prompt asks for n targets; waivers are only recorded)."""
+    if not target_only:
+        return cands[:n]
+    keep = set([i for i, c in enumerate(cands) if c.get("kind") == "task"][:n])
+    return [c for i, c in enumerate(cands) if c.get("kind") != "task" or i in keep]
 
 
 def formal_opts(run_dir: Path, manifest: dict) -> dict:
@@ -599,12 +650,16 @@ def _flow(run_dir: Path, model, executor: Executor, context: str) -> dict:
     m = load(run_dir / "manifest.json")
     max_candidates, parallel = m["max_candidates"], m["parallel"]
     mode = {"target_only": m.get("target_only", False), "formal": formal_opts(run_dir, m)}
-    cands, err = stage_a(run_dir, model, enumerate_prompt(context, mode["target_only"]), "stage_a",
-                         parse_target_candidates if mode["target_only"] else parse_candidates)
-    cands = _number((cands or [])[:max_candidates], 1, 1)
-    dump(run_dir / "candidates.json", {"passes": {"1": {"error": err}}, "candidates": cands, "unkillable": []})
-    if err or m["stage_a_only"]:
+    seeds, skipped = seed_candidates(run_dir, m)
+    cands, err = stage_a(run_dir, model, enumerate_prompt(context, mode["target_only"], max_candidates, seeds),
+                         "stage_a", parse_target_candidates if mode["target_only"] else parse_candidates)
+    cands = seeds + _number(first_candidates(cands or [], max_candidates, mode["target_only"]), len(seeds) + 1, 1)
+    dump(run_dir / "candidates.json", {"passes": {"1": {"error": err}}, "candidates": cands, "unkillable": [],
+                                       **({"seed_skipped": skipped} if m.get("seed") else {})})
+    if (err and not seeds) or m["stage_a_only"]:
         return finish(run_dir, executor)
+    for c in seeds:
+        record_seed(run_dir, c, context, mode["target_only"])
     author_all(run_dir, model, executor, cands, context, parallel, **mode)
     set_stage(run_dir, executor, only={c["cid"] for c in cands}, formal=mode["formal"])
     if m["survivor_pass"]:
@@ -645,10 +700,7 @@ def author_all(run_dir: Path, model, executor: Executor, cands: list[dict], cont
 def author(run_dir: Path, model, executor: Executor, cand: dict, pid: str, context: str,
            target_only: bool = False, formal: dict | None = None) -> None:
     cid = cand["cid"]
-    shown = {k: v for k, v in cand.items() if k not in ("cid", "pass")}
-    template = "author_target.md" if target_only else "author.md"
-    messages = [{"role": "user", "content": fill((PROMPTS / template).read_text(), context=context,
-                                                 candidate=yaml.safe_dump(shown, sort_keys=False).strip())}]
+    messages = author_messages(cand, context, target_only)
     for attempt in range(RETRIES + 1):
         text = _call(model, messages, run_dir / "responses" / cid / f"{attempt}.json")
         out = run_dir / "gates" / cid / f"{attempt}.json"
@@ -665,6 +717,73 @@ def author(run_dir: Path, model, executor: Executor, cand: dict, pid: str, conte
             return
         messages = [*messages, {"role": "assistant", "content": text},
                     {"role": "user", "content": repair_message(res)}]
+
+
+def author_messages(cand: dict, context: str, target_only: bool) -> list[dict]:
+    """The first Stage B message for a candidate (a seeded one too: its repair turns follow it)."""
+    shown = {k: v for k, v in cand.items() if k not in ("cid", "pass", "seeded")}
+    template = "author_target.md" if target_only else "author.md"
+    return [{"role": "user", "content": fill((PROMPTS / template).read_text(), context=context,
+                                             candidate=yaml.safe_dump(shown, sort_keys=False).strip())}]
+
+
+# --- seeding --------------------------------------------------------------------------------
+
+SEED_DIR = "seed"  # under the run: the copy of the run it was seeded from
+
+
+def seed_candidates(run_dir: Path, manifest: dict) -> tuple[list[dict], list[str]]:
+    """(seeded candidates, numbered from c01; source cids skipped for having no bundle).
+
+    Every task candidate of the copied seed run with a bundle on disk, at its latest
+    attempt (the last candidates/<cid>/<n>/ with an item.yaml, gated or not), with
+    provenance seeded: {run, cid, attempt}. Read from the run's copy only, so the
+    run, a resume and the replay all derive the same list."""
+    if not manifest.get("seed"):
+        return [], []
+    src = run_dir / manifest["seed"]
+    out, skipped = [], []
+    for c in load(src / "candidates.json")["candidates"]:
+        if c.get("kind") != "task":
+            continue
+        d = src / "candidates" / c["cid"]
+        att = max((int(p.name) for p in d.glob("*") if (p / "item.yaml").is_file()), default=None)
+        if att is None:
+            skipped.append(c["cid"])
+            continue
+        shown = {k: v for k, v in c.items() if k not in ("cid", "pass", "seeded")}
+        out.append({**shown, "seeded": {"run": src.name, "cid": c["cid"], "attempt": att}})
+    return _number(out, 1, 1), skipped
+
+
+def seed_bundle_text(run_dir: Path, manifest: dict, cand: dict) -> str:
+    """A seeded candidate's bundle as a Stage B answer, with the ITEM token where the
+    seed run's ID was: the text parse_bundle reads, and what repair turns follow."""
+    s = cand["seeded"]
+    src = run_dir / manifest["seed"] / "candidates" / s["cid"] / str(s["attempt"])
+    item = yaml.safe_load((src / "item.yaml").read_text())
+    pid = item["id"]
+    plan = {k: v for k, v in item.items() if k not in ("id", "cover_module")}  # write_candidate adds them
+    blocks = [("plan", yaml.safe_dump(plan, sort_keys=False)), ("cover", (src / "cover.sv").read_text())]
+    if (src / "twin.sv").is_file():
+        blocks.append(("twin", (src / "twin.sv").read_text()))
+    out = ""
+    for tag, body in blocks:
+        out += f"<{tag}>\n" + substitute(body, pid, "ITEM").rstrip("\n") + f"\n</{tag}>\n"
+    return out
+
+
+def record_seed(run_dir: Path, cand: dict, context: str, target_only: bool) -> None:
+    """Attempt 0 of a seeded candidate, recorded as a response with no model call; Stage B
+    then gates it and continues with repair turns as for any candidate."""
+    path = run_dir / "responses" / cand["cid"] / "0.json"
+    rec = {"messages": author_messages(cand, context, target_only), "params": None, "seeded": cand["seeded"],
+           "response": {"text": seed_bundle_text(run_dir, load(run_dir / "manifest.json"), cand)}}
+    if path.exists():  # resume
+        if load(path) != json.loads(json.dumps(rec)):
+            raise RuntimeError(f"{path}: recorded seed differs from the one this code builds; cannot resume")
+        return
+    dump(path, rec)
 
 
 _MANIFEST = threading.Lock()
@@ -696,7 +815,11 @@ def gate_response(cand_dir: Path, text: str, pid: str, executor: Executor, out: 
     if cand_dir.exists():
         shutil.rmtree(cand_dir)
     write_candidate(bundle, pid, cand_dir)
-    return executor.gate(cand_dir, out, base, formal)
+    res = executor.gate(cand_dir, out, base, formal)
+    if bundle["yaml_fallback"]:  # the plan parsed only with its description quoted (parse_bundle)
+        next(g for g in res["gates"] if g["gate"] == "format")["data"]["yaml_fallback"] = True
+        dump(out, res)
+    return res
 
 
 def _final_attempt(run_dir: Path, cid: str) -> tuple[int, dict] | None:
@@ -1000,6 +1123,9 @@ def summarize(run_dir: Path) -> dict:
         "cites_outside_context_pages": sorted(cid for cid, v in cited.items() if set(v) - pages),
         "context_pages": sorted(f"{d} p{p}" for d, p in context_pages) if not pack["full_docs"] else "full documents",
     }
+    if rec.get("seed_skipped") is not None:
+        s["seeded"] = {c["cid"]: c["seeded"] for c in cands if c.get("seeded")}
+        s["seed_skipped"] = rec["seed_skipped"]
     if "2" in rec["passes"]:
         targets = {c["cid"]: sorted(map(str, c.get("targets") or [])) for c in tasks if c["pass"] == 2}
         s["survivor_pass"] = {
@@ -1099,10 +1225,22 @@ def replay(run_dir: Path, executor: Executor) -> list[str]:
             if (work / d).exists():
                 shutil.copytree(work / d, again / d, dirs_exist_ok=True)
 
+    seeds, skipped = seed_candidates(run_dir, manifest)
+    if manifest.get("seed"):  # the seeded list shown at Stage A, and each seeded attempt 0
+        context = render_context(load(run_dir / "context_pack.json"), (PROMPTS / "rules.md").read_text(),
+                                 target_only)
+        a = load(run_dir / "responses" / "stage_a" / "0.json")["messages"][0]["content"]
+        if a != enumerate_prompt(context, target_only, manifest["max_candidates"], seeds):
+            diffs.append("stage A (pass 1): prompt differs (seeded candidates changed)")
+        for c in seeds:
+            if load(run_dir / "responses" / c["cid"] / "0.json")["response"]["text"] != \
+                    seed_bundle_text(run_dir, manifest, c):
+                diffs.append(f"{c['cid']} attempt 0: seeded bundle differs")
     cands, err = _replay_stage_a(run_dir, "stage_a", parse_target_candidates if target_only else parse_candidates,
                                  diffs)
-    cands = _number((cands or [])[:manifest["max_candidates"]], 1, 1)
-    if cands != recorded["1"] or err != rec["passes"]["1"]["error"]:
+    cands = seeds + _number(first_candidates(cands or [], manifest["max_candidates"], target_only),
+                            len(seeds) + 1, 1)
+    if cands != recorded["1"] or err != rec["passes"]["1"]["error"] or skipped != rec.get("seed_skipped", []):
         return diffs + ["stage A (pass 1): parsed candidates differ from candidates.json"]
     _replay_stage_b(run_dir, work, cands, executor, diffs, target_only, formal)
     sync()

@@ -6,6 +6,7 @@ simulation runs in the toolchain image with networking off.
 
   tools/propose_plan [--stage-a-only] [--full-docs] [--write] [--max-candidates N]
   tools/propose_plan --target-only [--min-frames F]   # covers only; formal finds the gold (no survivor pass)
+  tools/propose_plan --target-only --seed-from runs/propose/<run_id>  # re-gate its candidates, propose others
   tools/propose_plan --executor prime --concurrency N  # gate in Prime sandboxes, N at once
   tools/propose_plan --replay runs/propose/<run_id>      # no model calls
   tools/propose_plan --summarize runs/propose/<run_id>   # recompute summary.json
@@ -46,6 +47,8 @@ def main() -> int:
                     help="formal gate: reject target witnesses shorter than this many frames "
                          f"(default with --target-only: {propose.TARGET_MIN_FRAMES}, i.e. two frames)")
     ap.add_argument("--tag", default="", help="suffix for the run directory name")
+    ap.add_argument("--seed-from", type=Path,
+                    help="target-only: seed every task candidate of this run (its latest bundle) as attempt 0")
     ap.add_argument("--image", default=os.environ.get("CLOSURE_BENCH_IMAGE", propose.IMAGE),
                     help="toolchain image for the docker executor (on Apple silicon pass the arm64 manifest "
                          "digest); the prime executor always uses the pinned index propose.IMAGE")
@@ -105,7 +108,8 @@ def main() -> int:
                         stage_a_only=args.stage_a_only, full_docs=args.full_docs, write=args.write,
                         survivor_pass=not args.no_survivor_pass, parallel=args.p, target_only=args.target_only,
                         min_frames=args.min_frames if args.min_frames is not None or not args.target_only
-                        else propose.TARGET_MIN_FRAMES)
+                        else propose.TARGET_MIN_FRAMES,
+                        seed_from=args.seed_from and args.seed_from.expanduser().resolve())
     except InfraError as e:
         return infra_abort(run_dir.relative_to(ROOT), e)
     print(json.dumps(s, indent=2))

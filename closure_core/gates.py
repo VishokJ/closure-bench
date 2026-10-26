@@ -76,6 +76,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 from concurrent.futures import as_completed
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -92,6 +93,11 @@ from closure_core.grader import GradeResult, Simulation
 COVER_RE = re.compile(r"^\s*(\w+)\s*:\s*cover\b", re.M)
 MODULE_RE = re.compile(r"^\s*module\s+(\w+)", re.M)
 REQUIREMENT_TYPES = ("DOC", "README")
+# Shared by every worktree and run on this machine, next to the cited PDFs (citations.CACHE):
+# the Docker executor mounts this folder, the Prime executor uploads it and merges it back.
+CACHE_DIR = Path.home() / ".cache" / "closure-bench"
+MUTATION_CACHE = CACHE_DIR / "mutation_cache.json"
+WITNESSES = CACHE_DIR / "witnesses"
 
 
 @dataclass
@@ -505,7 +511,26 @@ def formal_slot(cache_dir: Path | None, exclusive: bool):
             fcntl.lockf(f, fcntl.LOCK_UN)
 
 
-def witness(design: Design, cover: Path, cache_dir: Path | None) -> dict:
+def witness_store(root: Path = WITNESSES) -> Path | None:
+    """The shared witness store for this formal engine: root/<hash of closure_core/formal.py>.
+    witness_key leaves the engine's code out (a run's keys must not change with it), so
+    a store shared across worktrees and runs is split by it instead. None without formal.py."""
+    engine = Path(__file__).with_name("formal.py")
+    return root / hashlib.sha256(engine.read_bytes()).hexdigest()[:16] if engine.is_file() else None
+
+
+def store_witness(store: Path, key: str, w: dict) -> bool:
+    """Add a witness to the shared store unless it has one for this key (never overwritten)."""
+    dest = store / f"{key}.json"
+    with cache_lock(store):
+        if dest.exists():
+            return False
+        store.mkdir(parents=True, exist_ok=True)
+        save_cache(dest, w)
+        return True
+
+
+def witness(design: Design, cover: Path, cache_dir: Path | None, store: Path | None = None) -> dict:
     """A cached witness: cache_dir/<key>.json, so a replay never re-solves.
 
     A timeout may be load, so it is retried once with no other formal job running
@@ -513,16 +538,26 @@ def witness(design: Design, cover: Path, cache_dir: Path | None) -> dict:
     timeout is a decision: TIMEOUT_DETAIL. Every other outcome cover_witness
     returns is cached as is (reachable, unreachable, unsupported, invalid);
     infrastructure errors raise and are not.
+
+    store: the shared witness store (witness_store()), looked up after cache_dir; a
+    hit is copied into cache_dir, so the run keeps every witness it used. Solved
+    outcomes go into the store too, except timeouts: they depend on the machine
+    and its load, so another run solves them again.
     """
     key = witness_key(design, cover.read_text())
     path = cache_dir / f"{key}.json" if cache_dir else None
     if path and path.exists():
         return {**json.loads(path.read_text()), "key": key}
-    with formal_slot(cache_dir, exclusive=False):
-        w = solve_witness(design, cover)
-    if w["status"] == "timeout":
-        with formal_slot(cache_dir, exclusive=True):
-            w = {**solve_witness(design, cover), "retried": True}
+    if store and (store / f"{key}.json").exists():
+        w = json.loads((store / f"{key}.json").read_text())
+    else:
+        with formal_slot(cache_dir, exclusive=False):
+            w = solve_witness(design, cover)
+        if w["status"] == "timeout":
+            with formal_slot(cache_dir, exclusive=True):
+                w = {**solve_witness(design, cover), "retried": True}
+        if store and w["status"] != "timeout":
+            store_witness(store, key, w)
     if path:
         path.parent.mkdir(parents=True, exist_ok=True)
         save_cache(path, w)
@@ -826,13 +861,42 @@ def duplicate(corpus: dict[str, dict[str, int]], ids: list[str],
 
 
 def save_cache(path: Path, cache: dict) -> None:
-    """Atomic: parallel gate runs (tools/propose_plan -p) share this file. A lost
-    update only costs a re-simulation; a torn read would crash a run. The temp
+    """Atomic: parallel gate runs (tools/propose_plan -p) share this file, and a torn
+    read would crash a run. Writers of a shared cache merge (merge_cache). The temp
     name is unique per call: every container is PID 1, so a pid suffix collides."""
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
     with os.fdopen(fd, "w") as f:
         f.write(json.dumps(dict(cache), indent=1, sort_keys=True) + "\n")
     os.replace(tmp, path)
+
+
+_CACHE_THREADS = threading.Lock()  # lockf excludes other processes only, not this one's threads
+
+
+@contextmanager
+def cache_lock(path: Path):
+    """Exclusive lock for writing the shared cache `path` (a file or a directory), held
+    on <path>.lock with lockf, as in formal_slot, so it excludes other containers too."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _CACHE_THREADS, open(path.parent / f"{path.name}.lock", "a+") as f:
+        fcntl.lockf(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.lockf(f, fcntl.LOCK_UN)
+
+
+def merge_cache(path: Path, entries: dict) -> int:
+    """Add the entries the cache file does not have yet, under cache_lock: runs and
+    worktrees share it, and an existing entry is never overwritten. Returns how many
+    were added."""
+    entries = dict(entries)  # one copy: simulation threads may be adding to it
+    with cache_lock(path):
+        ours = json.loads(path.read_text()) if path.exists() else {}
+        new = {k: v for k, v in entries.items() if k not in ours}
+        if new:
+            save_cache(path, {**ours, **new})
+        return len(new)
 
 
 def mutation_runs(design: Design, golds: dict[str, Path], pool, cache_path: Path) -> dict:
@@ -853,8 +917,7 @@ def mutation_runs(design: Design, golds: dict[str, Path], pool, cache_path: Path
 
     run = lambda tb, m=None: pool.submit(mutants.simulate, design, *tbs[tb], m, cache=cache)
     orig = {tb: f.result() for tb, f in {tb: run(tb) for tb in tbs}.items()}
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    save = lambda: save_cache(cache_path, cache)
+    save = lambda: merge_cache(cache_path, cache)
     status: dict[tuple[str, str], str] = {}
 
     def collect(futs: dict, phase: str) -> None:

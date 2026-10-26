@@ -3,6 +3,7 @@
 image: it simulates the baselines for their coverage holes and extracts doc pages.
 
 Usage:  tools/context_pack --out pack.json [--design uart | --design PACK_DIR] [--full-docs] [-j N]
+                          [--mutation-cache FILE]
 """
 
 from __future__ import annotations
@@ -29,10 +30,13 @@ def main() -> int:
     mode.add_argument("--progress-only", action="store_true", help="write only progress_before")
     ap.add_argument("-j", type=int, default=default_jobs(),
                     help="parallel simulations (mutants, golds; default: cores - 2)")
+    ap.add_argument("--mutation-cache", type=Path, help="default: the shared gates.MUTATION_CACHE")
     args = ap.parse_args()
     design = load_design(args.design)
-    propose.dump(args.out, propose.progress_before(design, j=args.j) if args.progress_only else
-                 propose.build_context_pack(design, full_docs=args.full_docs, j=args.j, progress=not args.no_progress))
+    cache = args.mutation_cache and args.mutation_cache.resolve()
+    propose.dump(args.out, propose.progress_before(design, cache_path=cache, j=args.j) if args.progress_only else
+                 propose.build_context_pack(design, full_docs=args.full_docs, cache_path=cache, j=args.j,
+                                            progress=not args.no_progress))
     return 0
 
 
