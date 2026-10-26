@@ -140,6 +140,11 @@ def check_policy(design: Design, tb_text: str) -> tuple[list[str], str]:
         tb.write_text(tb_text)
         root, log = policy.parse_testbench(tb, ours)
         if root is None:
+            # A redefined design module often breaks the parse itself (our covers bind
+            # to internals the copy lacks); report it as the violation it is.
+            dup = sorted(set(policy.MODULE_RE.findall(tb_text)) & policy.module_names(ours))
+            if dup:
+                return [f"submission/tb.sv: redefines design or cover module {m!r}" for m in dup], ""
             return [], log.replace(str(work), "<work>")
         vs = policy.check_testbench(policy.Ast(root), str(tb), policy.module_names(ours))
         return [str(v).replace(str(work), "<work>") for v in vs], ""
