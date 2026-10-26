@@ -1,0 +1,42 @@
+# Pilot: every plan item with a gold (R1-R11, T1-T4), bash harness (shell in
+# the agent sandbox with Verilator and /workspace/run.sh; the agent writes
+# /workspace/submission/tb.sv), k=4, isolated grading in a fresh Prime sandbox.
+# Sampling as pilot_null.toml. One run per model, from the repo root with the
+# venv from the README activated:
+#   vf-eval @ configs/pilot_bash.toml -m google/gemini-4-argon
+#   vf-eval @ configs/pilot_bash.toml -m qwen/qwen3.8-27b --sampling.max_tokens 32768
+model = "google/gemini-4-argon"  # frontier; the trainable model is qwen/qwen3.8-27b (-m)
+num_rollouts = 4                 # rollouts per task (-r)
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+push = false
+
+[sampling]
+temperature = 1.0
+max_tokens = 16000               # per model response
+
+[env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+# Must match the harness id below: it selects the prompt and installs run.sh.
+harness = "bash"
+# Agent wall clock (s); ~9 s per simulation. A timed-out run is still graded
+# on whatever submission/tb.sv holds.
+agent_timeout = 1200
+# Stated in the prompt; must equal [env.agent] max_turns (checked at setup).
+max_turns = 40
+
+[env.agent]
+# Cost guard: each turn re-sends the growing context, so tokens (not wall
+# clock) are the runaway risk. A capped run still finalizes and is graded.
+max_turns = 40                   # = taskset max_turns above
+
+[env.agent.harness]
+id = "bash"
+
+[env.agent.runtime]
+type = "prime"
+
+[env.agent.scoring]
+mode = "isolated"

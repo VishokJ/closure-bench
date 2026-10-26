@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 dependencies = ["pyyaml>=6"]
 
 [project.optional-dependencies]
+analyze = ["matplotlib>=3.8"]  # tools/analyze_eval charts
 check = ["pypdf>=4"]   # citation checks against cited PDFs
 dev = ["pytest>=8"]    # tests/
 propose = ["openai>=1"]  # tools/propose_plan (Prime Inference, OpenAI-compatible)
