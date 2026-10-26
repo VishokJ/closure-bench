@@ -177,6 +177,8 @@ class ClosureTask(vf.Task[ClosureData]):
             "compiled": float(g["status"] not in ("compile_error", "compile_timeout", "policy_violation")),
             # How often a model reaches for force, bind, hierarchical writes, ... (red-team).
             "policy_violation": float(g["status"] == "policy_violation"),
+            # How often a model breaks a legality rule (legality.yaml) the task enforces.
+            "illegal_stimulus": float(g["status"] == "illegal_stimulus"),
             "finished": float(g["status"] == "ok"),
             "target_hit": float(all(v > 0 for v in g["target_hits"].values())),
             "off_target_items_hit": float(off_target),
@@ -324,7 +326,7 @@ class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
             tasks.append(ClosureTask(ClosureData(
                 id=f"{design.name}/{name}",
                 name=name,
-                system_prompt=prompt.system_prompt(harness),
+                system_prompt=prompt.system_prompt(harness, rules=design.enforced(list(targets))),
                 prompt=prompt.render(design, [design.item(t) for t in targets], self.config.run_timeout,
                                      harness, agent_timeout if harness == "bash" else None,
                                      self.config.max_turns if harness == "bash" else None, task_id=name),
@@ -361,7 +363,8 @@ class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
             tasks.append(ClosureTask(ClosureData(
                 id=f"{design.name}/campaign_{module}",
                 name=f"campaign_{module}",
-                system_prompt=prompt.system_prompt(harness, max_files),
+                system_prompt=prompt.system_prompt(harness, max_files,
+                                                   rules=design.enforced([it.id for it in items])),
                 prompt=prompt.render_campaign(design, module, items, self.config.run_timeout,
                                               max_files, harness,
                                               agent_timeout if harness == "bash" else None,

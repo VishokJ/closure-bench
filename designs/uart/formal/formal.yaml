@@ -1,6 +1,8 @@
 # Formal environment (closure_core/formal.py, tools/formal): one formal top per
-# module a cover binds to. Hand-reviewed design-pack input; the assumptions
-# live in the env files, each with its source.
+# module a cover binds to. Hand-reviewed design-pack input. Two kinds of
+# assumptions, kept apart: the legal stimulus rules in ../legality.yaml (also
+# enforced by the grader; formal.py inserts them into each module) and the search
+# restrictions in the env files (formal only, never enforced), each with its reason.
 #
 # inputs: the formal top's free inputs besides clk; they must equal the DUT's
 #   input port names and widths, because a witness is replayed on the DUT's

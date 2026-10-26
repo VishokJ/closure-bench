@@ -69,7 +69,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-OUTCOMES = ["no_submission", "policy_violation", "compile_error", "timeout",
+OUTCOMES = ["no_submission", "policy_violation", "illegal_stimulus", "compile_error", "timeout",
             "runtime_error", "no_finish", "missed", "hit"]
 Z95 = 1.959963984540054
 BOOTSTRAP_RESAMPLES = 2000
@@ -572,6 +572,11 @@ def markdown(summary: dict) -> str:
 
 SURFACE, INK, MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
+# Outcome colors, hit first. illegal_stimulus has no hue of its own (8 is the palette's
+# limit): policy_violation's, hatched, since both are runs the grader rejects.
+OUTCOME_STYLE = {o: (SERIES[c], None) for c, o in enumerate(
+    ["hit", "missed", "no_finish", "runtime_error", "timeout", "compile_error", "policy_violation", "no_submission"])}
+OUTCOME_STYLE["illegal_stimulus"] = (OUTCOME_STYLE["policy_violation"][0], "////")
 
 
 def charts(summary: dict, out: Path) -> None:
@@ -622,10 +627,11 @@ def charts(summary: dict, out: Path) -> None:
     for i, g in enumerate(gs):
         a = g["aggregate"]
         left = 0.0
-        for c, o in enumerate(order):
+        for o in order:
             share = a["outcomes"].get(o, 0) / a["graded"] if a["graded"] else 0
             if share:
-                ax.barh(i, share, left=left, height=0.6, color=SERIES[c], edgecolor=SURFACE, lw=2)
+                color, hatch = OUTCOME_STYLE[o]
+                ax.barh(i, share, left=left, height=0.6, color=color, edgecolor=SURFACE, lw=2, hatch=hatch)
                 if share >= 0.08:
                     ax.text(left + share / 2, i, f"{100 * share:.0f}%", ha="center", va="center",
                             fontsize=7.5, color="#ffffff")
@@ -638,7 +644,7 @@ def charts(summary: dict, out: Path) -> None:
     for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
     ax.tick_params(axis="y", length=0)
-    ax.legend([Patch(color=SERIES[c]) for c in range(len(order))], order, loc="upper center", bbox_to_anchor=(0.5, -0.15),
+    ax.legend([Patch(facecolor=OUTCOME_STYLE[o][0], edgecolor=SURFACE, hatch=OUTCOME_STYLE[o][1]) for o in order], order, loc="upper center", bbox_to_anchor=(0.5, -0.15),
               ncol=4, frameon=False, fontsize=8)
     fig.tight_layout()
     fig.savefig(out / "outcomes.png", dpi=150, metadata=meta, facecolor=SURFACE)

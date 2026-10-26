@@ -181,10 +181,11 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
             st = gates.formal_settings(design)
             bound = st["bound"]
             # Named as the repo path the proposer sees, also when the base is a run's snapshot.
-            kw = {"assumptions": f"designs/{base.name}/{gates.FORMAL_DIR}/", "bound": bound,
+            kw = {"assumptions": f"designs/{base.name}/legality.yaml and designs/{base.name}/{gates.FORMAL_DIR}/",
+                  "bound": bound,
                   "min_frames": min_frames, "frame_cycles": st["frame_cycles"]}
             w = None if has_gold else gates.witness(design, design.pack / "covers" / f"{i}.sv", witness_cache,
-                                                   witness_store)
+                                                   witness_store, allow=it.legality_allow)
             # A measurement, not a decision: how much of the witness is protocol activity.
             probe = (pool.submit(gates.active_frames, design, w, st["frame_cycles"], st["active_signal"])
                      if w and w["status"] == "reachable" and w.get("tb_text") and st["frame_cycles"]
@@ -193,7 +194,8 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
             tw = None
             if fr.ok in (True, "n/a") and twin:  # the twin only once the target is settled
                 tv = gates.twin_policy(design, twin, i)
-                tw = None if tv else gates.witness(design, twin, witness_cache, witness_store)
+                tw = None if tv else gates.witness(design, twin, witness_cache, witness_store,
+                                                   allow=it.legality_allow)
                 fr = gates.formal(it, w, tw, twin_violations=tv, **kw)
             if probe:
                 fr.data.update(probe.result())

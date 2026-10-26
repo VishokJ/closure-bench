@@ -16,6 +16,9 @@ def summary(g: dict) -> str:
     lines.append(f"would score: {int(g['reward'])}")
     if g["status"] == "policy_violation":
         lines += ["", "policy violations:", g["diagnostics"]]
+    elif g["status"] == "illegal_stimulus":
+        lines += ["", "legality rules broken (see the rules in the task):",
+                  *(l for l in g["diagnostics"].splitlines() if l.startswith("ILLEGAL_STIMULUS:"))]
     elif g["status"] != "ok":
         lines += ["", "log tail:", g["diagnostics"]]
     return "\n".join(lines)

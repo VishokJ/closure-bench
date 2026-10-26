@@ -9,7 +9,7 @@ target hits over files whose status is ok:
 The grade records reward_kind "fraction" (the single-target grader's reward is
 all-or-nothing). At most max_files files are graded: by default one per target.
 
-A file that is not ok (policy_violation included) contributes nothing; its
+A file that is not ok (policy_violation and illegal_stimulus included) contributes nothing; its
 status is recorded per file. Standard library only: it runs next to
 closure_core in the grading sandbox (/grader/campaign.py) and in the agent's
 sandbox (/workspace/.tools/campaign.py, behind run.sh).
@@ -34,7 +34,7 @@ from pathlib import Path
 MAX_FILE_BYTES = 1_000_000
 NAME = re.compile(r"tb_[A-Za-z0-9_]+\.sv")
 STATUSES = ("ok", "compile_error", "compile_timeout", "timeout", "runtime_error",
-            "no_finish", "policy_violation")
+            "no_finish", "policy_violation", "illegal_stimulus")
 
 
 def eligible(sizes: dict[str, int]) -> list[str]:
@@ -89,6 +89,9 @@ def summary(c: dict) -> str:
     for name, g in c["files"].items():
         if g["status"] == "policy_violation":
             lines += ["", f"{name}: policy violations:", g["diagnostics"]]
+        elif g["status"] == "illegal_stimulus":
+            lines += ["", f"{name}: legality rules broken (see the rules in the task):",
+                      *(l for l in g["diagnostics"].splitlines() if l.startswith("ILLEGAL_STIMULUS:"))]
         elif g["status"] != "ok":
             lines += ["", f"{name}: log tail:", g["diagnostics"]]
     return "\n".join(lines)

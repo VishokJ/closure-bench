@@ -23,7 +23,7 @@ import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from closure_core import grader, infra, sim
+from closure_core import grader, infra, legality, sim
 from closure_core.design import Design
 
 REL_SWAP = {"==": "!=", "!=": "==", ">": ">=", ">=": ">", "<": "<=", "<=": "<"}
@@ -167,8 +167,10 @@ def simulate(design: Design, tb_text: str, top: str, mutant: Mutant | None = Non
              run_timeout: float = 20.0, cache: dict | None = None) -> dict:
     """Run one testbench against the RTL, optionally with one mutant applied.
 
-    Compiled without covers: a mutant's status depends only on the RTL and the
-    testbench, so cached results stay valid when covers are added or changed.
+    Compiled without covers and without the legality checker: a mutant's status
+    depends only on the RTL and the testbench, so cached results stay valid when
+    covers or legality rules change, and a mutant that changes a design output the
+    checker reads (busy, s_axis_tready) cannot turn into an illegal_stimulus.
 
     Returns {"status": sim status, "modules": design modules the testbench
     instantiates (from line coverage)}. Cached under cache_key().
@@ -191,8 +193,8 @@ def simulate(design: Design, tb_text: str, top: str, mutant: Mutant | None = Non
             for p, t in rtl.items():
                 (Path(d) / p.name).write_text(t)
                 paths.append(Path(d) / p.name)
-            s = grader.simulate(replace(design, rtl=tuple(paths), covers=(), plan=()), tb_text,
-                                top=top, run_timeout=run_timeout)
+            s = grader.simulate(replace(design, rtl=tuple(paths), covers=(), plan=(), legality=legality.NONE),
+                                tb_text, top=top, run_timeout=run_timeout)
         return s, s.sim.status
 
     s, status = infra.retry_once(run)

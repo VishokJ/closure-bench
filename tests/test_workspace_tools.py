@@ -101,6 +101,34 @@ def test_run_sh_empty_scores_0(workspace):
 
 
 @needs_sim
+def test_run_sh_reports_illegal_stimulus(workspace):
+    """The workspace bundle carries the legality checker: run.sh stops illegal stimulus too."""
+    out = _run(workspace, _illegal_tb())
+    assert out.startswith("status: illegal_stimulus\n")
+    assert "would score: 0" in out
+    assert "ILLEGAL_STIMULUS: axis_tvalid_low_in_reset at " in out
+
+
+def _illegal_tb() -> str:
+    # s_axis_tvalid high during reset (AXI-Stream s2.8.2); tests/test_legality.py has the grader tests.
+    return """`timescale 1ns / 1ps
+module tb;
+  logic clk = 1'b0;
+  always #5 clk = ~clk;
+  logic rst = 1'b1, s_axis_tvalid = 1'b1;
+  logic [7:0] s_axis_tdata = 8'h55;
+  logic [15:0] prescale = 16'd1;
+  wire s_axis_tready, txd, busy;
+  uart_tx dut (.*);
+  initial begin
+    repeat (3) @(negedge clk); rst = 1'b0;
+    repeat (20) @(negedge clk); $finish;
+  end
+endmodule
+"""
+
+
+@needs_sim
 def test_run_sh_reports_policy_violation(workspace):
     out = _run(workspace, (ROOT / "tests/fixtures/attacks/force.sv").read_text())
     assert out.startswith("status: policy_violation\n")

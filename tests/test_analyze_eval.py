@@ -89,11 +89,21 @@ def test_groups_split_by_max_tokens(summary):
 def test_outcome_categories(summary):
     g = summary["groups"][0]
     assert g["tasks"]["uart/R1"]["outcomes"] == {
-        "no_submission": 0, "policy_violation": 1, "compile_error": 1, "timeout": 0,
+        "no_submission": 0, "policy_violation": 1, "illegal_stimulus": 0, "compile_error": 1, "timeout": 0,
         "runtime_error": 0, "no_finish": 0, "missed": 1, "hit": 1}
     r2 = g["tasks"]["uart/R2"]["outcomes"]
     assert (r2["timeout"], r2["runtime_error"], r2["no_finish"], r2["no_submission"],
             r2["compile_error"]) == (1, 1, 1, 1, 0)
+
+
+def test_illegal_stimulus_is_an_outcome_with_a_chart_style(tmp_path):
+    write_run(tmp_path / "run", [trace("uart/T1", status="illegal_stimulus"), trace("uart/T1", reward=1.0)])
+    g = ae.summarise(*ae.load([tmp_path]))
+    assert g["groups"][0]["tasks"]["uart/T1"]["outcomes"]["illegal_stimulus"] == 1
+    assert set(ae.OUTCOME_STYLE) == set(ae.OUTCOMES)
+    pytest.importorskip("matplotlib")
+    ae.charts(g, tmp_path)
+    assert (tmp_path / "outcomes.png").exists()
 
 
 def test_truncation_and_infra(summary):

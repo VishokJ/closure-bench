@@ -27,6 +27,9 @@ def test_bundle_is_self_sufficient(tmp_path):
     shipped = load_design("uart", repo_root=tmp_path)
     assert [it.id for it in shipped.plan] == [it.id for it in design.plan]
     assert len(shipped.covers) == len(design.covers)
+    # The legality checker ships as its rules and generator: the same checker runs here.
+    assert "designs/uart/legality.yaml" in bundle and "closure_core/legality.py" in bundle
+    assert shipped.legality == design.legality
 
 
 def test_bundle_excludes_answers():

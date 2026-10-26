@@ -7,6 +7,8 @@ from pathlib import Path
 
 import yaml
 
+from closure_core import legality as legal
+
 
 @dataclass(frozen=True)
 class PlanItem:
@@ -20,6 +22,7 @@ class PlanItem:
     near_miss_waiver: str | None = None  # why no near-miss is meaningful; audited
     composed_from: tuple[str, ...] = ()  # plan IDs a composed item is built from (tools/compose)
     template: str | None = None          # its composition template: seq, count, cross, excl, budget
+    legality_allow: tuple[str, ...] = ()  # legality rule ids this item may break (legality.yaml)
 
 
 @dataclass(frozen=True)
@@ -37,6 +40,11 @@ class Design:
     near_misses: dict[str, tuple[Path, ...]] = field(default_factory=dict)  # near_miss/<ID>_*.sv
     randoms: dict[str, dict] = field(default_factory=dict)  # fixed-seed random TBs, like baselines
     multi: dict[str, tuple[str, ...]] = field(default_factory=dict)  # multi-target task ID -> plan IDs
+    legality: legal.Legality = legal.NONE  # legal stimulus rules (legality.yaml); NONE: no checker
+
+    def enforced(self, targets: list[str]) -> tuple[legal.Rule, ...]:
+        """The legality rules a grade of these targets enforces (legality.enforced)."""
+        return legal.enforced(self.legality, [self.item(t).legality_allow for t in targets])
 
     def item(self, plan_id: str) -> PlanItem:
         for it in self.plan:
@@ -84,6 +92,7 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
             near_miss_waiver=(str(it["near_miss_waiver"]).strip() or None) if it.get("near_miss_waiver") else None,
             composed_from=tuple(map(str, it.get("composed_from") or ())),
             template=it.get("template"),
+            legality_allow=tuple(map(str, (it.get("legality") or {}).get("allow") or ())),
         )
         for it in plan_spec["items"]
     )
@@ -97,6 +106,11 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
     for it in plan:
         if set(it.composed_from) - set(ids) or it.id in it.composed_from:
             raise ValueError(f"{it.id}: composed_from must name other plan items, got {list(it.composed_from)}")
+    legality = legal.load(pack / spec["legality"]) if "legality" in spec else legal.NONE
+    for it in plan:
+        unknown = set(it.legality_allow) - {r.id for r in legality.rules}
+        if unknown:
+            raise ValueError(f"{it.id}: legality allows unknown rules {sorted(unknown)}")
     multi = {m["id"]: tuple(m["targets"])
              for m in (yaml.safe_load((pack / spec["multi"]).read_text()) or {}).get("multi", [])} \
         if "multi" in spec else {}
@@ -117,6 +131,7 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
         },
         randoms={k: {"top": v["top"], "file": resolve(v["file"])} for k, v in spec.get("random", {}).items()},
         multi=multi,
+        legality=legality,
         mutate={resolve(f): (lo, hi) for f, (lo, hi) in spec.get("mutate", {}).items()},
         waivers=(yaml.safe_load((pack / spec["waivers"]).read_text()) or {}) if "waivers" in spec else {},
         golds={it.id: g.resolve() for it in plan if (g := pack / "gold" / f"{it.id}.sv").is_file()},

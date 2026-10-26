@@ -133,8 +133,11 @@ def build_context_pack(design: Design, *, full_docs: bool = False, cache_path: P
         "waivers": (design.pack / "waivers.yaml").read_text() if (design.pack / "waivers.yaml").exists() else "",
         "docs": docs,
         "full_docs": full_docs,
-        # Shown only in target-only mode: the formal environment (what formal may assume).
-        "formal": {f"designs/{design.name}/{gates.FORMAL_DIR}/{n}": t for n, t in gates.formal_files(design).items()},
+        # Shown only in target-only mode: what formal may assume, the legality rules (also
+        # enforced by the grader) and the formal environment's search restrictions.
+        "formal": {**({f"designs/{design.name}/legality.yaml": (design.pack / "legality.yaml").read_text()}
+                      if (design.pack / "legality.yaml").is_file() else {}),
+                   **{f"designs/{design.name}/{gates.FORMAL_DIR}/{n}": t for n, t in gates.formal_files(design).items()}},
     }
     if progress:
         pack["progress_before"] = progress_before(design, sims, cache_path=cache_path, j=j)

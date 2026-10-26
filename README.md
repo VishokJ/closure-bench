@@ -11,6 +11,11 @@ Status: grader, validity gates and the Prime eval adapter in place for the first
 - `third_party/verilog-uart/` pinned, unmodified design under test (see UPSTREAM.md)
 - `designs/uart/` design pack: baseline testbenches, coverage plan (`plan.yaml`),
   cited documents (`sources.yaml`), one cover file per item, gold testbenches, waivers
+- `designs/uart/legality.yaml` legal stimulus rules (AXI-Stream source rules, prescale
+  nonzero where it is read and constant while busy), each with its source. The grader binds a checker
+  generated from them into every graded simulation (a violation scores 0, status
+  `illegal_stimulus`) and formal assumes the same rules; a plan item about a
+  documented hazard may allow rules (`legality: {allow: [...]}`)
 - `closure_core/` simulation, coverage parsing, citation checks, mutants, gate logic
   (`gates.py`), AST policy checks on Verilator's parse (`policy.py`) and the grader;
   plain Python with no verifiers dependency
@@ -24,10 +29,13 @@ Status: grader, validity gates and the Prime eval adapter in place for the first
 - `configs/` eval configs (`slice_r1.toml`: R1, null harness, Prime sandboxes)
 - `tests/` unit tests for the gate logic and the grader bundle
 - `tools/run_tb` run one testbench and write annotated coverage
+- `tools/regrade` re-grade the submissions in verifiers `traces.jsonl` files with the
+  current grader (in the task image); prints every changed status or reward
 - `tools/formal` formal measurement (Yosys + SymbiYosys) per plan item: shortest
   witness within a bound, its depth and input changes, converted to a testbench
-  that the grader must score 1. It measures; Verilator decides. Formal
-  environment (hand-reviewed assumptions) in `designs/uart/formal/`
+  that the grader must score 1. It measures; Verilator decides. Formal assumes
+  the legality rules plus search restrictions (formal only, never enforced: e.g.
+  prescale 1..4) in `designs/uart/formal/`
 - `docker/toolchain/` two pinned images from one Dockerfile: `task` (Verilator
   5.020 only: agent and grading sandboxes) and `pipeline` (plus the formal tools:
   checks, gates, proposer)

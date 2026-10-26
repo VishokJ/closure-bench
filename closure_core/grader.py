@@ -4,8 +4,11 @@ The submission is graded in a fresh directory containing only the pinned RTL,
 our cover files, our simulation driver and the submitted testbench. It is first
 checked against the testbench policy (closure_core.policy: no force, no writes
 or binds into the design, no redefined modules, no $system/$c/file I/O); a
-violation scores 0 with status policy_violation and is never simulated. Reward
-is 1.0 only if the simulation ran cleanly to $finish and every target was hit.
+violation scores 0 with status policy_violation and is never simulated. Every
+simulation also compiles the legality checker (closure_core.legality: the rules
+of designs/<name>/legality.yaml the targets do not allow); stimulus that breaks
+one scores 0 with status illegal_stimulus. Reward is 1.0 only if the simulation
+ran cleanly to $finish and every target was hit.
 
 CLI (used inside the grading sandbox):
     python -m closure_core.grader --design uart --target R1 path/to/tb.sv
@@ -23,7 +26,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from closure_core import coverage, policy, sim
+from closure_core import coverage, legality, policy, sim
 from closure_core.design import Design, load_design
 
 SUBMISSION_TOP = "tb"  # agent testbenches must name their top module `tb`
@@ -33,7 +36,7 @@ SUBMISSION_TOP = "tb"  # agent testbenches must name their top module `tb`
 class GradeResult:
     design: str
     targets: list[str]
-    status: str                    # sim status (closure_core.sim) or policy_violation
+    status: str                    # sim status (closure_core.sim), policy_violation or illegal_stimulus
     reward: float
     target_hits: dict[str, int]
     plan_hits: dict[str, int]      # every plan item, for metrics and analysis
@@ -50,7 +53,7 @@ class GradeResult:
 @dataclass
 class Simulation:
     sim: sim.SimResult
-    points: list[coverage.CoverPoint]   # every coverage point; empty unless status ok
+    points: list[coverage.CoverPoint]   # every coverage point but the checker's; empty unless status ok
     plan_hits: dict[str, int]           # trusted hits per plan ID
 
 
@@ -62,8 +65,13 @@ def simulate(
     compile_timeout: float = 120.0,
     run_timeout: float = 60.0,
     keep_workdir: Path | None = None,
+    rules: tuple[legality.Rule, ...] | None = None,
 ) -> Simulation:
-    """Run one testbench against the pinned RTL and our covers in a fresh directory."""
+    """Run one testbench against the pinned RTL, our covers and the legality checker
+    in a fresh directory. rules: the legality rules to check; None checks all of
+    design.legality (a design with legality NONE, as in mutation runs, gets no checker).
+    A run whose log has the checker's marker gets status illegal_stimulus."""
+    rules = design.legality.rules if rules is None else rules
     work = Path(tempfile.mkdtemp(prefix="cb-sim-"))
     try:
         (work / "rtl").mkdir()
@@ -71,15 +79,21 @@ def simulate(
         (work / "submission").mkdir()
         rtl = [Path(shutil.copy2(f, work / "rtl" / f.name)) for f in design.rtl]
         covers = [Path(shutil.copy2(f, work / "covers" / f.name)) for f in design.covers]
+        checker = _write_checker(work, design, rules)
         tb = work / "submission" / "tb.sv"
         tb.write_text(tb_text)
 
-        res = sim.build_and_run(work, [*rtl, *covers, tb], top,
+        res = sim.build_and_run(work, [*rtl, *covers, *checker, tb], top,
                                 compile_timeout=compile_timeout, run_timeout=run_timeout)
+        if res.status not in ("compile_error", "compile_timeout", "timeout") and legality.violations(res.run_log):
+            # Checked before ok: a $finish in the same time step must not hide a violation.
+            res = sim.SimResult("illegal_stimulus", None, res.compile_log, res.run_log,
+                                res.compile_s, res.run_s, res.exit_code)
         points: list[coverage.CoverPoint] = []
         hits = {it.id: 0 for it in design.plan}
         if res.status == "ok":
-            points = coverage.parse(res.coverage_file)
+            ours = {str(f.resolve()) for f in checker}
+            points = [p for p in coverage.parse(res.coverage_file) if str(Path(p.file).resolve()) not in ours]
             hits = coverage.plan_hits(points, design, covers)
         # Logs mention the temp dir; normalise so results are comparable across runs.
         res = sim.SimResult(res.status, None, res.compile_log.replace(str(work), "<work>"),
@@ -92,6 +106,17 @@ def simulate(
         if keep_workdir:
             shutil.copytree(work, keep_workdir, dirs_exist_ok=True)
         shutil.rmtree(work, ignore_errors=True)
+
+
+def _write_checker(work: Path, design: Design, rules: tuple[legality.Rule, ...]) -> list[Path]:
+    """The generated legality checker in work/legal/, as a source list (empty if no rule applies)."""
+    text = legality.checker_text(design.legality, rules)
+    if not text:
+        return []
+    (work / "legal").mkdir()
+    f = work / "legal" / legality.CHECKER_FILE
+    f.write_text(text)
+    return [f]
 
 
 def grade(
@@ -116,7 +141,7 @@ def grade(
             compile_s=0.0, run_s=0.0, diagnostics="\n".join(violations) or log,
             toolchain=sim.verilator_version())
     s = simulate(design, tb_text, top=top, compile_timeout=compile_timeout,
-                 run_timeout=run_timeout, keep_workdir=keep_workdir)
+                 run_timeout=run_timeout, keep_workdir=keep_workdir, rules=design.enforced(targets))
     return score(design, targets, s)
 
 
@@ -134,8 +159,10 @@ def check_policy(design: Design, tb_text: str) -> tuple[list[str], str]:
         work = Path(d)
         for sub in ("rtl", "covers", "submission"):
             (work / sub).mkdir()
+        # The checker with every rule: its module names are reserved whatever a task allows.
         ours = [*(Path(shutil.copy2(f, work / "rtl" / f.name)) for f in design.rtl),
-                *(Path(shutil.copy2(f, work / "covers" / f.name)) for f in design.covers)]
+                *(Path(shutil.copy2(f, work / "covers" / f.name)) for f in design.covers),
+                *_write_checker(work, design, design.legality.rules)]
         tb = work / "submission" / "tb.sv"
         tb.write_text(tb_text)
         root, log = policy.parse_testbench(tb, ours)

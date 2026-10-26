@@ -67,7 +67,11 @@ module tb_rand_tx;
         if (!busy && !s_axis_tvalid && s[21:16] == 6'd1) prescale = 16'(1 + s[24:22]);
       end
     end
-    s_axis_tvalid = 1'b0;
+    // A word still offered waits for its handshake before tvalid drops (AXIS 2.2).
+    if (s_axis_tvalid) begin
+      do @(negedge clk); while (!hs);
+      s_axis_tvalid = 1'b0;
+    end
     repeat (200) @(negedge clk);
     $finish;
   end

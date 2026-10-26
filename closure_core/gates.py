@@ -85,7 +85,7 @@ from pathlib import Path
 import yaml
 
 from closure_core import citations as cit
-from closure_core import mutants, policy
+from closure_core import legality, mutants, policy
 from closure_core.infra import InfraError
 from closure_core.design import Design, PlanItem
 from closure_core.grader import GradeResult, Simulation
@@ -240,6 +240,24 @@ def citations(design: Design, item: PlanItem, store: cit.DocStore,
     ok = False if failed else (None if unverified else True)
     return GateResult("citations", ok, "; ".join(f"{r.kind} {r.detail}" for r in failed + unverified),
                       {"verified": verified})
+
+
+def legality_citations(design: Design, store: cit.DocStore) -> GateResult:
+    """Every legality rule's cited sources verify (RTL/README anchors, DOC page and hash)."""
+    results = []
+    for r in design.legality.rules:
+        for src in r.sources:
+            if src["type"] in ("RTL", "README"):
+                results.append(cit.check_file_anchor(design.repo_root, r.id, src))
+            elif src["type"] == "DOC":
+                results.append(cit.check_doc(store, r.id, src))
+            else:
+                results.append(cit.CitationResult(r.id, src["type"], False, "a rule cites RTL, README or DOC only"))
+    failed = [r for r in results if r.ok is False]
+    unverified = [r for r in results if r.ok is None]
+    return GateResult("legality_citations", False if failed else (None if unverified else True),
+                      "; ".join(f"{r.item}: {r.kind} {r.detail}" for r in failed + unverified)
+                      or f"{len(results)} sources verified")
 
 
 def baseline(item: PlanItem, baselines: dict[str, Simulation],
@@ -449,9 +467,10 @@ def tools_release(version: str | None) -> str | None:
     return m.group(1) + ")" if m else version
 
 
-def witness_key(design: Design, cover_text: str) -> str:
+def witness_key(design: Design, cover_text: str, allow: tuple[str, ...] = ()) -> str:
     """What a witness depends on: the cover, the RTL, the whole formal environment
-    (assumptions, engine, bound, timeouts) and the formal tools' release (tools_release), so a
+    (search restrictions, engine, bound, timeouts), the legality assumptions formal
+    generates for this allow list, and the formal tools' release (tools_release), so a
     witness solved on arm64 is reused on x86_64 and the other way round.
 
     Not the rest of the pack, so the set stage (a different pack, same design)
@@ -460,12 +479,13 @@ def witness_key(design: Design, cover_text: str) -> str:
     return hashlib.sha256(json.dumps({
         "cover": cover_text, "rtl": {q.name: q.read_text() for q in design.rtl},
         "formal": formal_files(design), "tools": tools_release(formal_version()),
+        "legality": legality.assume_text(design.legality, legality.enforced(design.legality, [tuple(allow)])),
     }, sort_keys=True).encode()).hexdigest()
 
 
-def solve_witness(design: Design, cover: Path) -> dict:
+def solve_witness(design: Design, cover: Path, allow: tuple[str, ...] = ()) -> dict:
     """The only call into closure_core.formal: cover_witness(pack_dir, cover_file, *, bound, timeout,
-    engine, minimize_timeout), all from formal.yaml.
+    engine, minimize_timeout, allow), all from formal.yaml but allow (the item's legality allow list).
 
     UnsupportedCover and ValueError are decisions about the cover (statuses
     'unsupported' and 'invalid'); RuntimeError and missing tools raise FormalError.
@@ -477,7 +497,8 @@ def solve_witness(design: Design, cover: Path) -> dict:
     st = formal_settings(design)
     try:
         w = formal_mod.cover_witness(design.pack, cover, bound=st["bound"], timeout=st["timeout"],
-                                     engine=st["engine"], minimize_timeout=st["minimize_timeout"])
+                                     engine=st["engine"], minimize_timeout=st["minimize_timeout"],
+                                     allow=tuple(allow))
     except formal_mod.UnsupportedCover as e:  # a ValueError: caught first
         return {"status": "unsupported", "detail": str(e)}
     except ValueError as e:
@@ -530,8 +551,10 @@ def store_witness(store: Path, key: str, w: dict) -> bool:
         return True
 
 
-def witness(design: Design, cover: Path, cache_dir: Path | None, store: Path | None = None) -> dict:
+def witness(design: Design, cover: Path, cache_dir: Path | None, store: Path | None = None,
+            allow: tuple[str, ...] = ()) -> dict:
     """A cached witness: cache_dir/<key>.json, so a replay never re-solves.
+    allow: the item's legality allow list (legality rules formal does not assume).
 
     A timeout may be load, so it is retried once with no other formal job running
     (formal_slot); only the retry's outcome is cached (`retried: true`). A second
@@ -544,7 +567,7 @@ def witness(design: Design, cover: Path, cache_dir: Path | None, store: Path | N
     outcomes go into the store too, except timeouts: they depend on the machine
     and its load, so another run solves them again.
     """
-    key = witness_key(design, cover.read_text())
+    key = witness_key(design, cover.read_text(), allow)
     path = cache_dir / f"{key}.json" if cache_dir else None
     if path and path.exists():
         return {**json.loads(path.read_text()), "key": key}
@@ -552,10 +575,10 @@ def witness(design: Design, cover: Path, cache_dir: Path | None, store: Path | N
         w = json.loads((store / f"{key}.json").read_text())
     else:
         with formal_slot(cache_dir, exclusive=False):
-            w = solve_witness(design, cover)
+            w = solve_witness(design, cover, allow)
         if w["status"] == "timeout":
             with formal_slot(cache_dir, exclusive=True):
-                w = {**solve_witness(design, cover), "retried": True}
+                w = {**solve_witness(design, cover, allow), "retried": True}
         if store and w["status"] != "timeout":
             store_witness(store, key, w)
     if path:

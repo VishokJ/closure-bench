@@ -6,8 +6,12 @@ bound, and converts the witness into a testbench. It never decides a reward or
 a gate: a witness counts only after the existing grader confirms, under
 Verilator, that its testbench hits the cover.
 
-The legal stimulus is the design pack's hand-reviewed formal environment,
-designs/<name>/formal/ (formal.yaml plus one env file per bound module).
+The stimulus formal may use is the design pack's legality rules,
+designs/<name>/legality.yaml (closure_core.legality generates them as assumptions
+inside each design module; the grader enforces the same rules), restricted further
+by the hand-reviewed formal environment, designs/<name>/formal/ (formal.yaml plus
+one env file per bound module): search restrictions such as the prescale range,
+which keep the search small and are never enforced.
 
 Open-source Yosys supports neither `cover property (@(posedge clk) ...)` nor
 `bind`, so the cover file is translated into a formal-only copy:
@@ -34,6 +38,7 @@ from pathlib import Path
 
 import yaml
 
+from closure_core import legality
 from closure_core.design import load_design
 
 FORMAL_HOME = Path(os.environ.get("CLOSURE_BENCH_FORMAL", "/opt/oss-cad-suite"))
@@ -245,7 +250,7 @@ def witness_testbench(steps: list[dict[str, int]], top: dict, dut: str, label: s
 
 def cover_witness(pack_dir: Path | str, cover_file: Path | str, *, bound: int = 300,
                   timeout: float = 600.0, engine: str = "abc bmc3",
-                  minimize_timeout: float = 120.0) -> dict:
+                  minimize_timeout: float = 120.0, allow: tuple[str, ...] = ()) -> dict:
     """Shortest legal witness for the single cover in cover_file, within `bound` cycles.
 
     Returns {status: reachable | unreachable | timeout, depth, input_changes, tb_text}
@@ -259,9 +264,10 @@ def cover_witness(pack_dir: Path | str, cover_file: Path | str, *, bound: int = 
     by step. input_changes: the fewest
     input changes (a bus counts once, rst included) among witnesses of that
     depth; exact unless minimize_timeout ran out (input_changes_exact false).
+    allow: legality rule ids not assumed (the plan item's legality allow list).
     `unreachable` means not reachable within `bound` cycles under the pack's
-    formal environment, not unreachable at any depth. `timeout`: the first solve
-    ran out of `timeout`. depth/input_changes/tb_text are None unless reachable.
+    legality rules and formal environment, not unreachable at any depth.
+    `timeout`: the first solve ran out of `timeout`. depth/input_changes/tb_text are None unless reachable.
     Raises UnsupportedCover, or RuntimeError when the tools themselves fail or the
     engine is unknown (a pack setting, not a decision about the cover).
     """
@@ -270,7 +276,7 @@ def cover_witness(pack_dir: Path | str, cover_file: Path | str, *, bound: int = 
         raise RuntimeError(f"engine {engine!r}: expected one of {sorted(ENGINES)}")
     mode = ENGINES[engine]
     pack = Path(pack_dir).resolve()
-    label, target, top, staged = _prepare(pack, cover_file)
+    label, target, top, staged = _prepare(pack, cover_file, allow)
     out = {"label": label, "bound_module": target, "status": None, "depth": None,
            "input_changes": None, "input_changes_exact": None, "tb_text": None, "solve_s": None,
            "minimize_s": None}
@@ -321,13 +327,14 @@ def cover_witness(pack_dir: Path | str, cover_file: Path | str, *, bound: int = 
                 "total_s": round(time.monotonic() - t0, 1)}
 
 
-def _prepare(pack: Path, cover_file: Path | str):
+def _prepare(pack: Path, cover_file: Path | str, allow: tuple[str, ...] = ()):
     """(label, bound module, formal.yaml top, staged(work, mode) -> files to read).
 
-    staged writes the RTL (with the bind emulated), the translated cover and the env
-    into work. Modes bmc and prove turn the cover into `assert (!(e))`; prove reads
-    no measurement wrapper: its change counter restricts long traces, so a proof
-    through it would not cover every legal trace.
+    staged writes the RTL (with the bind and the legality assumptions emulated: an
+    instance inserted at the end of each module), the legality modules, the
+    translated cover and the env into work. Modes bmc and prove turn the cover
+    into `assert (!(e))`; prove reads no measurement wrapper: its change counter
+    restricts long traces, so a proof through it would not cover every legal trace.
     """
     design = load_design(pack)
     spec = yaml.safe_load((pack / "formal" / "formal.yaml").read_text())["tops"]
@@ -340,6 +347,7 @@ def _prepare(pack: Path, cover_file: Path | str):
     if target not in spec:
         raise ValueError(f"no formal environment for module {target} in {pack}/formal/formal.yaml")
     top = spec[target]
+    legal = legality.assume_text(design.legality, legality.enforced(design.legality, [tuple(allow)]))
 
     def staged(work: Path, *, mode: str) -> list[str]:
         files = []
@@ -347,8 +355,14 @@ def _prepare(pack: Path, cover_file: Path | str):
             text = p.read_text()
             if re.search(rf"^\s*module\s+{target}\b", text, re.M):
                 text = _insert_instance(text, target, instance)
+            for module, (_, inst) in legal.items():
+                if re.search(rf"^\s*module\s+{module}\b", text, re.M):
+                    text = _insert_instance(text, module, inst)
             (work / p.name).write_text(text)
             files.append(p.name)
+        if legal:
+            (work / "legal.sv").write_text("\n".join(t for t, _ in legal.values()))
+            files.append("legal.sv")
         text = formal_text
         if mode in ("bmc", "prove"):
             m = re.search(rf"\b{labels[0]}\s*:\s*cover\s*\(", text)
@@ -370,7 +384,8 @@ PROVE_K = (1, 4, 16, 64)
 
 
 def prove_unreachable(pack_dir: Path | str, cover_file: Path | str, *,
-                      ks: tuple[int, ...] = PROVE_K, timeout: float = 600.0) -> dict:
+                      ks: tuple[int, ...] = PROVE_K, timeout: float = 600.0,
+                      allow: tuple[str, ...] = ()) -> dict:
     """k-induction proof that the cover never fires, under the pack's formal environment.
 
     Meant for a cover cover_witness reported unreachable within its bound. Returns
@@ -380,13 +395,13 @@ def prove_unreachable(pack_dir: Path | str, cover_file: Path | str, *,
     state can break induction without strengthening invariants); timeout when the
     budget ran out first. A proof holds relative to the environment's assumptions:
     a cover that contradicts an assumption (e.g. prescale outside the env range) is
-    proven unreachable there, not in the design.
+    proven unreachable there, not in the design. allow: as in cover_witness.
     Raises RuntimeError if a base case fails (the cover is reachable within k cycles:
     the caller's bounded result was wrong or used a smaller bound) or the tools fail.
     """
     t0 = time.monotonic()
     pack = Path(pack_dir).resolve()
-    label, target, top, staged = _prepare(pack, cover_file)
+    label, target, top, staged = _prepare(pack, cover_file, allow)
     out = {"label": label, "bound_module": target, "k": None}
     with tempfile.TemporaryDirectory(prefix="cb-prove-") as d:
         work = Path(d)

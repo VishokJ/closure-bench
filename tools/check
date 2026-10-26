@@ -5,6 +5,11 @@ Runs every gate in closure_core/gates.py (see its docstring for what each
 checks) on every selected item, in parallel, and prints a full report.
 Duplicates are compared among the selected items only.
 
+Every simulation compiles the legality checker (closure_core/legality.py):
+baselines and random testbenches against every rule, an item's gold and
+near-misses against the rules that item enforces. The report lists every
+testbench with illegal stimulus, and verifies each rule's cited sources.
+
 Mutant results are cached in the shared ~/.cache/closure-bench/mutation_cache.json
 (gates.MUTATION_CACHE; --mutation-cache overrides it).
 
@@ -25,7 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from closure_core import citations, gates, load_design  # noqa: E402
+from closure_core import citations, gates, legality, load_design  # noqa: E402
 from closure_core.grader import grade, score  # noqa: E402
 from closure_core.infra import default_jobs, simulate  # noqa: E402
 
@@ -66,16 +71,18 @@ def main() -> int:
                      for name, b in design.baselines.items()}
         rand_futs = {name: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
                      for name, b in design.randoms.items()}
-        gold_futs = {i: tuple(pool.submit(simulate, design, p.read_text()) for _ in range(2))
+        # An item's own testbenches run under the rules its grade enforces (its allow list).
+        rules = {it.id: design.enforced([it.id]) for it in items}
+        gold_futs = {i: tuple(pool.submit(simulate, design, p.read_text(), rules=rules[i]) for _ in range(2))
                      for i, p in golds.items()}
-        near_futs = {it.id: [(p.name, pool.submit(simulate, design, p.read_text()))
+        near_futs = {it.id: [(p.name, pool.submit(simulate, design, p.read_text(), rules=rules[it.id]))
                              for p in design.near_misses.get(it.id, ())] for it in items}
         gold_policy = {i: pool.submit(gates.testbench_policy, design, p, gold=True)
                        for i, p in golds.items()}
         near_policy = {it.id: {p.name: pool.submit(gates.testbench_policy, design, p, gold=False)
                                for p in design.near_misses.get(it.id, ())} for it in items}
         # Composed items inherit their components' golds and near-misses (gates.composed_near_misses).
-        inh_futs = {it.id: {n: pool.submit(simulate, design, p.read_text())
+        inh_futs = {it.id: {n: pool.submit(simulate, design, p.read_text(), rules=rules[it.id])
                             for n, p in gates.composed_testbenches(design, it).items()} for it in items}
 
         baselines = {name: f.result() for name, f in base_futs.items()}
@@ -105,12 +112,19 @@ def main() -> int:
                 {n: gates.line_overlap(sa, s) for n, s in nm} if sa else None))
 
         mutation = gates.mutation_runs(design, golds, pool, args.mutation_cache.resolve())
+        # Every testbench of ours the checker stopped: name -> rules it reported.
+        illegal = {name: legality.violations(s.sim.run_log) for name, s in [
+            *((f"baseline:{n}", s) for n, s in baselines.items()), *((f"random:{n}", s) for n, s in randoms.items()),
+            *((f"gold:{i}", f.result()) for i, (f, _) in gold_futs.items()),
+            *((f"near_miss:{n}", f.result()) for fs in near_futs.values() for n, f in fs)]
+            if s.sim.status == "illegal_stimulus"}
 
     dups, duplicate = gates.duplicate(corpus, [it.id for it in items], mutation["gold_kills"])
     for i, r in dups.items():
         put(i, r)
 
     store = citations.DocStore(design.pack, offline=args.offline)
+    legal_cites = gates.legality_citations(design, store)
     for it in items:
         c = gates.citations(design, it, store, base_points)
         put(it.id, c)
@@ -181,6 +195,8 @@ def main() -> int:
         else:
             errs += list(gates.testbench_policy(design, g, gold=True))
             a, b = (grade(design, list(ts), g.read_text()) for _ in range(2))
+            if a.status == "illegal_stimulus":
+                illegal[f"gold:{mid}"] = legality.violations(a.diagnostics)
             if a.reward != 1.0:
                 errs.append(f"gold scores {a.reward} ({a.status}, hits {a.target_hits})")
             if (a.status, a.plan_hits) != (b.status, b.plan_hits):
@@ -189,6 +205,14 @@ def main() -> int:
         all_ok &= not errs
         print(f"multi {mid} ({' + '.join(ts)}): {'FAIL ' + '; '.join(errs) if errs else 'pass'}")
 
+    # Illegal golds and near-misses already fail their gates; baselines fail every
+    # item's baseline gate. This line names the testbench and the rules it broke.
+    shown_illegal = [f"{n} ({' '.join(dict.fromkeys(v))})" for n, v in sorted(illegal.items())]
+    print(f"legality: {len(design.legality.rules)} rules; illegal stimulus in {', '.join(shown_illegal) or 'none'}")
+    if legal_cites.ok is not True:
+        all_ok = False
+        print(f"{'FAIL' if legal_cites.ok is False else 'UNVERIFIED'}  legality citations: {legal_cites.detail}")
+
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps(
         {"design": design.name, "orphan_covers": orphans, "mutation": mutation,
@@ -196,6 +220,7 @@ def main() -> int:
          "value": {"items": value, "by_evidence": by_path, "spec_only_audit": by_path["spec"]},
          "audit": {"always": audit, "spec_only": by_path["spec"], "near_miss_opt_outs": opted_out},
          "hit_by_random": by_random, "holes": holes, "multi": multi,
+         "legality": {"illegal_stimulus": illegal, "citations": {"ok": legal_cites.ok, "detail": legal_cites.detail}},
          "items": {i: {g: {"ok": r.ok, "detail": r.detail} for g, r in gs.items()}
                    for i, gs in res.items()}},
         indent=2, default=str) + "\n")

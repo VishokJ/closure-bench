@@ -69,7 +69,7 @@ agent's view; add it before the pilot.
   `--x-assign 0 --x-initial 0` for determinism.
 - Statuses: `ok`, `compile_error`, `compile_timeout`, `timeout`,
   `runtime_error` (`$fatal`, `$stop`, crash), `no_finish` (events ran out),
-  `policy_violation` (see below).
+  `policy_violation` (see below), `illegal_stimulus` (see below).
   Only `ok` can score.
 - Coverage provenance: a functional point counts only if it comes from our
   cover file, in the plan's cover module, under the plan's label, at the
@@ -83,6 +83,21 @@ agent's view; add it before the pilot.
   `$system`, `$c`, file I/O, hierarchical writes, instances placed inside a
   design module) gives status `policy_violation` and reward 0. A parse failure
   is a `compile_error`; a wrong Verilator version is a grader failure.
+- Legal stimulus: `designs/uart/legality.yaml` lists the protocol and spec
+  rules a testbench must obey (AXI-Stream s2.8.2 TVALID low in reset, s2.2 and
+  s2.2.1 TVALID held and TDATA stable until the handshake, README prescale
+  nonzero where a module reads it and constant while busy), each cited. `closure_core/legality.py`
+  generates from it a checker `chk_legal_<module>`, bound to each module and
+  compiled with every graded testbench: a violation prints
+  `ILLEGAL_STIMULUS: <rule> at <time>` and calls `$fatal`, and the grader
+  reports `illegal_stimulus` (reward 0). Formal assumes the same rules, so the
+  difficulty it measures is the difficulty under the stimulus the grader
+  accepts. Search restrictions (prescale 1..4, reset in the first cycle) stay
+  formal-only in `designs/uart/formal/`. A plan item about a documented hazard
+  may allow rules (`legality: {allow: [...]}`), for formal and the grader
+  alike; a multi-target grade drops a rule only if every target allows it.
+  Mutation runs compile no checker (a mutant may change `busy` or
+  `s_axis_tready`, which the checker reads).
 - On Prime: the agent's sandbox never contains the grader, golds or
   near-misses. Grading runs in a fresh, offline sandbox where only the
   submitted testbench is restored and the grader bundle is staged.

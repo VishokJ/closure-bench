@@ -45,17 +45,18 @@ from closure_core.grader import grade  # noqa: E402
 def measure(design_name: str, item_id: str, bound: int, timeout: float, out: Path, prove: bool) -> dict:
     design = load_design(design_name)
     cover = design.pack / "covers" / f"{item_id}.sv"
+    allow = design.item(item_id).legality_allow
     spec = yaml.safe_load((design.pack / "formal" / "formal.yaml").read_text())
     try:
         r = cover_witness(design.pack, cover, bound=bound, timeout=timeout, engine=spec["engine"],
-                          minimize_timeout=float(spec["minimize_timeout"]))
+                          minimize_timeout=float(spec["minimize_timeout"]), allow=allow)
     except UnsupportedCover as e:
         return {"id": item_id, "status": "unsupported", "error": str(e)}
     row = {"id": item_id, **{k: v for k, v in r.items() if k != "tb_text"}, "witness": None, "proof": None}
     if r["status"] == "unreachable":
         row["status"] = "unreachable_within_bound"
         if prove:
-            row["proof"] = prove_unreachable(design.pack, cover, timeout=timeout)
+            row["proof"] = prove_unreachable(design.pack, cover, timeout=timeout, allow=allow)
             if row["proof"]["status"] == "proven_unreachable":
                 row["status"] = "proven_unreachable"
     if r["tb_text"]:

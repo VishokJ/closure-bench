@@ -7,6 +7,11 @@ rtl:
   - third_party/verilog-uart/rtl/uart_rx.v
   - third_party/verilog-uart/rtl/uart_tx.v
 
+# Legal stimulus (closure_core/legality.py): rules every testbench must obey. The
+# grader binds a generated checker for them into every graded simulation (status
+# illegal_stimulus); formal assumes the same rules. Search restrictions stay in formal/.
+legality: legality.yaml
+
 # Each plan item's cover is covers/<ID>.sv (module cov_<ID>, with its own bind).
 plan: plan.yaml
 

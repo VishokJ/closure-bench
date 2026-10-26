@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Re-grade the submissions in verifiers traces with the current grader.
+
+vf-replay cannot rescore rewards graded in a sandbox, and a grader change (e.g. a
+new legality rule) needs every recorded rollout graded again. This reads each
+traces.jsonl, grades info.submission against the task's design and targets with
+closure_core.grader.grade (the grader the grading sandbox runs; run this in the
+task image), and writes one JSON line per rollout: the recorded status and reward
+next to the new ones. Rollouts never graded (no info.grade, e.g. a provider error)
+are listed as not graded. An empty submission is graded as the empty file the
+taskset writes. Campaign submissions (one text per file) are not supported.
+
+Usage:  tools/regrade outputs/run/traces.jsonl ... --out regrade.jsonl [-j 4]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from closure_core import load_design  # noqa: E402
+from closure_core.grader import grade  # noqa: E402
+
+
+def rollouts(paths: list[Path]):
+    for path in paths:
+        for line_no, line in enumerate(path.read_text().splitlines(), 1):
+            rec = json.loads(line)
+            data = rec["task"]["data"]
+            for k, t in enumerate(rec["traces"]):
+                info = t.get("info") or {}
+                yield {"traces": str(path), "line": line_no, "trace": k, "task": data["id"],
+                       "design": data["design"], "targets": data["targets"],
+                       "old_status": (info.get("grade") or {}).get("status"),
+                       "old_reward": (info.get("grade") or {}).get("reward"),
+                       "submission": info.get("submission") if "grade" in info else None}
+
+
+def regrade(r: dict, run_timeout: float) -> dict:
+    out = {k: v for k, v in r.items() if k != "submission"}
+    if r["old_status"] is None:
+        return {**out, "status": None, "reward": None, "note": "not graded in the run"}
+    if isinstance(r["submission"], dict):
+        raise SystemExit(f"{r['traces']}:{r['line']}: campaign submission, not supported")
+    g = grade(load_design(r["design"]), r["targets"], r["submission"] or "", run_timeout=run_timeout)
+    return {**out, "status": g.status, "reward": g.reward, "target_hits": g.target_hits,
+            "diagnostics": g.diagnostics[-1000:]}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("traces", nargs="+", type=Path)
+    ap.add_argument("--out", type=Path, required=True, help="JSONL, one line per rollout")
+    ap.add_argument("-j", "--jobs", type=int, default=4)
+    ap.add_argument("--run-timeout", type=float, default=60.0)
+    args = ap.parse_args()
+
+    rs = list(rollouts(args.traces))
+    with ThreadPoolExecutor(args.jobs) as pool:
+        res = list(pool.map(lambda r: regrade(r, args.run_timeout), rs))
+    args.out.write_text("".join(json.dumps(r) + "\n" for r in res))
+
+    changed = [r for r in res if (r["status"], r["reward"]) != (r["old_status"], r["old_reward"])]
+    print(f"{len(res)} rollouts, {sum(r['status'] is not None for r in res)} graded, "
+          f"{len(changed)} changed; reward {sum(r['old_reward'] or 0 for r in res):g} -> "
+          f"{sum(r['reward'] or 0 for r in res):g}")
+    for r in changed:
+        print(f"  {r['task']:10} {Path(r['traces']).parent.name}:{r['line']}  "
+              f"{r['old_status']} {r['old_reward']} -> {r['status']} {r['reward']}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -243,7 +243,7 @@ def fake_formal(monkeypatch, behaviour, during=None):
     calls = []
     script = list(behaviour) if isinstance(behaviour, list) else None
 
-    def cover_witness(pack_dir, cover_file, *, bound, timeout, engine, minimize_timeout):
+    def cover_witness(pack_dir, cover_file, *, bound, timeout, engine, minimize_timeout, allow):
         calls.append((Path(pack_dir), Path(cover_file), bound, timeout, engine, minimize_timeout))
         if during:
             calls.append(during())

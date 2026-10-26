@@ -1,0 +1,124 @@
+# Legal stimulus (closure_core/legality.py): the protocol and spec rules every
+# testbench must obey. One source of truth for both consumers:
+#   grader  a generated checker chk_legal_<module>, bound to each module below and
+#           compiled with every graded testbench; at the first violation it prints
+#           `ILLEGAL_STIMULUS: <rule> at <time>` and calls $fatal (status
+#           illegal_stimulus, reward 0). Mutation runs leave it out.
+#   formal  the same conditions as assumptions, inserted into the module
+#           (closure_core/formal.py), so every witness is legal stimulus.
+# Search restrictions (prescale 1..4, reset in the first cycle) are not legality:
+# they only keep formal's search small, live in formal/env_*.sv, and are never
+# enforced. A testbench using prescale 8 is legal.
+#
+# A rule is violated at a rising edge of clk where `when` holds and `require` does
+# not, on the values the module samples at that edge. Both are SystemVerilog over the
+# module's ports (ports: name -> width); $past(<port>) is the port at the previous
+# rising edge, and a rule using it is checked from the second edge on. when defaults
+# to 1. text: the rule for the agent prompt. sources: citations as in plan.yaml
+# (tools/check verifies them).
+#
+# A plan item about a documented hazard may allow rules (plan.yaml:
+# `legality: {allow: [<rule id>]}`); formal and the grader then both drop them for
+# that item. A multi-target grade enforces every rule some target does not allow.
+#
+# Not a rule yet, recorded for review: AXI-Stream s2.8.2 (page 28) also says a
+# transmitter may begin driving TVALID only at a rising edge following one at which
+# reset is deasserted. Its sampled-value reading is ambiguous (which edge of
+# Figure 2-4 is first). It matters: uart_tx latches a word on s_axis_tvalid alone,
+# with s_axis_tready still low (uart_tx.v:93-99), so s_axis_tvalid high at the first
+# edge after reset starts a frame one cycle sooner than the stricter reading allows.
+
+modules:
+  uart_rx: {clk: 1, rst: 1, rxd: 1, prescale: 16, busy: 1}
+  uart_tx: {clk: 1, rst: 1, prescale: 16, busy: 1, s_axis_tdata: 8, s_axis_tvalid: 1, s_axis_tready: 1}
+
+rules:
+  # prescale is read only where a module loads its bit timer: in a frame (busy) and
+  # at the edge that starts one, which is s_axis_tvalid high for uart_tx
+  # (uart_tx.v:93-95) and rxd low at the previous edge for uart_rx (rxd_reg,
+  # uart_rx.v:97,132-133); !rxd also covers the edge before. A zero prescale while
+  # idle is never read, so it is legal.
+  - id: prescale_nonzero_rx
+    modules: [uart_rx]
+    when: "!rst && (busy || !rxd || !$past(rxd))"
+    require: "prescale != 16'd0"
+    text: >-
+      prescale is nonzero at every rising edge where rst is low and uart_rx is busy,
+      or rxd is low at that edge or the previous one (a frame may be starting).
+    sources:
+      - type: README
+        file: third_party/verilog-uart/README.md
+        lines: [27, 28]
+        anchor: "it should be set to Fclk / (baud * 8)"
+
+  - id: prescale_nonzero_tx
+    modules: [uart_tx]
+    when: "!rst && (busy || s_axis_tvalid)"
+    require: "prescale != 16'd0"
+    text: >-
+      prescale is nonzero at every rising edge where rst is low and uart_tx is busy
+      or s_axis_tvalid is high (a frame may be starting).
+    sources:
+      - type: README
+        file: third_party/verilog-uart/README.md
+        lines: [27, 28]
+        anchor: "it should be set to Fclk / (baud * 8)"
+
+  - id: prescale_stable_while_busy
+    modules: [uart_rx, uart_tx]
+    # busy as sampled at an edge is the register before that edge's update: high
+    # means a frame is in progress and the module may reload its bit timer from
+    # prescale there. ($past(busy) was one edge late: it flagged a change at the
+    # first idle edge and missed one right after the edge that starts a frame.)
+    when: "busy"
+    require: "prescale == $past(prescale)"
+    text: >-
+      prescale does not change while the module is busy: at every rising edge where
+      busy is high, prescale equals its value at the previous rising edge.
+    sources:
+      - type: README
+        file: third_party/verilog-uart/README.md
+        lines: [28, 30]
+        anchor: "it is not buffered internally so care should be used to avoid corrupt data"
+
+  - id: axis_tvalid_low_in_reset
+    modules: [uart_tx]
+    when: "rst"
+    require: "!s_axis_tvalid"
+    text: s_axis_tvalid is low at every rising edge where rst is high.
+    sources:
+      - type: DOC
+        doc: axis
+        section: "2.8.2 Reset"
+        page: 28
+        anchor: "During reset, TV ALID  must be driven LOW."
+
+  - id: axis_tvalid_held
+    modules: [uart_tx]
+    when: "!rst && !$past(rst) && $past(s_axis_tvalid) && !$past(s_axis_tready)"
+    require: "s_axis_tvalid"
+    text: >-
+      once s_axis_tvalid is high at a rising edge without a handshake
+      (s_axis_tready low), it is still high at the next rising edge, unless rst is
+      high at either edge.
+    sources:
+      - type: DOC
+        doc: axis
+        section: "2.2 Handshake signaling"
+        page: 18
+        anchor: "it must remain asse rted until the handshake occurs."
+
+  - id: axis_tdata_stable
+    modules: [uart_tx]
+    when: "!rst && !$past(rst) && $past(s_axis_tvalid) && !$past(s_axis_tready)"
+    require: "s_axis_tdata == $past(s_axis_tdata)"
+    text: >-
+      s_axis_tdata does not change while s_axis_tvalid waits for the handshake:
+      under the same condition as axis_tvalid_held, s_axis_tdata equals its value
+      at the previous rising edge.
+    sources:
+      - type: DOC
+        doc: axis
+        section: "2.2.1 Handshake with TVALID asserted before TREADY"
+        page: 18
+        anchor: "must remain unchanged once TV ALID  has been asserted"

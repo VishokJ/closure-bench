@@ -14,6 +14,7 @@ import re
 import shlex
 from pathlib import Path
 
+from closure_core import legality
 from closure_core.design import Design, PlanItem
 from closure_core.sim import VERILATOR_FLAGS
 
@@ -72,16 +73,28 @@ Rules:
   design, uses bind, redefines a design or coverage module, overrides a design
   parameter (#() or defparam), or calls $system, $c or file I/O is rejected
   before simulation and {fails}. Reading signals inside the design is allowed.
+{legal}"""
+
+_LEGAL_RULE = """\
+- Drive legal stimulus only. A checker bound to the design checks the rules below
+  at every rising edge of clk, on the values the design samples there; $past(x)
+  is x at the previous rising edge. A violation prints ILLEGAL_STIMULUS, ends the
+  run with status illegal_stimulus, and the run {fails}.
 """
 
 
-def system_prompt(harness: str, max_files: int | None = None) -> str:
-    """max_files: the campaign file cap; None for a single-target task."""
+def system_prompt(harness: str, max_files: int | None = None,
+                  rules: tuple[legality.Rule, ...] = ()) -> str:
+    """max_files: the campaign file cap; None for a single-target task.
+    rules: the legality rules the task's grade enforces (Design.enforced)."""
     c = max_files is not None
     rule = (_CAMPAIGN_SUBMIT_RULE if c else _SUBMIT_RULE)[harness]
+    fails = "contributes nothing" if c else "scores 0"
+    legal = (_LEGAL_RULE.format(fails=fails) + "".join(f"  - {line}\n" for line in legality.prompt_lines(rules))
+             if rules else "")
     return _SYSTEM_TEMPLATE.format(
         task=_TASK[c].format(max_files=max_files), submit=rule.format(max_files=max_files),
-        each=" in every testbench" if c else "", fails="contributes nothing" if c else "scores 0")
+        each=" in every testbench" if c else "", fails=fails, legal=legal)
 
 
 def _cover_location(design: Design, item: PlanItem) -> str:
@@ -227,7 +240,8 @@ def grader_bundle(design: Design) -> dict[str, bytes]:
     tests/test_bundle.py checks that the bundle loads on its own. Golds and
     near-misses stay out, and so does formal.py: grading never uses it, and in
     the bash harness this bundle is the agent's workspace, where it would
-    generate golds.
+    generate golds. The legality checker ships as its source (legality.yaml)
+    and generator (closure_core/legality.py), so run.sh checks the same rules.
     """
     root = design.repo_root
     core = root / "closure_core"
