@@ -1,0 +1,28 @@
+{
+ "executor": "prime",
+ "git": {
+  "commit": "fa7657d92422d4b0e64046e39b1725f3067774fa",
+  "dirty": true
+ },
+ "labeller": {
+  "max_tokens": 4000,
+  "model": "anthropic/claude-opus-5.5",
+  "temperature": 0.0
+ },
+ "propose_run": "/Users/vishokj/Developer/cb-run-hard/runs/propose/20261026T095426Z-hard2",
+ "traces": [
+  {
+   "path": "/Users/vishokj/Developer/cb-probe/outputs/official/gpt-6-sol/closure-bench--openai--gpt-6-sol--null--2fc9e854/traces.jsonl",
+   "sha256": "a6ad6c4de46d124864fb58778f1950b7b0cce09778f69cd98566bb6d48f12eb2"
+  },
+  {
+   "path": "/Users/vishokj/Developer/cb-probe/outputs/official/nemotron/closure-bench--nvidia--nemotron-3-nano-30b-a3b--null--aded5d0b/traces.jsonl",
+   "sha256": "16f010dcde974882f2f12a6bd821a2f02c5371b035245e50189a475ece3a87d2"
+  },
+  {
+   "path": "/Users/vishokj/Developer/cb-probe/outputs/official/qwen/closure-bench--qwen--qwen3.8-27b--null--ec46d01c/traces.jsonl",
+   "sha256": "7bafaf81c322040902af968b53bcd9398999e9e3a7a8e35f397297c85f206f93"
+  }
+ ],
+ "written": "/Users/vishokj/Developer/cb-probe/runs/propose/20261026T095426Z-hard2/written.json"
+}

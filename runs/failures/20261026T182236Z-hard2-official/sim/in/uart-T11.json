@@ -1,0 +1,46 @@
+[
+ {
+  "design": "uart",
+  "id": "gold/uart/T11",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T11"
+  ],
+  "tb": "// gold_source: formal\n// closure_core.formal.cover_witness: depth 157, input_changes 4, bound 300, witness 740436c57a3aed97\n// Formal witness for T11_tvalid_rise_mid_frame (closure_core/formal.py): the shortest legal input\n// trace Yosys/SymbiYosys found (157 cycles), replayed on the uart_tx ports.\n// A gold candidate, never shown to an agent; Verilator decides whether it hits.\n`timescale 1ns / 1ps\n\nmodule tb;\n  logic clk = 1'b0;\n  always #5 clk = ~clk;\n  logic rst = 1'd1;\n  logic [7:0] s_axis_tdata = 8'd60;\n  logic s_axis_tvalid = 1'd0;\n  logic [15:0] prescale = 16'd1;\n  wire  s_axis_tready;\n  wire  txd;\n  wire  busy;\n\n  uart_tx dut (.clk(clk), .rst(rst), .s_axis_tdata(s_axis_tdata), .s_axis_tvalid(s_axis_tvalid), .prescale(prescale), .s_axis_tready(s_axis_tready), .txd(txd), .busy(busy));\n\n  initial begin\n    @(negedge clk);\n    rst = 1'd0; s_axis_tvalid = 1'd1;\n    repeat (2) @(negedge clk);\n    s_axis_tvalid = 1'd0;\n    repeat (64) @(negedge clk);\n    s_axis_tvalid = 1'd1;\n    repeat (91) @(negedge clk);\n    $finish;\n  end\nendmodule\n"
+ },
+ {
+  "design": "uart",
+  "id": "sub/nemotron-3-nano-30b-a3b/T11/6",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T11"
+  ],
+  "tb": "module tb;\n  // Clock\n  reg clk = 0;\n  always #5 clk = ~clk;  // 10ns period (100 MHz) arbitrary\n\n  // DUT signals\n  reg rst = 0;\n  reg [7:0] s_axis_tdata;\n  reg s_axis_tvalid;\n  reg [15:0] prescale = 16'd5; // non\u2011zero prescale\n  wire s_axis_tready;\n  wire txd;\n  wire busy;\n\n  // Instantiate the DUT\n  uart_tx #(.DATA_WIDTH(8)) dut (\n    .clk(clk),\n    .rst(rst),\n    .s_axis_tdata(s_axis_tdata),\n    .s_axis_tvalid(s_axis_tvalid),\n    .s_axis_tready(s_axis_tready),\n    .txd(txd),\n    .busy(busy),\n    .prescale(prescale)\n  );\n\n  // Reset generation\n  initial begin\n    rst = 1'b0;\n    #10;\n    rst = 1'b1;\n    #10;\n    rst = 1'b0;\n    #10;\n  end\n\n  // Main stimulus\n  initial begin\n    // Wait for reset de\u2011assertion\n    wait (!rst);\n\n    // ----------- First frame (any data) ----------\n    s_axis_tdata  = 8'h00;        // arbitrary byte\n    s_axis_tvalid = 1'b1;         // raise tvalid\n    @(posedge clk);               // hold for one clock\n    s_axis_tvalid = 1'b0;         // de\u2011assert\n\n    // Give the transmitter time to start moving bits (busy will be high)\n    // ~50 clock cycles is safely inside the transmission window\n    repeat (50) @(posedge clk);\n\n    // ----------- Second frame \u2013 data must be 0x3C ----------\n    s_axis_tdata  = 8'h3C;        // required data\n    // Ensure previous value was 0 (it is, because we just de\u2011asserted)\n    s_axis_tvalid = 1'b1;         // rising edge -> coverage trigger\n    @(posedge clk);               // hold one clock so the edge is seen\n    s_axis_tvalid = 1'b0;         // de\u2011assert\n\n    // Wait for the coverage point to be sampled\n    repeat (200) @(posedge clk);\n\n    $finish; // clean termination\n  end\nendmodule\n"
+ },
+ {
+  "design": "uart",
+  "id": "sub/nemotron-3-nano-30b-a3b/T11/7",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T11"
+  ],
+  "tb": "module tb;\n  // -------------------------------------------------\n  // Parameters and clock\n  // -------------------------------------------------\n  localparam int CLK_PERIOD = 8; // 125\u202fMHz\n  reg clk = 0;\n\n  // -------------------------------------------------\n  // DUT interface signals\n  // -------------------------------------------------\n  reg rst = 0;\n  reg rxd = 1'b1;\n  reg [15:0] prescale_input = 16'h0;\n\n  reg [7:0] s_axis_tdata_int = 0;\n  reg s_axis_tvalid_int = 0;\n\n  // DUT output wires\n  wire s_axis_tready_o;\n  wire [7:0] m_axis_tdata;\n  wire       m_axis_tvalid;\n  wire       txd;\n  wire       tx_busy;\n  wire       rx_busy;\n  wire       rx_overrun_error;\n  wire       rx_frame_error;\n\n  // Clock generation\n  always #(CLK_PERIOD/2) clk = ~clk;\n\n  // -------------------------------------------------\n  // DUT instantiation\n  // -------------------------------------------------\n  uart #(.DATA_WIDTH(8)) dut (\n    .clk               (clk),\n    .rst               (rst),\n    .s_axis_tdata      (s_axis_tdata_int),\n    .s_axis_tvalid     (s_axis_tvalid_int),\n    .s_axis_tready     (s_axis_tready_o),\n    .m_axis_tdata      (m_axis_tdata),\n    .m_axis_tvalid     (m_axis_tvalid),\n    .m_axis_tready     (1'b1),           // always ready\n    .rxd               (rxd),\n    .txd               (txd),\n    .tx_busy           (tx_busy),\n    .rx_busy           (rx_busy),\n    .rx_overrun_error  (rx_overrun_error),\n    .rx_frame_error    (rx_frame_error),\n    .prescale          (prescale_input)\n  );\n\n  // Use a moderately sized prescale to obtain a long busy window\n  initial prescale_input = 16'd200;\n\n  // -------------------------------------------------\n  // Main stimulus\n  // -------------------------------------------------\n  initial begin\n    // --- Reset ---\n    rst = 1'b1;\n    #(CLK_PERIOD*2);\n    rst = 1'b0;\n    #(CLK_PERIOD*2);\n\n    // --- Wait for the AXI stream to be ready ---\n    while (!s_axis_tready_o) @(posedge clk);\n\n    // --- Load a dummy byte to make the transmitter become busy ---\n    s_axis_tvalid_int <= 1'b1;\n    s_axis_tdata_int  <= 8'hA5; // any payload\n    @(posedge clk);\n    s_axis_tvalid_int <= 1'b0;   // de\u2011assert after one cycle\n\n    // --- Wait until tx_busy goes high (first frame is being transmitted) ---\n    wait (tx_busy);\n\n    // --- Advance so that bit_cnt is in the 1..8 range ---\n    repeat (30) @(posedge clk);\n\n    // --- Prepare the rising\u2011edge event that satisfies T11 ---\n    // Keep valid low and load the target data word (8'h3C)\n    s_axis_tvalid_int <= 1'b0;\n    s_axis_tdata_int  <= 8'h3C;\n\n    // On the next clock edge assert valid (rising edge) while busy is still high\n    @(posedge clk);\n    s_axis_tvalid_int <= 1'b1;   // rising edge observed by the coverage point\n\n    // --- Hold long enough for the coverage counter to be hit ---\n    repeat (20) @(posedge clk);\n\n    // --- End simulation ---\n    $finish;\n  end\nendmodule\n"
+ },
+ {
+  "design": "uart",
+  "id": "sub/qwen3.8-27b/T11/6",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T11"
+  ],
+  "tb": "`timescale 1ns / 1ps\n\nmodule tb;\n  localparam int CLK_PERIOD = 8;\n  localparam logic [15:0] PRESCALE = 16'd5;\n\n  logic        clk = 1'b0;\n  logic        rst = 1'b1;\n  logic [7:0]  s_axis_tdata = 8'h00;\n  logic        s_axis_tvalid = 1'b0;\n  logic [15:0] prescale = PRESCALE;\n\n  wire         s_axis_tready;\n  wire         txd;\n  wire         busy;\n\n  always #(CLK_PERIOD / 2) clk = ~clk;\n\n  uart_tx dut (\n    .clk(clk),\n    .rst(rst),\n    .s_axis_tdata(s_axis_tdata),\n    .s_axis_tvalid(s_axis_tvalid),\n    .s_axis_tready(s_axis_tready),\n    .txd(txd),\n    .busy(busy),\n    .prescale(prescale)\n  );\n\n  task automatic wait_clks(input int n);\n    repeat (n) @(negedge clk);\n  endtask\n\n  task automatic do_reset();\n    rst = 1'b1;\n    wait_clks(4);\n    rst = 1'b0;\n    wait_clks(4);\n  endtask\n\n  task automatic send_first_and_drop(input logic [7:0] b);\n    logic ready;\n    s_axis_tdata = b;\n    s_axis_tvalid = 1'b1;\n    do begin\n      ready = s_axis_tready;\n      @(negedge clk);\n    end while (!ready);\n    s_axis_tvalid = 1'b0;\n    s_axis_tdata = 8'h00;\n  endtask\n\n  initial begin\n    do_reset();\n\n    // Start one normal frame, then deassert tvalid before the data bits.\n    send_first_and_drop(8'hA5);\n\n    // Enter the first data-bit interval and raise tvalid with 8'h3C.\n    wait_clks(6);\n    s_axis_tdata = 8'h3C;\n    s_axis_tvalid = 1'b1;\n\n    // Hold the mid-frame transaction until it is loaded and the following\n    // frame has had time to shift out.  Finish while still asserted to avoid\n    // dropping tvalid while tready is low.\n    wait_clks(2000);\n\n    $display(\"T11: txd=%b busy=%b\", txd, busy);\n    $finish;\n  end\n\nendmodule\n"
+ }
+]

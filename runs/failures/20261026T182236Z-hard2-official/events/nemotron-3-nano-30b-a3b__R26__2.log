@@ -1,0 +1,5 @@
+1 25000 rx prescale 5
+1 65000 rx prescale 5
+5 105000 rx busy_rise 0
+384 3895000 rx frame_error 1
+765 7705000 rx busy_fall 0

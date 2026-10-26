@@ -1,0 +1,38 @@
+[
+ {
+  "events": "1 15000 rx prescale 1\n3 35000 rx busy_rise 0\n154 1545000 rx overrun_error 1\n155 1555000 rx busy_fall 0\n155 1555000 rx hs c3\n",
+  "id": "gold/uart/R18",
+  "log_tail": "- <work>/submission/tb.sv:39: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R18": 1
+  }
+ },
+ {
+  "events": "1 4000 rx prescale 5\n1 36000 rx prescale 5\n3 52000 rx busy_rise 0\n23 212000 rx busy_fall 0\n38 332000 rx busy_rise 0\n58 492000 rx busy_fall 0\n83 692000 rx busy_rise 0\n463 3732000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R18/2",
+  "log_tail": "ST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable       -fcoroutines -c -o verilated_threads.o /usr/share/verilator/include/verilated_threads.cpp\n/usr/bin/python3 /usr/share/verilator/bin/verilator_includer -DVL_INCLUDE_OPT=include Vtop.cpp Vtop___024root__DepSet_h84412442__0.cpp Vtop___024root__DepSet_heccd7ead__0.cpp Vtop__ConstPool_0.cpp Vtop___024root__Slow.cpp Vtop___024root__DepSet_h84412442__0__Slow.cpp Vtop___024root__DepSet_heccd7ead__0__Slow.cpp Vtop___024unit__Slow.cpp Vtop___024unit__DepSet_hff17caec__0__Slow.cpp Vtop__Syms.cpp > Vtop__ALL.cpp\ng++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=1 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable       -fcoroutines -c -o Vtop__ALL.o Vtop__ALL.cpp\necho \"\" > Vtop__ALL.verilator_deplist.tmp\nArchive ar -rcs Vtop__ALL.a Vtop__ALL.o\ng++     sim_main.o verilated.o verilated_cov.o verilated_timing.o verilated_threads.o Vtop__ALL.a    -pthread -lpthread -latomic   -o sim\nrm Vtop__ALL.verilator_deplist.tmp\nmake: Leaving directory '<work>/build'\n",
+  "status": "timeout",
+  "target_hits": {
+   "R18": 0
+  }
+ },
+ {
+  "events": "1 4000 tx prescale 5\n1 4000 rx prescale 5\n1 36000 tx prescale 5\n1 36000 rx prescale 5\n3 52000 rx busy_rise 0\n403 3252000 rx busy_fall 0\n404 3260000 rx busy_rise 0\n783 6292000 rx overrun_error 1\n784 6300000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R18/7",
+  "log_tail": "ST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable       -fcoroutines -c -o verilated_threads.o /usr/share/verilator/include/verilated_threads.cpp\n/usr/bin/python3 /usr/share/verilator/bin/verilator_includer -DVL_INCLUDE_OPT=include Vtop.cpp Vtop___024root__DepSet_h84412442__0.cpp Vtop___024root__DepSet_heccd7ead__0.cpp Vtop__ConstPool_0.cpp Vtop___024root__Slow.cpp Vtop___024root__DepSet_h84412442__0__Slow.cpp Vtop___024root__DepSet_heccd7ead__0__Slow.cpp Vtop___024unit__Slow.cpp Vtop___024unit__DepSet_hff17caec__0__Slow.cpp Vtop__Syms.cpp > Vtop__ALL.cpp\ng++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=1 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable       -fcoroutines -c -o Vtop__ALL.o Vtop__ALL.cpp\necho \"\" > Vtop__ALL.verilator_deplist.tmp\nArchive ar -rcs Vtop__ALL.a Vtop__ALL.o\ng++     sim_main.o verilated.o verilated_cov.o verilated_timing.o verilated_threads.o Vtop__ALL.a    -pthread -lpthread -latomic   -o sim\nrm Vtop__ALL.verilator_deplist.tmp\nmake: Leaving directory '<work>/build'\n",
+  "status": "timeout",
+  "target_hits": {
+   "R18": 0
+  }
+ },
+ {
+  "events": "1 20000 tx prescale 5\n1 20000 rx prescale 5\n7 68000 rx busy_rise 0\n387 3108000 rx busy_fall 0\n409 3284000 rx busy_rise 0\n788 6316000 rx overrun_error 1\n789 6324000 rx busy_fall 0\n",
+  "id": "sub/qwen3.8-27b/R18/4",
+  "log_tail": "[100000000000] %Fatal: tb.sv:114: Assertion failed in TOP.tb: timeout\n%Error: <work>/submission/tb.sv:114: Verilog $stop\nAborting...\n",
+  "status": "runtime_error",
+  "target_hits": {
+   "R18": 0
+  }
+ }
+]

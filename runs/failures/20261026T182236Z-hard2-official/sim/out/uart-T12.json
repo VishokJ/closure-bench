@@ -1,0 +1,20 @@
+[
+ {
+  "events": "1 15000 tx prescale 1\n2 25000 tx busy_rise 0\n2 25000 tx hs 0\n83 835000 tx hs 0\n164 1645000 tx busy_fall 0\n",
+  "id": "gold/uart/T12",
+  "log_tail": "- <work>/submission/tb.sv:27: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "T12": 1
+  }
+ },
+ {
+  "events": "1 5000 tx prescale 1\n1 25000 tx prescale 1\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/T12/1",
+  "log_tail": "- <work>/submission/tb.sv:86: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "T12": 0
+  }
+ }
+]

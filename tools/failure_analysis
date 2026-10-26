@@ -1,0 +1,1203 @@
+#!/usr/bin/env python3
+"""Why each failed rollout failed, which skills each model lacks, and which failures the reward can teach.
+
+Reads any verifiers traces.jsonl (docs/FAILURES.md has the taxonomy, every rule
+and its blind spots). Layers, in order:
+
+  1 root cause   deterministic, every failed rollout: one category from the
+                 grade status, the diagnostics, the stop reason or the reply,
+                 with the evidence that produced it (the matched line, the
+                 pin, the broken rule)
+  2 event logs   only for miss, self_check_failed and never_finishes: the
+                 submission and the task's formal gold rerun in the task image
+                 through an Executor, with a monitor bound to uart_rx and
+                 uart_tx; both event logs and their first divergence. The
+                 grader's verdict stays the one in the trace.
+  3 residual     opt-in (--label-residual), only for the layer-2 set: one label
+                 from a model that is not evaluated, recorded under
+                 runs/failures/<run-id>/labels/; --replay rebuilds every label
+                 with no model call. Never affects a reward.
+  4 features     pass@1 per task joined with the proposer's witness depth,
+                 mechanisms and module
+  5 RL views     pass@k, learnability per category, fix channel, success by
+                 output-token quartile
+  6 validation   results/failures/handcheck.csv (blind) and --agreement
+
+Rollouts with no grade, and Verilator internal errors, are infrastructure:
+excluded from every rate and listed separately.
+
+Usage:
+  tools/failure_analysis TRACES.jsonl ... --propose-run RUN [--written written.json]
+                         [--executor prime --concurrency N] [--label-residual] [--tag T]
+  tools/failure_analysis --resume runs/failures/<run-id> [--label-residual]  # finish a run
+  tools/failure_analysis --replay runs/failures/<run-id>   # no model calls, no simulations
+  tools/failure_analysis --agreement results/failures/handcheck.csv
+  tools/failure_analysis --simulate-batch IN.json --out OUT.json [-j N]   # in the task image
+Outputs: results/failures/{labels.jsonl,summary.md,handcheck.csv,exemplars/}.
+Same inputs and recorded run give byte-identical outputs.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import importlib.util
+import json
+import math
+import random
+import re
+import shutil
+import sys
+import tempfile
+from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+OUT = ROOT / "results" / "failures"
+RUNS = ROOT / "runs" / "failures"
+
+# --- taxonomy ---------------------------------------------------------------------------------
+
+# Layer 1, in the order the rules are tried (docs/FAILURES.md).
+CATEGORIES = ["infra", "budget", "empty_answer", "policy_violation", "illegal_stimulus",
+              "literal_bitselect", "unsupported_construct", "undeclared", "assign_to_input",
+              "include_path", "interface_hallucination", "other_syntax", "never_finishes",
+              "self_check_failed", "runtime_crash", "miss"]
+COMPILE = ["literal_bitselect", "unsupported_construct", "undeclared", "assign_to_input",
+           "include_path", "interface_hallucination", "other_syntax"]
+RESIDUAL_SET = ("miss", "self_check_failed", "never_finishes")  # layers 2 and 3
+RESIDUAL_LABELS = ["timing_arithmetic", "wrong_sequence", "wrong_data", "protocol_misunderstanding",
+                   "near_miss", "misread_spec", "wrong_self_check", "unclear"]
+
+# How a failure can be fixed. Fixed mapping, documented in docs/FAILURES.md. miss,
+# self_check_failed and never_finishes are reasoning until a residual label refines them.
+FIX_CHANNEL = {
+    **{c: "compiler feedback" for c in COMPILE}, "runtime_crash": "compiler feedback",
+    "illegal_stimulus": "knowledge", "protocol_misunderstanding": "knowledge",
+    **{c: "reasoning" for c in ("timing_arithmetic", "wrong_sequence", "wrong_data", "misread_spec",
+                                "near_miss", "wrong_self_check", "miss", "self_check_failed",
+                                "never_finishes")},
+    "budget": "budget", "empty_answer": "instruction following", "policy_violation": "instruction following",
+}
+SKILL_AXES = ["syntax and Verilator subset", "interface knowledge", "protocol knowledge", "timing arithmetic",
+              "multi-frame sequencing", "spec reading", "budget management", "answer formatting"]
+# Layer-2 categories have no axis of their own: their residual label decides (unattributed without one).
+SKILL_AXIS = {
+    **{c: "syntax and Verilator subset" for c in COMPILE if c != "interface_hallucination"},
+    "runtime_crash": "syntax and Verilator subset",
+    "interface_hallucination": "interface knowledge",
+    "illegal_stimulus": "protocol knowledge", "protocol_misunderstanding": "protocol knowledge",
+    "timing_arithmetic": "timing arithmetic", "near_miss": "timing arithmetic",
+    "wrong_sequence": "multi-frame sequencing",
+    "misread_spec": "spec reading", "wrong_data": "spec reading", "wrong_self_check": "spec reading",
+    "policy_violation": "spec reading",
+    "budget": "budget management", "empty_answer": "answer formatting",
+}
+UNATTRIBUTED = "unattributed (no residual label)"
+
+KS = (1, 2, 4, 8)
+HANDCHECK_PER_CATEGORY, HANDCHECK_RESIDUAL, HANDCHECK_SEED = 5, 20, 0
+RESIDUAL_MIN = 20       # below this many residuals per model, hand labelling beats a labeller
+AGREEMENT_MIN = 0.8
+LABELLER = {"model": "anthropic/claude-opus-5.5", "temperature": 0.0, "max_tokens": 4000}
+EVENT_CAP = 4000        # monitor lines per simulation (a hung testbench can toggle forever)
+PROMPT_EVENTS = 150     # event-log lines per log in the labeller prompt
+
+# --- loading ----------------------------------------------------------------------------------
+
+
+def load_rollouts(paths: list[Path]) -> list[dict]:
+    """One dict per trace, keyed <model>/<task>/<n> (n: order within model and task)."""
+    out, seen = [], Counter()
+    for path in paths:
+        for line_no, line in enumerate(path.read_text().splitlines(), 1):
+            rec = json.loads(line)
+            data = rec["task"]["data"]
+            for t in rec.get("traces") or []:
+                cfg = t["agent"]["config"]
+                model = cfg["model"]
+                task = data["name"]
+                info = t.get("info") or {}
+                n = seen[(model, task)]
+                seen[(model, task)] += 1
+                last = next((x["message"] for x in reversed(t.get("nodes") or [])
+                             if x["message"].get("role") == "assistant"), {})
+                out.append({
+                    "key": f"{model.split('/')[-1]}/{task}/{n}", "model": model,
+                    "run": path.parent.name, "traces": str(path), "line": line_no,
+                    "task": task, "design": data["design"], "targets": data["targets"],
+                    "image": data.get("image"), "run_timeout": data.get("run_timeout", 60.0),
+                    "grade": info.get("grade"), "submission": info.get("submission") or "",
+                    "submission_source": info.get("submission_source"),
+                    "finish_reasons": [c.get("finish_reason") for c in t.get("calls") or []],
+                    "stop_condition": t.get("stop_condition"), "is_timeout": bool(t.get("is_timeout")),
+                    "errors": [e.get("message", "") for e in t.get("errors") or []],
+                    "output_tokens": t.get("num_output_tokens") or 0,
+                    "max_tokens": (cfg.get("sampling") or {}).get("max_tokens"),
+                    "reply": last.get("content") or "",
+                    "reasoning": last.get("reasoning_content") or last.get("reasoning") or "",
+                })
+    return out
+
+
+def passed(r: dict) -> bool:
+    return bool(r["grade"]) and r["grade"]["reward"] == 1.0
+
+
+# --- layer 1: root cause ----------------------------------------------------------------------
+
+FATAL = re.compile(r"^%Error(?:-([A-Z0-9_]+))?: (?!Exiting due to)(.*)$")
+LOC = re.compile(r"^(?:<work>/)?(?:submission/)?([\w./-]+\.s?v):(\d+):(?:(\d+):)? ?")
+# A sized literal indexed directly: 8'hA5[i]
+SIZED_LITERAL_INDEX = re.compile(r"\b\d+\s*'\s*[sS]?[bBoOdDhH]\s*[0-9a-fA-F_xXzZ?]+\s*\[")
+DECL_START = re.compile(r"^\s*(int|integer|logic|bit|reg|byte|shortint|longint|time|real|string|wire)\b")
+ILLEGAL = re.compile(r"ILLEGAL_STIMULUS: (\w+) at (\d+) in (\S+)")
+# The testbench's own $fatal/$error ("[t] %Fatal: tb.sv:98: ...") and Verilog's "$stop" line after it.
+TB_STOP = re.compile(r"^(?:\[\d+\] )?%(?:Fatal|Error): (?:<work>/submission/)?tb\.sv:(\d+): (.*)$")
+WATCHDOG = re.compile(r"time ?out|timed out|never|waiting|stuck", re.I)
+TB_MODULE = re.compile(r"\bmodule\s+tb\b.*?\bendmodule\b", re.S)
+
+
+def result(category: str, sub_label: str | None = None, **evidence) -> dict:
+    return {"category": category, "sub_label": sub_label, "evidence": evidence}
+
+
+def fatal_lines(diag: str) -> list[tuple[str | None, str]]:
+    """(warning code, message) of each fatal %Error line, in log order."""
+    return [(m.group(1), m.group(2)) for m in map(FATAL.match, diag.splitlines()) if m]
+
+
+def normalise(msg: str) -> str:
+    """The message without its location and quoted names: a stable sub-label."""
+    msg = LOC.sub("", msg)
+    return re.sub(r"'[^'\s]*'", "'…'", msg).strip()[:120]
+
+
+def classify_error(code: str | None, msg: str, submission: list[str], ports: dict) -> dict:
+    """One fatal compile error line -> a category."""
+    loc = LOC.match(msg)
+    line_no = int(loc.group(2)) if loc and loc.group(1).endswith("tb.sv") else None
+    src = submission[line_no - 1].strip() if line_no and line_no <= len(submission) else None
+    body = LOC.sub("", msg)
+    ev = {"diagnostic": f"%Error{'-' + code if code else ''}: {msg}", "source_line": src}
+    if "syntax error, unexpected '['" in body and src and (lit := SIZED_LITERAL_INDEX.search(src)):
+        return result("literal_bitselect", None, literal=lit.group(0), **ev)
+    if code == "UNSUPPORTED" or "Unsupported:" in body or "syntax error, unexpected void" in body:
+        return result("unsupported_construct", "void cast" if "unexpected void" in body else normalise(body), **ev)
+    if m := re.search(r"Can't find definition of variable: '([^']+)'", body):
+        return result("undeclared", m.group(1), **ev)
+    if code == "ASSIGNIN":
+        m = re.search(r"'([^']+)'", body)
+        return result("assign_to_input", m.group(1) if m else None, **ev)
+    if m := re.search(r"Cannot find include file: (\S+)", body):
+        return result("include_path", m.group(1), **ev)
+    if code == "PINNOTFOUND":
+        m = re.search(r"(Pin|Parameter) not found: '([^']+)'", body)
+        mod = instantiated_module(submission, line_no, ports)
+        return result("interface_hallucination", m.group(2) if m else None,
+                      kind=(m.group(1).lower() if m else None), module=mod,
+                      real_ports=ports.get(mod), **ev)
+    sub = normalise(body)
+    if 'unexpected IDENTIFIER, expecting "\'{"' in body and src and DECL_START.match(src):
+        sub = "decl_after_statement"
+    elif "Specified --top-module" in body:
+        sub = "top_module_missing"
+    return result("other_syntax", sub, **ev)
+
+
+def instantiated_module(submission: list[str], line_no: int | None, ports: dict) -> str | None:
+    """The design module instantiated nearest above line_no (the cell the pin belongs to)."""
+    if not line_no:
+        return None
+    pat = re.compile(r"^\s*(" + "|".join(map(re.escape, sorted(ports, key=len, reverse=True))) + r")\b")
+    for s in reversed(submission[:line_no]):
+        if m := pat.match(s):
+            return m.group(1)
+    return None
+
+
+def classify(r: dict, ports: dict) -> dict:
+    """Layer 1: one category per failed rollout, with its evidence (docs/FAILURES.md)."""
+    g = r["grade"]
+    if g is None:
+        return result("infra", "no_grade", stop_condition=r["stop_condition"], errors=r["errors"][:1])
+    diag = g.get("diagnostics") or ""
+    status = g["status"]
+    if status == "compile_error" and (m := re.search(r"^%Error: Internal Error: .*$", diag, re.M)):
+        return result("infra", "verilator_internal", diagnostic=m.group(0))
+    if status == "compile_timeout":
+        return result("infra", "compile_timeout", status=status)
+    last_finish = r["finish_reasons"][-1] if r["finish_reasons"] else None
+    if not r["submission"].strip():
+        tokens = {"finish_reason": last_finish, "output_tokens": r["output_tokens"], "max_tokens": r["max_tokens"],
+                  "stop_condition": r["stop_condition"]}
+        if last_finish == "length" or r["is_timeout"] or "timeout" in (r["stop_condition"] or ""):
+            return result("budget", "max_tokens" if last_finish == "length" else "agent_timeout", **tokens)
+        in_reply, in_reasoning = bool(TB_MODULE.search(r["reply"])), bool(TB_MODULE.search(r["reasoning"]))
+        sub = "malformed_fence" if in_reply else "answer_in_reasoning" if in_reasoning else "no_answer"
+        return result("empty_answer", sub, module_tb_in_reply=in_reply, module_tb_in_reasoning=in_reasoning,
+                      **({"reply_head": r["reply"][:60]} if in_reply else {}), **tokens)
+    if status == "policy_violation":
+        first = diag.splitlines()[0] if diag else ""
+        return result("policy_violation", normalise(first), diagnostic=first)
+    if status == "illegal_stimulus":
+        m = ILLEGAL.search(diag)
+        return result("illegal_stimulus", m.group(1) if m else None,
+                      diagnostic=m.group(0) if m else None, time=int(m.group(2)) if m else None,
+                      checker=m.group(3) if m else None)
+    if status == "compile_error":
+        lines = r["submission"].splitlines()
+        errs = [classify_error(code, msg, lines, ports) for code, msg in fatal_lines(diag)]
+        if not errs:
+            return result("other_syntax", "no_error_line", diagnostic=diag.strip().splitlines()[-1:] or None)
+        first = errs[0]
+        first["evidence"]["fatal_errors"] = len(errs)
+        first["evidence"]["categories_in_log"] = dict(Counter(e["category"] for e in errs))
+        missing = re.findall(r"%Warning-PINMISSING: \S+ Cell has missing pin: '([^']+)'", diag)
+        if missing:
+            first["evidence"]["pinmissing"] = sorted(set(missing))
+        return first
+    if status in ("timeout", "no_finish"):
+        tail = [x for x in (g.get("diagnostics") or "").splitlines() if x.strip()][-1:]
+        return result("never_finishes", status, status=status, run_s=g.get("run_s"),
+                      last_log_line=tail[0][:200] if tail and status == "no_finish" else None)
+    if status == "runtime_error":
+        hits = [(m.group(1), m.group(2)) for x in diag.splitlines() if (m := TB_STOP.match(x))]
+        if hits:
+            # The testbench's message is on the %Fatal/%Error line before Verilog's "$stop" line.
+            msg = next((h[1] for h in hits if "Verilog $stop" not in h[1]), hits[0][1])
+            return result("self_check_failed", "watchdog" if WATCHDOG.search(msg) else "check",
+                          diagnostic=msg[:200], line=int(hits[0][0]))
+        return result("runtime_crash", None, run_s=g.get("run_s"),
+                      note="runtime_error with no $fatal/$stop/$error from the testbench in the log")
+    if status == "ok":
+        return result("miss", None, target_hits=g.get("target_hits"),
+                      other_items_hit=sorted(k for k, v in (g.get("plan_hits") or {}).items()
+                                             if v and k not in r["targets"]))
+    return result("other_syntax", f"unknown status {status}", status=status)
+
+
+def design_ports(design) -> dict[str, list[str]]:
+    """Port names of every RTL module, from the module headers."""
+    ports: dict[str, list[str]] = {}
+    for f in design.rtl:
+        for m in re.finditer(r"\bmodule\s+(\w+)\s*(?:#\s*\(.*?\)\s*)?\((.*?)\);", f.read_text(), re.S):
+            body = re.sub(r"/\*.*?\*/|//[^\n]*", "", m.group(2), flags=re.S)
+            ports[m.group(1)] = re.findall(r"\b(?:input|output|inout)\b[^,;]*?(\w+)\s*(?=,|$)", body.strip())
+    return ports
+
+
+# --- layer 2: event logs ----------------------------------------------------------------------
+
+def monitor_text(log_path: str) -> str:
+    """Bound to uart_rx and uart_tx (not the testbench): every event with its cycle, counted
+    in posedges since reset was last high. Flushed per line, so a killed run keeps its log."""
+    common = f"""  integer fd, cyc, n;
+  logic have, busy_q;
+  logic [15:0] pre_q;
+  initial begin fd = $fopen("{log_path}", "a"); cyc = 0; n = 0; have = 1'b0; end
+  task automatic ev(input string m, input string kind, input [31:0] v);
+    if (n < {EVENT_CAP}) begin
+      $fwrite(fd, "%0d %0t %s %s %0h\\n", cyc, $time, m, kind, v);
+      $fflush(fd);
+      n = n + 1;
+    end
+  endtask
+"""
+    track = """    if (!rst) begin
+      if (!have || prescale != pre_q) ev(M, "prescale", {16'd0, prescale});
+      if (have && busy != busy_q) ev(M, busy ? "busy_rise" : "busy_fall", 0);
+"""
+    tail = """    end
+    have = !rst;
+    busy_q = busy;
+    pre_q = prescale;
+  end
+endmodule
+"""
+    rx = ("module cb_fa_mon_rx (input wire clk, input wire rst, input wire [7:0] m_axis_tdata,\n"
+          "  input wire m_axis_tvalid, input wire m_axis_tready, input wire busy,\n"
+          "  input wire overrun_error, input wire frame_error, input wire [15:0] prescale);\n"
+          + common + "  localparam string M = \"rx\";\n  always @(posedge clk) begin\n    cyc = rst ? 0 : cyc + 1;\n"
+          + track + """      if (m_axis_tvalid && m_axis_tready) ev(M, "hs", {24'd0, m_axis_tdata});
+      if (frame_error) ev(M, "frame_error", 1);
+      if (overrun_error) ev(M, "overrun_error", 1);
+""" + tail)
+    tx = ("module cb_fa_mon_tx (input wire clk, input wire rst, input wire [7:0] s_axis_tdata,\n"
+          "  input wire s_axis_tvalid, input wire s_axis_tready, input wire busy, input wire [15:0] prescale);\n"
+          + common + "  localparam string M = \"tx\";\n  always @(posedge clk) begin\n    cyc = rst ? 0 : cyc + 1;\n"
+          + track + """      if (s_axis_tvalid && s_axis_tready) ev(M, "hs", {24'd0, s_axis_tdata});
+""" + tail)
+    return ("\n\n// --- tools/failure_analysis event monitor (appended for the replay; never graded) ---\n"
+            + rx + "\n" + tx + "\nbind uart_rx cb_fa_mon_rx u_cb_fa_mon_rx (.*);\n"
+            "bind uart_tx cb_fa_mon_tx u_cb_fa_mon_tx (.*);\n")
+
+
+def simulate_batch(in_path: Path, out_path: Path, jobs: int) -> None:
+    """In the task image: run each job of the batch. kind events: the testbench with the
+    monitor, the same legality rules as the grader; kind grade: closure_core.grader.grade."""
+    from closure_core import load_design
+    from closure_core import grader
+
+    def one(job: dict) -> dict:
+        design = load_design(job["design"])
+        if job["kind"] == "grade":
+            g = grader.grade(design, job["targets"], job["tb"], run_timeout=job["run_timeout"])
+            return {"id": job["id"], "grade": asdict(g)}
+        with tempfile.TemporaryDirectory(prefix="cb-fa-") as d:
+            log = Path(d) / "events.log"
+            s = grader.simulate(design, job["tb"] + monitor_text(str(log)), run_timeout=job["run_timeout"],
+                                rules=design.enforced(job["targets"]))
+            events = log.read_text() if log.exists() else ""
+        return {"id": job["id"], "status": s.sim.status, "events": events,
+                "target_hits": {t: s.plan_hits[t] for t in job["targets"]},
+                "log_tail": (s.sim.run_log or s.sim.compile_log)[-1500:]}
+
+    batch = json.loads(in_path.read_text())
+    with ThreadPoolExecutor(jobs) as pool:
+        res = list(pool.map(one, batch))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(res, indent=1, sort_keys=True))
+
+
+def parse_events(text: str) -> list[tuple[int, str, str, str]]:
+    """(cycle, module, kind, value) per event line; the time column is kept in the log only."""
+    out = []
+    for line in text.splitlines():
+        p = line.split()
+        if len(p) == 5:
+            out.append((int(p[0]), p[2], p[3], p[4]))
+    return out
+
+
+def first_divergence(gold: list[tuple], sub: list[tuple]) -> dict | None:
+    """The first gold event the submission lacks or has at a different cycle (None: none).
+    Also the first gold event missing from the submission in order, ignoring cycles: a
+    different prescale or reset length moves every cycle, not the sequence. prescale events
+    are configuration, not behaviour: compared apart (the formal golds mostly use prescale 1,
+    so comparing them would put nearly every divergence at the gold's first line)."""
+    pre = {"gold": [int(e[3], 16) for e in gold if e[2] == "prescale"],
+           "submission": [int(e[3], 16) for e in sub if e[2] == "prescale"][:5]}
+    gold = [e for e in gold if e[2] != "prescale"]
+    sub = [e for e in sub if e[2] != "prescale"]
+    have = set(sub)
+    out = None
+    for i, e in enumerate(gold):
+        if e not in have:
+            same = [s[0] for s in sub if s[1:] == e[1:]]
+            out = {"index": i, "gold_event": fmt_event(e),
+                   "reason": "at a different cycle" if same else "missing",
+                   "submission_cycles": same[:5]}
+            break
+    if out is None:
+        return None
+    out["prescale"] = pre
+    j = 0
+    for i, e in enumerate(gold):
+        while j < len(sub) and sub[j][1:] != e[1:]:
+            j += 1
+        if j == len(sub):
+            out["sequence"] = {"index": i, "gold_event": fmt_event(e),
+                               "matched_before": i, "of": len(gold)}
+            break
+        j += 1
+    else:
+        out["sequence"] = None  # every gold event occurs, in order, at other cycles
+    return out
+
+
+def fmt_event(e: tuple) -> str:
+    return f"cycle {e[0]} {e[1]} {e[2]} {e[3]}"
+
+
+# --- executor runs (layer 2 and the empty-answer what-if) ---------------------------------------
+
+def make_executor(kind: str, image: str, concurrency: int, j: int | None):
+    from closure_core import propose
+    if kind == "prime":
+        from closure_core.prime_executor import PrimeExecutor
+        return PrimeExecutor(image, concurrency=concurrency)
+    return propose.Executor(None if kind == "local" else image, j=j)
+
+
+def run_batches(run_dir: Path, batches: dict[str, list[dict]], executor_kind: str | None,
+                concurrency: int, j: int | None) -> dict[str, dict]:
+    """Run each batch once (recorded under sim/); a recorded batch is never rerun. With no
+    executor (replay) a batch that is not recorded is an error."""
+    from closure_core import propose
+    todo = []
+    for name, jobs in sorted(batches.items()):
+        inp, out = run_dir / "sim" / "in" / f"{name}.json", run_dir / "sim" / "out" / f"{name}.json"
+        text = json.dumps(jobs, indent=1, sort_keys=True)
+        if inp.exists() and inp.read_text() != text:
+            raise SystemExit(f"{inp}: recorded batch differs from the one this code builds")
+        if not out.exists():
+            if executor_kind is None:
+                raise SystemExit(f"{out}: not recorded; --replay runs no simulation")
+            inp.parent.mkdir(parents=True, exist_ok=True)
+            inp.write_text(text)
+            todo.append((name, inp, out, jobs[0]["image"]))
+    if todo:
+        images = {t[3] for t in todo}
+        execs = {im: make_executor(executor_kind, im, concurrency, j) for im in images}
+
+        def go(t):
+            name, inp, out, image = t
+            ex = execs[image]
+            p = ex.run(["tools/failure_analysis", "--simulate-batch", propose._rel(inp),
+                        "--out", propose._rel(out), "-j", str(ex.j)])
+            if not out.exists():
+                raise SystemExit(f"batch {name} failed (exit {p.returncode}):\n{p.stdout[-2000:]}\n{p.stderr[-2000:]}")
+            print(f"sim batch {name}: {len(json.loads(inp.read_text()))} jobs", file=sys.stderr, flush=True)
+
+        with ThreadPoolExecutor(max(1, concurrency if executor_kind == "prime" else 1)) as pool:
+            list(pool.map(go, todo))
+    res = {}
+    for name in sorted(batches):
+        for x in json.loads((run_dir / "sim" / "out" / f"{name}.json").read_text()):
+            res[x["id"]] = x
+    return res
+
+
+def slug(key: str) -> str:
+    return key.replace("/", "__")
+
+
+def build_jobs(rollouts: list[dict], labels: dict[str, dict], golds: dict) -> dict[str, list[dict]]:
+    """Batches: one per task (its layer-2 submissions and its gold), plus one for the what-ifs."""
+    prompt = _prompt_module()
+    batches: dict[str, list[dict]] = defaultdict(list)
+    for r in rollouts:
+        lab = labels.get(r["key"])
+        if not lab:
+            continue
+        base = {"design": r["design"], "targets": r["targets"], "run_timeout": r["run_timeout"], "image": r["image"]}
+        if lab["category"] in RESIDUAL_SET:
+            batch = batches[f"{r['design']}-{r['task']}"]
+            batch.append({**base, "id": f"sub/{r['key']}", "kind": "events", "tb": r["submission"]})
+            gid = f"gold/{r['design']}/{r['task']}"
+            if (r["design"], r["task"]) in golds and not any(x["id"] == gid for x in batch):
+                batch.append({**base, "id": gid, "kind": "events", "tb": golds[(r["design"], r["task"])]})
+        elif lab["category"] == "empty_answer" and lab["sub_label"] != "no_answer":
+            text = r["reply"] if lab["sub_label"] == "malformed_fence" else r["reasoning"]
+            batches["whatif"].append({**base, "id": f"whatif/{r['key']}", "kind": "grade",
+                                      "tb": answer_testbench(text, prompt)})
+    for b in batches.values():
+        b.sort(key=lambda x: x["id"])
+    return dict(batches)
+
+
+def answer_testbench(text: str, prompt) -> str:
+    """The what-if testbench from the reasoning (or a reply with broken fences): the last
+    fenced block holding a module tb (the taskset's rule), else the last module tb ... endmodule."""
+    blocks = [b for b in prompt.CODE_BLOCK.findall(text) if TB_MODULE.search(b)]
+    if blocks:
+        return blocks[-1].strip() + "\n"
+    return TB_MODULE.findall(text)[-1].strip() + "\n"
+
+
+def _prompt_module():
+    """closure_bench.prompt by path: the package itself pulls in verifiers."""
+    p = ROOT / "environments" / "closure_bench" / "closure_bench" / "prompt.py"
+    spec = importlib.util.spec_from_file_location("closure_bench_prompt", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# --- layer 3: residual labels ----------------------------------------------------------------
+
+LABEL_PROMPT = """You are labelling why a hardware testbench failed to reach a coverage target.
+
+The design is an AXI4-Stream UART (uart_rx receives serial rxd and emits bytes on m_axis; uart_tx takes bytes on s_axis and drives txd; one bit lasts prescale*8 clock cycles). The testbench below was written by a model under evaluation. It compiled. Its grade was: {status}. A formal tool found the gold testbench, which reaches the target.
+
+Both testbenches were rerun with a monitor bound to uart_rx and uart_tx. Each event line is `<cycle> <time> <module> <event> <value>`: cycle counts clock posedges since reset was last high; events are hs (an AXI-Stream handshake, value = data byte in hex), frame_error and overrun_error pulses, busy_rise/busy_fall, and prescale (its value when it changes).
+
+Choose exactly one label:
+- timing_arithmetic: the stimulus has the right shape but its cycle arithmetic is wrong (bit period, frame length, when to raise or drop a signal), so the key event happens at the wrong time or a frame is mis-sampled. Example: "frames end in frame_error (sub `311 ... rx frame_error 1`) because bits last prescale*4 cycles, not prescale*8."
+- wrong_sequence: the individual frames and handshakes are right, but their order or count is wrong. Example: "the sink handshakes after the first frame (sub `170 ... rx hs a5`), so no second overrun occurs (gold `232 ... rx overrun_error 1`)."
+- wrong_data: the sequence and timing match but a data value differs. Example: "the second frame carries 3c (sub `236 ... rx hs 3c`) where the target needs 5a (gold `232 ... rx hs 5a`)."
+- protocol_misunderstanding: the testbench misunderstands AXI-Stream or UART framing semantics (handshake rules, LSB-first bit order, start/stop bits, what tready does). Example: "drives the data bits MSB first, so the byte 01 arrives as 80 (sub `152 ... rx hs 80`, gold `152 ... rx hs 01`)."
+- near_miss: the submission reproduces the gold's events up to the last step and misses the target by one condition (one cycle, one frame, one bit). Example: "every gold event occurs, but the final overrun is one cycle after tready rises (sub `233 ... rx overrun_error 1`)."
+- misread_spec: the testbench drives a different scenario from the one the target describes. Example: "the target asks for a second overrun with tready low, but the sub never holds tready low (sub `100 ... rx hs 3c`)."
+- wrong_self_check: the stimulus is plausible but the testbench's own check or wait condition is wrong and ends or hangs the run. Example: "the sub reaches gold's `232 ... rx overrun_error 1` but then $fatal fires on a wrong expected value."
+- unclear: the evidence does not support one label.
+
+## Target description
+{description}
+
+## Gold testbench (formal witness)
+```systemverilog
+{gold}
+```
+
+## Submitted testbench
+```systemverilog
+{submission}
+```
+
+## Gold event log
+{gold_events}
+
+## Submission event log
+{sub_events}
+
+## First divergence
+{divergence}
+
+Answer with one JSON object on one line and nothing else:
+{{"label": "<one label>", "reason": "<one sentence that cites log lines>"}}
+"""
+
+
+def _excerpt(text: str, n: int) -> str:
+    lines = text.splitlines()
+    more = f"\n... ({len(lines) - n} more lines)" if len(lines) > n else ""
+    return "```\n" + ("\n".join(lines[:n]) or "(no events)") + more + "\n```"
+
+
+def label_messages(r: dict, lab: dict, description: str, gold: str, sim: dict) -> list[dict]:
+    status = r["grade"]["status"] + (f" ({lab['evidence'].get('diagnostic')})"
+                                      if lab["category"] == "self_check_failed" else "")
+    status += "; target not hit" if lab["category"] == "miss" else ""
+    div = lab["evidence"].get("first_divergence")
+    text = LABEL_PROMPT.format(
+        status=status, description=description.strip(), gold=gold.strip(),
+        submission=r["submission"].strip(), gold_events=_excerpt(sim["gold_events"], PROMPT_EVENTS),
+        sub_events=_excerpt(sim["sub_events"], PROMPT_EVENTS),
+        divergence=json.dumps(div, sort_keys=True) if div else "none: the submission has every gold event at the same cycle")
+    return [{"role": "user", "content": text}]
+
+
+def parse_label(text: str) -> tuple[str, str]:
+    m = re.search(r"\{.*\}", text or "", re.S)
+    try:
+        obj = json.loads(m.group(0)) if m else None
+    except json.JSONDecodeError:
+        obj = None
+    if not isinstance(obj, dict) or obj.get("label") not in RESIDUAL_LABELS or not str(obj.get("reason", "")).strip():
+        return "unclear", f"unparseable labeller answer: {(text or '')[:200]!r}"
+    return obj["label"], " ".join(str(obj["reason"]).split())
+
+
+class NoModel:
+    """--replay: every label must already be recorded."""
+    params = None
+
+    def __call__(self, messages):
+        raise SystemExit("--replay makes no model call, and a residual label is not recorded")
+
+
+def label_residuals(run_dir: Path, items: list[tuple[dict, dict, list[dict]]], model, parallel: int) -> dict:
+    """items: (rollout, label, messages). Each call recorded at labels/<key>.json (propose._call:
+    a recorded call is reused only if it answered these exact messages)."""
+    from closure_core import propose
+
+    def one(item):
+        r, lab, messages = item
+        text = propose._call(model, messages, run_dir / "labels" / f"{slug(r['key'])}.json")
+        return r["key"], parse_label(text)
+
+    with ThreadPoolExecutor(parallel) as pool:
+        return dict(pool.map(one, items))
+
+
+# --- layer 4 and 5: features and RL views -------------------------------------------------------
+
+def per_task(rollouts: list[dict], labels: dict) -> dict[tuple[str, str], tuple[int, int]]:
+    """(model, task) -> (passes, graded rollouts); infrastructure excluded."""
+    c: dict = defaultdict(lambda: [0, 0])
+    for r in rollouts:
+        if labels.get(r["key"], {}).get("category") == "infra":
+            continue
+        c[(r["model"], r["task"])][1] += 1
+        c[(r["model"], r["task"])][0] += passed(r)
+    return {k: tuple(v) for k, v in c.items()}
+
+
+def pass_at_k(n: int, c: int, k: int) -> float:
+    """Unbiased estimator 1 - C(n-c, k) / C(n, k) (Chen et al. 2021)."""
+    if n - c < k:
+        return 1.0
+    return 1.0 - math.comb(n - c, k) / math.comb(n, k)
+
+
+def pass_at_k_all(n: int, c: int, k: int) -> float:
+    """pass@k for any task with n >= 1 graded rollouts: the unbiased estimator when n >= k,
+    else pass@n (all n tried: 1 if any passed). Dropping tasks with n < k biases pass@k upward
+    whenever those are the hard ones (an infra-excluded rollout on a 0/n task)."""
+    return pass_at_k(n, c, min(k, n))
+
+
+def task_features(propose_run: Path, written: Path, design) -> dict[str, dict]:
+    """Per task: the proposer's witness measures (summary.json, by candidate), mechanisms
+    (plan.yaml, checked against summary.json) and module (the cover's bind target)."""
+    summary = json.loads((propose_run / "summary.json").read_text())
+    cid_of = {task: cid for cid, task in json.loads(written.read_text()).items()}
+    mech_by_cid = defaultdict(set)
+    for mech, cids in summary.get("mechanisms", {}).items():
+        for cid in cids:
+            mech_by_cid[cid].add(mech)
+    out = {}
+    for task, cid in sorted(cid_of.items()):
+        item = design.item(task)
+        plan = _plan_entry(design, task)
+        mechs = sorted(plan.get("mechanism") or [])
+        if set(mechs) != mech_by_cid[cid]:
+            raise SystemExit(f"{task} ({cid}): plan.yaml mechanisms {mechs} != summary.json {sorted(mech_by_cid[cid])}")
+        prov = plan.get("provenance") or {}
+        if prov.get("candidate") not in (None, cid):
+            raise SystemExit(f"{task}: plan.yaml says candidate {prov['candidate']}, written.json says {cid}")
+        cover = (design.pack / "covers" / f"{task}.sv").read_text()
+        bind = re.search(r"^\s*bind\s+(\w+)", cover, re.M)
+        w = summary["witnesses"][cid]
+        out[task] = {"cid": cid, "witness_frames": w.get("witness_frames"), "active_frames": w.get("active_frames"),
+                     "input_changes": w.get("input_changes"), "witness_depth": w.get("witness_depth"),
+                     "mechanisms": mechs, "module": bind.group(1) if bind else None,
+                     "description": item.description}
+    return out
+
+
+def _plan_entry(design, task: str) -> dict:
+    import yaml
+    plan = yaml.safe_load((design.pack / "plan.yaml").read_text())
+    return next(it for it in plan["items"] if it["id"] == task)
+
+
+def depth_bucket(frames: float | None) -> str:
+    if frames is None:
+        return "unknown"
+    return "< 1.9 frames" if frames < 1.9 else "1.9-2.0 frames" if frames < 2.0 else ">= 2.0 frames"
+
+
+# --- layer 6: validation ----------------------------------------------------------------------
+
+def handcheck_rows(failed: list[dict], labels: dict, sims: dict) -> tuple[list[dict], dict]:
+    """Stratified sample (seed 0): HANDCHECK_PER_CATEGORY per layer-1 category (all when
+    fewer); HANDCHECK_RESIDUAL from the residual set of models with at least RESIDUAL_MIN
+    residuals, plus every residual of a model with fewer (too few for a labeller to be judged
+    on a sample). Rows are shuffled and carry no predicted label (blind); the key maps each
+    sample id to its strata."""
+    rng = random.Random(HANDCHECK_SEED)
+    by_cat = defaultdict(list)
+    for r in failed:
+        by_cat[labels[r["key"]]["category"]].append(r["key"])
+    strata: dict[str, list[str]] = defaultdict(list)
+    for cat in CATEGORIES:
+        keys = sorted(by_cat.get(cat, []))
+        for k in (rng.sample(keys, HANDCHECK_PER_CATEGORY) if len(keys) > HANDCHECK_PER_CATEGORY else keys):
+            strata[k].append(f"category:{cat}")
+    residual = sorted(r["key"] for r in failed if labels[r["key"]]["category"] in RESIDUAL_SET)
+    per_model = Counter(k.split("/")[0] for k in residual)
+    small = {m for m, n in per_model.items() if n < RESIDUAL_MIN}
+    pool = [k for k in residual if k.split("/")[0] not in small]
+    for k in rng.sample(pool, min(HANDCHECK_RESIDUAL, len(pool))):
+        strata[k].append("residual:sample")
+    for k in residual:
+        if k.split("/")[0] in small:
+            strata[k].append("residual:all_of_small_model")
+    keys = sorted(strata)
+    rng.shuffle(keys)
+    by_key = {r["key"]: r for r in failed}
+    rows, key_map = [], {}
+    for i, k in enumerate(keys, 1):
+        r, lab = by_key[k], labels[k]
+        sid = f"h{i:03d}"
+        key_map[sid] = {"key": k, "strata": strata[k]}
+        ev = {x: y for x, y in lab["evidence"].items() if x != "first_divergence"}
+        s = sims.get(k) or {}
+        rows.append({"sample_id": sid, "model": r["model"], "task": r["task"], "rollout": k,
+                     "status": (r["grade"] or {}).get("status", "no grade"),
+                     "evidence": json.dumps(ev, sort_keys=True)[:1500],
+                     "first_divergence": json.dumps(lab["evidence"].get("first_divergence"), sort_keys=True)
+                     if lab["category"] in RESIDUAL_SET else "",
+                     "gold_events_head": "\n".join(s.get("gold_events", "").splitlines()[:25]),
+                     "submission_events_head": "\n".join(s.get("sub_events", "").splitlines()[:25]),
+                     "logs": " ".join(v for v in (lab.get("logs") or {}).values() if v),
+                     "hand_category": "", "hand_residual_label": "", "hand_notes": ""})
+    return rows, key_map
+
+
+def cohen_kappa(a: list[str], b: list[str]) -> float | None:
+    n = len(a)
+    if n == 0:
+        return None
+    po = sum(x == y for x, y in zip(a, b)) / n
+    ca, cb = Counter(a), Counter(b)
+    pe = sum(ca[k] * cb[k] for k in set(a) | set(b)) / (n * n)
+    return 1.0 if pe == 1 else (po - pe) / (1 - pe)
+
+
+def agreement(csv_path: Path, labels: dict, key_map: dict) -> dict:
+    rows = list(csv.DictReader(csv_path.open()))
+    prec: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    pairs = []
+    for row in rows:
+        km = key_map[row["sample_id"]]
+        lab = labels[km["key"]]
+        hand_cat = row["hand_category"].strip()
+        for s in km["strata"]:
+            if s.startswith("category:") and hand_cat:
+                prec[s.split(":", 1)[1]][0] += hand_cat == lab["category"]
+                prec[s.split(":", 1)[1]][1] += 1
+        hand_res = row["hand_residual_label"].strip()
+        if any(s.startswith("residual:") for s in km["strata"]) and hand_res and lab.get("residual"):
+            pairs.append((hand_res, lab["residual"]["label"]))
+    acc = sum(a == b for a, b in pairs) / len(pairs) if pairs else None
+    kappa = cohen_kappa([p[0] for p in pairs], [p[1] for p in pairs])
+    return {"precision": {c: {"correct": v[0], "checked": v[1], "precision": round(v[0] / v[1], 3)}
+                          for c, v in sorted(prec.items())},
+            "residual": {"pairs": len(pairs), "accuracy": acc and round(acc, 3),
+                         "kappa": kappa and round(kappa, 3),
+                         "validated": bool(pairs) and acc >= AGREEMENT_MIN and kappa >= AGREEMENT_MIN}}
+
+
+# --- layer 7: outputs -------------------------------------------------------------------------
+
+def table(head: list[str], rows: list[list]) -> str:
+    out = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+    out += ["| " + " | ".join(str(x) for x in r) + " |" for r in rows]
+    return "\n".join(out)
+
+
+def axis_of(lab: dict) -> str:
+    if lab["category"] in RESIDUAL_SET:
+        res = lab.get("residual")
+        return SKILL_AXIS.get(res["label"], UNATTRIBUTED) if res else UNATTRIBUTED
+    return SKILL_AXIS[lab["category"]]
+
+
+def channel_of(lab: dict) -> str:
+    res = lab.get("residual")
+    if lab["category"] in RESIDUAL_SET and res and res["label"] != "unclear":
+        return FIX_CHANNEL[res["label"]]
+    return FIX_CHANNEL.get(lab["category"], "-")
+
+
+def summary_md(rollouts, labels, models, features, whatif, agree, labelled, run_dir) -> str:
+    failed = [r for r in rollouts if r["key"] in labels]
+    real = [r for r in failed if labels[r["key"]]["category"] != "infra"]
+    tasks_n = per_task(rollouts, labels)
+    tasks = sorted({r["task"] for r in rollouts}, key=_task_order)
+    s = ["# Failure analysis", "",
+         f"Generated by `tools/failure_analysis` from run `{run_dir.relative_to(ROOT)}` (docs/FAILURES.md: "
+         "taxonomy, rules, blind spots). Infrastructure is excluded from every rate.", ""]
+    graded = Counter(r["model"] for r in rollouts if labels.get(r["key"], {}).get("category") != "infra")
+    s += ["## Rollouts", "", table(["model", "rollouts", "graded", "passed", "failed", "infra"], [
+        [m, sum(r["model"] == m for r in rollouts), graded[m], sum(passed(r) for r in rollouts if r["model"] == m),
+         sum(r["model"] == m for r in real), sum(r["model"] == m for r in failed) - sum(r["model"] == m for r in real)]
+        for m in models]), ""]
+
+    s += ["## Layers", "", table(["model", "layer 1 final", "layer 2 set (replayed)", "layer 3 labelled",
+                                  "layer 3 unclear", "unlabelled"], [
+        [m, sum(r["model"] == m and labels[r["key"]]["category"] not in RESIDUAL_SET for r in real),
+         sum(r["model"] == m and labels[r["key"]]["category"] in RESIDUAL_SET for r in real),
+         sum(r["model"] == m and (labels[r["key"]].get("residual") or {}).get("label") not in (None, "unclear")
+             for r in real),
+         sum(r["model"] == m and (labels[r["key"]].get("residual") or {}).get("label") == "unclear" for r in real),
+         sum(r["model"] == m and labels[r["key"]]["category"] in RESIDUAL_SET and not labels[r["key"]].get("residual")
+             for r in real)] for m in models]), ""]
+    if not labelled:
+        s += ["Residual labels were not requested (`--label-residual`): layer-2 rollouts stay unattributed.", ""]
+    elif not (agree or {}).get("residual", {}).get("validated"):
+        why = ("no hand labels yet (`--agreement`)" if not agree or not agree["residual"]["pairs"]
+               else f"agreement with the hand labels is below {AGREEMENT_MIN}: accuracy "
+                    f"{agree['residual']['accuracy']}, kappa {agree['residual']['kappa']} "
+                    f"on {agree['residual']['pairs']} rollouts")
+        s += [f"**Residual labels are indicative only**: {why}. They never affect a reward.", ""]
+    else:
+        s += [f"Residual labels agree with the hand labels: accuracy {agree['residual']['accuracy']}, "
+              f"kappa {agree['residual']['kappa']} on {agree['residual']['pairs']} rollouts.", ""]
+
+    s += ["## Counts per category and model", ""]
+    rows = []
+    for c in CATEGORIES:
+        counts = [sum(r["model"] == m and labels[r["key"]]["category"] == c for r in failed) for m in models]
+        if any(counts):
+            rows.append([c, *counts, FIX_CHANNEL.get(c, "excluded"), SKILL_AXIS.get(c, "via residual label" if c in RESIDUAL_SET else "excluded")])
+    s += [table(["category", *models, "fix channel", "skill axis"], rows), ""]
+    subs = Counter((labels[r["key"]]["category"], labels[r["key"]]["sub_label"], r["model"]) for r in failed
+                   if labels[r["key"]]["sub_label"])
+    s += ["### Sub-labels", "", table(["category", "sub-label", *models], [
+        [c, f"`{sl}`", *[subs[(c, sl, m)] for m in models]]
+        for c, sl in sorted({(c, sl) for c, sl, _ in subs}, key=lambda x: (CATEGORIES.index(x[0]), x[1]))]), ""]
+    if labelled:
+        res = Counter((labels[r["key"]]["residual"]["label"], r["model"]) for r in failed if labels[r["key"]].get("residual"))
+        s += ["### Residual labels (layer 3, indicative unless validated above)", "", table(
+            ["label", *models, "fix channel", "skill axis"],
+            [[lb, *[res[(lb, m)] for m in models], FIX_CHANNEL.get(lb, "-"), SKILL_AXIS.get(lb, UNATTRIBUTED)]
+             for lb in RESIDUAL_LABELS if any(res[(lb, m)] for m in models)]), ""]
+
+    s += ["## Infrastructure (excluded from rates)", ""]
+    infra = [r for r in failed if labels[r["key"]]["category"] == "infra"]
+    s += ([f"- `{r['key']}` {labels[r['key']]['sub_label']}: "
+           f"{json.dumps(labels[r['key']]['evidence'], sort_keys=True)[:300]}" for r in infra] or ["none"])
+    tool = [r for r in infra if labels[r["key"]]["sub_label"] == "verilator_internal"]
+    if tool:
+        s += ["", f"{len(tool)} are Verilator internal errors: toolchain bugs, to report upstream."]
+    s += [""]
+
+    empties = [r for r in failed if labels[r["key"]]["category"] == "empty_answer"]
+    if empties:
+        s += ["## Empty answers (a likely serving or format issue)", "",
+              "The model stopped on its own (no length or time limit) and the taskset extracted no testbench. "
+              "`answer_in_reasoning`: a complete `module tb ... endmodule` is only in the reasoning. "
+              "`malformed_fence`: the reply holds one, but its code fences yield an empty last block. "
+              "`no_answer`: no testbench anywhere. The first two were graded offline as a what-if; "
+              "the official score is unchanged.", "",
+              table(["rollout", "sub-label", "output tokens", "what-if status", "what-if reward"],
+                    [[f"`{r['key']}`", labels[r["key"]]["sub_label"], r["output_tokens"],
+                      *(lambda g: [g["status"], g["reward"]] if g else ["-", "-"])(
+                          (whatif.get(r["key"]) or {}).get("grade"))] for r in empties]), ""]
+        lost = sum(((whatif.get(r["key"]) or {}).get("grade") or {}).get("reward", 0) for r in empties)
+        s += [f"What-if hits lost to empty answers: {lost:g} of {len(empties)}.", ""]
+
+    s += ["## Category per task and model", "",
+          "Cells: passes/graded, then failure categories with counts (a residual label in brackets).", ""]
+    cell = defaultdict(Counter)
+    for r in real:
+        lab = labels[r["key"]]
+        name = lab["category"] + (f"[{lab['residual']['label']}]" if lab.get("residual") else "")
+        cell[(r["task"], r["model"])][name] += 1
+    s += [table(["task", *models], [[t, *[
+        f"{tasks_n.get((m, t), (0, 0))[0]}/{tasks_n.get((m, t), (0, 0))[1]} "
+        + ", ".join(f"{k} {v}" for k, v in sorted(cell[(t, m)].items())) for m in models]] for t in tasks]), ""]
+
+    s += ["## Skill gaps", "", "Mapping (fixed, docs/FAILURES.md): " + "; ".join(
+        f"{axis}: {', '.join(c for c, a in SKILL_AXIS.items() if a == axis)}" for axis in SKILL_AXES) +
+        f". Layer-2 categories count under their residual label's axis, else `{UNATTRIBUTED}`.", ""]
+    ax = Counter((axis_of(labels[r["key"]]), r["model"]) for r in real)
+    axes = SKILL_AXES + [UNATTRIBUTED]
+    s += [table(["skill axis", *models], [[a, *[ax[(a, m)] for m in models]] for a in axes
+                                          if any(ax[(a, m)] for m in models)]), ""]
+    s += ["Top three per model:", ""]
+    for m in models:
+        top = sorted(((ax[(a, m)], a) for a in SKILL_AXES if ax[(a, m)]), key=lambda x: (-x[0], x[1]))[:3]
+        s += [f"- {m}: " + (", ".join(f"{a} ({n})" for n, a in top) or "none")]
+    s += [""]
+
+    s += rl_views(rollouts, labels, models, tasks_n)
+    if features:
+        s += feature_tables(features, models, tasks_n)
+    return "\n".join(s) + "\n"
+
+
+def rl_views(rollouts, labels, models, tasks_n) -> list[str]:
+    s = ["## RL views", "", "### pass@k (unbiased estimator, mean over tasks)", "",
+         "The gap between pass@1 and pass@8 is the headroom RL can sharpen into pass@1. Every task "
+         "counts: a task with fewer than k graded rollouts (n < k, after infra) uses pass@n, its best "
+         "available estimate; the number of such tasks is shown after the task count.", ""]
+    rows = []
+    for m in models:
+        row = [m]
+        for k in KS:
+            ts = [(n, c) for (mm, _), (c, n) in tasks_n.items() if mm == m and n > 0]
+            short = sum(1 for n, _ in ts if n < k)
+            est = sum(pass_at_k_all(n, c, k) for n, c in ts) / len(ts) if ts else None
+            row.append(f"{est:.3f} ({len(ts)}" + (f", {short} with n<k)" if short else ")") if ts else "-")
+        rows.append(row)
+    s += [table(["model", *[f"pass@{k} (tasks)" for k in KS]], rows), ""]
+
+    s += ["### Learnability per category", "",
+          "Failures on tasks the model solves sometimes (mixed outcomes: the reward can teach these) "
+          "against failures on tasks it never solves (0 of k: needs curriculum or other help).", ""]
+    rows = []
+    for c in CATEGORIES[1:]:
+        cells = []
+        for m in models:
+            mixed = zero = 0
+            for r in rollouts:
+                lab = labels.get(r["key"])
+                if r["model"] != m or not lab or lab["category"] != c:
+                    continue
+                cnt, n = tasks_n[(m, r["task"])]
+                mixed += cnt > 0
+                zero += cnt == 0
+            cells.append(f"{mixed} / {zero}" if mixed or zero else "-")
+        if any(x != "-" for x in cells):
+            rows.append([c, FIX_CHANNEL[c], *cells])
+    s += [table(["category", "fix channel", *[f"{m} mixed / 0-of-k" for m in models]], rows), ""]
+
+    s += ["### Fix channel", "",
+          "compiler feedback: " + ", ".join(c for c, v in FIX_CHANNEL.items() if v == "compiler feedback")
+          + ". knowledge: " + ", ".join(c for c, v in FIX_CHANNEL.items() if v == "knowledge")
+          + ". reasoning: " + ", ".join(c for c, v in FIX_CHANNEL.items() if v == "reasoning")
+          + ". budget: budget. instruction following: empty_answer, policy_violation.", ""]
+    ch = Counter((channel_of(labels[r["key"]]), r["model"]) for r in rollouts
+                 if r["key"] in labels and labels[r["key"]]["category"] != "infra")
+    chans = sorted({c for c, _ in ch})
+    s += [table(["fix channel", *models], [[c, *[ch[(c, m)] for m in models]] for c in chans]), ""]
+
+    s += ["### Success by output-token quartile", "",
+          "Graded rollouts ranked by output tokens (ties by rollout key), split into four equal groups. "
+          "Does longer thinking help, or does the model run out?", ""]
+    rows = []
+    for m in models:
+        rs = sorted((r for r in rollouts if r["model"] == m and labels.get(r["key"], {}).get("category") != "infra"),
+                    key=lambda r: (r["output_tokens"], r["key"]))
+        for q in range(4):
+            part = rs[q * len(rs) // 4:(q + 1) * len(rs) // 4]
+            if not part:
+                continue
+            out_of = sum(labels.get(r["key"], {}).get("category") in ("budget", "empty_answer") for r in part)
+            rows.append([m, f"Q{q + 1}", f"{part[0]['output_tokens']}-{part[-1]['output_tokens']}", len(part),
+                         f"{sum(map(passed, part)) / len(part):.2f}", out_of])
+    s += [table(["model", "quartile", "output tokens", "rollouts", "pass rate", "budget or empty answer"], rows), ""]
+    return s
+
+
+def feature_tables(features, models, tasks_n) -> list[str]:
+    s = ["## Task features", "",
+         f"Descriptive only: {len(features)} tasks cannot support significance claims, and the features "
+         "are correlated (most tasks are about two frames deep and share mechanisms).", "",
+         "### Per task", ""]
+    rows = []
+    for t, f in sorted(features.items(), key=lambda x: _task_order(x[0])):
+        rows.append([t, f["cid"], f["module"], f["witness_frames"], f["active_frames"], f["input_changes"],
+                     ", ".join(f["mechanisms"]),
+                     *[_rate(tasks_n.get((m, t))) for m in models]])
+    s += [table(["task", "cid", "module", "witness frames", "active frames", "input changes", "mechanisms",
+                 *[f"{m} pass@1" for m in models]], rows), ""]
+
+    def grouped(title, key_fn):
+        groups = defaultdict(list)
+        for t, f in features.items():
+            for g in key_fn(f):
+                groups[g].append(t)
+        rows = [[g, len(ts), *[_mean_rate(tasks_n, m, ts) for m in models]] for g, ts in sorted(groups.items())]
+        return [f"### pass@1 by {title}", "", "Mean of per-task pass@1; a task counts once in each of its groups.", "",
+                table([title, "tasks", *models], rows), ""]
+
+    s += grouped("mechanism", lambda f: f["mechanisms"])
+    s += grouped("depth bucket", lambda f: [depth_bucket(f["witness_frames"])])
+    s += grouped("module", lambda f: [f["module"]])
+    return s
+
+
+def _rate(cn) -> str:
+    return f"{cn[0] / cn[1]:.2f}" if cn and cn[1] else "-"
+
+
+def _mean_rate(tasks_n, m, ts) -> str:
+    rs = [tasks_n[(m, t)][0] / tasks_n[(m, t)][1] for t in ts if tasks_n.get((m, t), (0, 0))[1]]
+    return f"{sum(rs) / len(rs):.2f}" if rs else "-"
+
+
+def _task_order(t: str):
+    m = re.match(r"([A-Za-z]+)(\d+)$", t)
+    return (m.group(1), int(m.group(2))) if m else (t, 0)
+
+
+def exemplars(out: Path, failed: list[dict], labels: dict, sims: dict, golds: dict) -> list[Path]:
+    """Per category and model, the rollout with the median submission length (lower median;
+    ties by task, then key)."""
+    groups = defaultdict(list)
+    for r in failed:
+        groups[(labels[r["key"]]["category"], r["model"])].append(r)
+    paths = []
+    for (cat, m), rs in sorted(groups.items()):
+        rs.sort(key=lambda r: (len(r["submission"]), _task_order(r["task"]), r["key"]))
+        r = rs[(len(rs) - 1) // 2]
+        lab, s = labels[r["key"]], sims.get(r["key"]) or {}
+        gold = golds.get((r["design"], r["task"]), "")
+        md = [f"# {cat}: {m}", "",
+              f"Rollout `{r['key']}` ({r['traces']}:{r['line']}), task {r['task']}, "
+              f"grade status `{(r['grade'] or {}).get('status', 'no grade')}`. Picked as the median submission "
+              f"length ({len(r['submission'])} chars) of {len(rs)} rollouts in this category for this model.", "",
+              f"Sub-label: `{lab['sub_label']}`", "", "## Evidence", "", "```json",
+              json.dumps(lab["evidence"], indent=1, sort_keys=True), "```", ""]
+        if lab.get("residual"):
+            md += [f"Residual label: **{lab['residual']['label']}**: {lab['residual']['reason']}", ""]
+        md += ["## Gold excerpt (formal witness)", "", "```systemverilog",
+               "\n".join(gold.splitlines()[:60]) or "(no gold)", "```", ""]
+        if cat in RESIDUAL_SET and s:
+            md += ["## Gold event log", "", _excerpt(s["gold_events"], 200), "",
+                   "## Submission event log", "", _excerpt(s["sub_events"], 200), "",
+                   "## First divergence", "", "```json",
+                   json.dumps(lab["evidence"].get("first_divergence"), indent=1, sort_keys=True), "```", ""]
+        else:
+            md += ["Event logs and divergence: not replayed (only miss, self_check_failed and "
+                   "never_finishes are).", ""]
+        md += ["## Submission excerpt", "", "```systemverilog", "\n".join(r["submission"].splitlines()[:80])
+               or "(empty submission)", "```", ""]
+        p = out / "exemplars" / cat / f"{m.split('/')[-1]}.md"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("\n".join(md))
+        paths.append(p)
+    return paths
+
+
+# --- driver -----------------------------------------------------------------------------------
+
+def sha256(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def git_head() -> dict:
+    import subprocess
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    dirty = bool(subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True).stdout.strip())
+    return {"commit": head, "dirty": dirty}
+
+
+def analyse(run_dir: Path, manifest: dict, *, executor: str | None, concurrency: int, j: int | None,
+            label: bool, replay: bool, out: Path) -> dict:
+    from closure_core import load_design
+
+    traces = [Path(t["path"]) for t in manifest["traces"]]
+    for t in manifest["traces"]:
+        if sha256(Path(t["path"])) != t["sha256"]:
+            raise SystemExit(f"{t['path']}: changed since the run was recorded")
+    rollouts = load_rollouts(traces)
+    designs = {d: load_design(d) for d in sorted({r["design"] for r in rollouts})}
+    ports = {d: design_ports(x) for d, x in designs.items()}
+    models = sorted({r["model"] for r in rollouts})
+
+    # Layer 1
+    labels = {r["key"]: classify(r, ports[r["design"]]) for r in rollouts if not passed(r)}
+    failed = [r for r in rollouts if r["key"] in labels]
+
+    # Layer 2 (and the empty-answer what-ifs, through the same executor)
+    golds = {(d, t): (x.pack / "gold" / f"{t}.sv").read_text() for d, x in designs.items()
+             for t in sorted({r["task"] for r in rollouts if r["design"] == d}) if (x.pack / "gold" / f"{t}.sv").exists()}
+    batches = build_jobs(rollouts, labels, golds)
+    res = run_batches(run_dir, batches, None if replay else executor, concurrency, j) if batches else {}
+    sims, whatif = {}, {}
+    no_gold = {"events": "", "status": "no gold", "target_hits": {}}
+    ev_dir = run_dir / "events"
+    for r in failed:
+        lab = labels[r["key"]]
+        lab["logs"] = {}
+        if lab["category"] in RESIDUAL_SET:
+            sub, gold = res[f"sub/{r['key']}"], res.get(f"gold/{r['design']}/{r['task']}", no_gold)
+            sp, gp = ev_dir / f"{slug(r['key'])}.log", ev_dir / "gold" / r["design"] / f"{r['task']}.log"
+            for p, x in ((sp, sub), (gp, gold)):
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(x["events"])
+            sims[r["key"]] = {"sub_events": sub["events"], "gold_events": gold["events"]}
+            lab["evidence"]["first_divergence"] = first_divergence(parse_events(gold["events"]),
+                                                                   parse_events(sub["events"]))
+            lab["evidence"]["replay"] = {"status": sub["status"], "target_hits": sub["target_hits"],
+                                         "gold_status": gold["status"], "gold_target_hits": gold["target_hits"],
+                                         "matches_trace": sub["status"] == r["grade"]["status"]}
+            lab["logs"] = {"submission_events": str(sp.relative_to(ROOT)), "gold_events": str(gp.relative_to(ROOT))}
+        if f"whatif/{r['key']}" in res:
+            whatif[r["key"]] = res[f"whatif/{r['key']}"]
+            g = whatif[r["key"]]["grade"]
+            lab["evidence"]["whatif"] = {"status": g["status"], "reward": g["reward"],
+                                         "note": f"graded offline from the {'reply' if lab['sub_label'] == 'malformed_fence' else 'reasoning'}; "
+                                                 "official score unchanged"}
+
+    # Layer 3
+    labelled = label or bool(manifest.get("labeller"))
+    if labelled:
+        from closure_core import propose
+        if replay:
+            model = NoModel()
+        else:
+            model = propose.PrimeModel(LABELLER["model"], LABELLER["temperature"], LABELLER["max_tokens"])
+            manifest["labeller"] = dict(LABELLER)
+            (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=1, sort_keys=True))
+        items = [(r, labels[r["key"]], label_messages(r, labels[r["key"]], designs[r["design"]].item(r["task"]).description,
+                                                      golds.get((r["design"], r["task"]), ""), sims[r["key"]]))
+                 for r in failed if labels[r["key"]]["category"] in RESIDUAL_SET]
+        got = label_residuals(run_dir, items, model, concurrency)
+        for k, (lb, why) in got.items():
+            labels[k]["residual"] = {"label": lb, "reason": why, "labeller": manifest["labeller"]["model"],
+                                     "record": str((run_dir / "labels" / f"{slug(k)}.json").relative_to(ROOT))}
+
+    # Layer 4
+    features = {}
+    if manifest.get("propose_run"):
+        d = designs[sorted(designs)[0]]
+        features = task_features(Path(manifest["propose_run"]), Path(manifest["written"]), d)
+
+    # Outputs
+    if out.exists():
+        for sub in ("exemplars",):
+            shutil.rmtree(out / sub, ignore_errors=True)
+    out.mkdir(parents=True, exist_ok=True)
+    with (out / "labels.jsonl").open("w") as f:
+        for r in failed:
+            lab = labels[r["key"]]
+            f.write(json.dumps({"key": r["key"], "model": r["model"], "task": r["task"], "run": r["run"],
+                                "traces": r["traces"], "line": r["line"],
+                                "status": (r["grade"] or {}).get("status"), "category": lab["category"],
+                                "sub_label": lab["sub_label"], "evidence": lab["evidence"],
+                                "residual": lab.get("residual"), "fix_channel": channel_of(lab),
+                                "skill_axis": axis_of(lab) if lab["category"] != "infra" else None,
+                                "logs": lab.get("logs") or {}}, sort_keys=True) + "\n")
+    rows, key_map = handcheck_rows(failed, labels, sims)
+    with (out / "handcheck.csv").open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]) if rows else ["sample_id"])
+        w.writeheader()
+        w.writerows(rows)
+    (out / "handcheck_key.json").write_text(json.dumps(key_map, indent=1, sort_keys=True))
+    agree = json.loads((out / "agreement.json").read_text()) if (out / "agreement.json").exists() else None
+    (out / "summary.md").write_text(summary_md(rollouts, labels, models, features, whatif, agree, labelled, run_dir))
+    ex = exemplars(out, failed, labels, sims, golds)
+    return {"rollouts": len(rollouts), "failed": len(failed), "exemplars": len(ex),
+            "categories": dict(Counter(labels[r["key"]]["category"] for r in failed))}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("traces", nargs="*", type=Path)
+    ap.add_argument("--propose-run", type=Path, help="proposer run of the task set (summary.json)")
+    ap.add_argument("--written", type=Path, help="written.json mapping candidates to task IDs "
+                                                 "(default: <propose-run>/written.json)")
+    ap.add_argument("--executor", choices=("docker", "prime", "local"), default="docker",
+                    help="where layer 2 runs: the task image in local Docker (default), one Prime sandbox "
+                         "per batch, or the local Verilator (development only)")
+    ap.add_argument("--concurrency", type=int, default=8, help="prime sandboxes, and labeller calls, at once")
+    ap.add_argument("-j", type=int, help="parallel simulations per batch")
+    ap.add_argument("--label-residual", action="store_true", help=f"layer 3 with {LABELLER['model']}")
+    ap.add_argument("--tag", default="")
+    ap.add_argument("--resume", type=Path, help="continue a run: recorded batches and labels are reused")
+    ap.add_argument("--replay", type=Path, help="rebuild every output of a run, no model call and no simulation")
+    ap.add_argument("--out", type=Path, default=OUT)
+    ap.add_argument("--agreement", type=Path, help="hand-labelled handcheck.csv: precision and agreement")
+    ap.add_argument("--simulate-batch", type=Path, help=argparse.SUPPRESS)
+    args = ap.parse_args()
+
+    if args.simulate_batch:  # in the task image
+        simulate_batch(args.simulate_batch, args.out, args.j or 2)
+        return 0
+    if args.agreement:
+        out = args.agreement.parent
+        labels = {json.loads(x)["key"]: json.loads(x) for x in (out / "labels.jsonl").read_text().splitlines()}
+        a = agreement(args.agreement, labels, json.loads((out / "handcheck_key.json").read_text()))
+        (out / "agreement.json").write_text(json.dumps(a, indent=1, sort_keys=True))
+        print(json.dumps(a, indent=1))
+        print("rerun with --replay <run> to put the agreement into summary.md")
+        return 0
+
+    if args.replay or args.resume:
+        run_dir = (args.replay or args.resume).resolve()
+        manifest = json.loads((run_dir / "manifest.json").read_text())
+    else:
+        if not args.traces:
+            ap.error("give traces.jsonl files, --resume, --replay or --agreement")
+        run_dir = RUNS / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + (f"-{args.tag}" if args.tag else ""))
+        run_dir.mkdir(parents=True)
+        pr = args.propose_run and args.propose_run.resolve()
+        manifest = {"traces": [{"path": str(p.resolve()), "sha256": sha256(p)} for p in args.traces],
+                    "propose_run": pr and str(pr),
+                    "written": pr and str((args.written or pr / "written.json").resolve()),
+                    "executor": args.executor, "git": git_head(), "labeller": None}
+        (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=1, sort_keys=True))
+    s = analyse(run_dir, manifest, executor=args.executor, concurrency=args.concurrency, j=args.j,
+                label=args.label_residual, replay=bool(args.replay), out=args.out.resolve())
+    print(json.dumps(s, indent=1, sort_keys=True))
+    print(f"run: {run_dir.relative_to(ROOT)}\noutputs: {args.out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,4 @@
+1 4000 rx prescale 5
+1 4000 tx prescale 5
+1 204000 rx prescale 5
+1 204000 tx prescale 5

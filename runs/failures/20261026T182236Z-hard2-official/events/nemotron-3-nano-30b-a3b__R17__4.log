@@ -1,0 +1,15 @@
+1 20000 tx prescale 5
+1 20000 rx prescale 5
+3 36000 rx busy_rise 0
+382 3068000 rx frame_error 1
+762 6108000 rx frame_error 1
+1142 9148000 rx frame_error 1
+1522 12188000 rx frame_error 1
+1902 15228000 rx frame_error 1
+2282 18268000 rx frame_error 1
+2662 21308000 rx frame_error 1
+3042 24348000 rx frame_error 1
+3422 27388000 rx frame_error 1
+3802 30428000 rx frame_error 1
+4182 33468000 rx frame_error 1
+4562 36508000 rx frame_error 1

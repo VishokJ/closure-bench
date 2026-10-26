@@ -1,0 +1,6 @@
+1 4000 tx prescale 5
+1 4000 rx prescale 5
+3 20000 rx busy_rise 0
+1 404000 tx prescale 5
+1 404000 rx prescale 5
+3 420000 rx busy_rise 0

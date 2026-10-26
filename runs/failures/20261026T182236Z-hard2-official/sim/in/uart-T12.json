@@ -1,0 +1,24 @@
+[
+ {
+  "design": "uart",
+  "id": "gold/uart/T12",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T12"
+  ],
+  "tb": "// gold_source: formal\n// closure_core.formal.cover_witness: depth 166, input_changes 3, bound 300, witness 42b840eea11fd4a4\n// Formal witness for T12_tx_b2b_busy_fall_ready_rise_9 (closure_core/formal.py): the shortest legal input\n// trace Yosys/SymbiYosys found (166 cycles), replayed on the uart_tx ports.\n// A gold candidate, never shown to an agent; Verilator decides whether it hits.\n`timescale 1ns / 1ps\n\nmodule tb;\n  logic clk = 1'b0;\n  always #5 clk = ~clk;\n  logic rst = 1'd1;\n  logic [7:0] s_axis_tdata = 8'd0;\n  logic s_axis_tvalid = 1'd0;\n  logic [15:0] prescale = 16'd1;\n  wire  s_axis_tready;\n  wire  txd;\n  wire  busy;\n\n  uart_tx dut (.clk(clk), .rst(rst), .s_axis_tdata(s_axis_tdata), .s_axis_tvalid(s_axis_tvalid), .prescale(prescale), .s_axis_tready(s_axis_tready), .txd(txd), .busy(busy));\n\n  initial begin\n    @(negedge clk);\n    rst = 1'd0; s_axis_tvalid = 1'd1;\n    repeat (83) @(negedge clk);\n    s_axis_tvalid = 1'd0;\n    repeat (83) @(negedge clk);\n    $finish;\n  end\nendmodule\n"
+ },
+ {
+  "design": "uart",
+  "id": "sub/nemotron-3-nano-30b-a3b/T12/1",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T12"
+  ],
+  "tb": "module tb;\n\n  // ------------------------------------------------------------\n  // Clock and reset\n  // ------------------------------------------------------------\n  localparam int CLK_PERIOD = 10;  // any period works\n  logic clk = 1'b0;\n  always #(CLK_PERIOD/2) clk = ~clk;\n\n  logic rst = 1'b0;\n\n  // ------------------------------------------------------------\n  // DUT interface signals\n  // ------------------------------------------------------------\n  logic [15:0] prescale_cfg = 16'd1;\n  logic [7:0]  s_axis_tdata;\n  logic        s_axis_tvalid;\n  logic        s_axis_tready;   // DUT output\n  logic        txd;             // unused\n  logic        busy;            // DUT output\n\n  // ------------------------------------------------------------\n  // Instantiate the AXI\u2011Stream UART transmitter\n  // ------------------------------------------------------------\n  uart_tx #(.DATA_WIDTH(8)) dut (\n    .clk       (clk),\n    .rst       (rst),\n    .s_axis_tdata(s_axis_tdata),\n    .s_axis_tvalid(s_axis_tvalid),\n    .s_axis_tready(s_axis_tready),\n    .txd       (txd),\n    .busy      (busy),\n    .prescale  (prescale_cfg)\n  );\n\n  // ------------------------------------------------------------\n  // Simple helpers\n  // ------------------------------------------------------------\n  task automatic do_reset();\n    rst = 1'b0;\n    #10;\n    rst = 1'b1;\n    #10;\n    rst = 1'b0;\n    #10;\n  endtask\n\n  // Send one byte using the AXI\u2011Stream handshake\n  task automatic send_byte(input byte unsigned data);\n    s_axis_tdata  = data;\n    s_axis_tvalid = 1'b1;\n    // Wait until the DUT asserts s_axis_tready (handshake)\n    wait (s_axis_tready == 1'b1);\n    // De\u2011assert valid for the next transaction\n    s_axis_tvalid = 1'b0;\n  endtask\n\n  // ------------------------------------------------------------\n  // Test sequence\n  // ------------------------------------------------------------\n  initial begin\n    // Initialise all driving signals\n    prescale_cfg = 16'd1;\n    s_axis_tdata = 8'h00;\n    s_axis_tvalid = 1'b0;\n\n    // Reset the DUT\n    do_reset();\n\n    // --------------------------------------------------------\n    // Drive two back\u2011to\u2011back words at the minimum prescale (1)\n    // --------------------------------------------------------\n    // First word (arbitrary pattern)\n    send_byte(8'hA5);\n    // Immediately follow with a second word\n    send_byte(8'h5A);\n\n    // --------------------------------------------------------\n    // Wait long enough for the coverage point to be observed.\n    // From the DUT timing, the event occurs well within a few\n    // hundred clock cycles after the second word is accepted.\n    // --------------------------------------------------------\n    repeat (300) @(posedge clk);\n\n    // End simulation \u2013 the coverage point must have been hit.\n    $finish;\n  end\n\nendmodule\n"
+ }
+]

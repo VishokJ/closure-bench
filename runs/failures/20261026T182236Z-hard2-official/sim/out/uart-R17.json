@@ -1,0 +1,56 @@
+[
+ {
+  "events": "1 15000 rx prescale 1\n3 35000 rx busy_rise 0\n154 1545000 rx overrun_error 1\n230 2305000 rx overrun_error 1\n231 2315000 rx busy_fall 0\n",
+  "id": "gold/uart/R17",
+  "log_tail": "- <work>/submission/tb.sv:49: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R17": 1
+  }
+ },
+ {
+  "events": "1 4000 rx prescale 5\n1 204000 rx prescale 5\n603 5020000 rx busy_rise 0\n983 8060000 rx busy_fall 0\n1003 8220000 rx busy_rise 0\n1382 11252000 rx overrun_error 1\n1383 11260000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R17/0",
+  "log_tail": "Testbench finished \u2013 coverage point should have been hit\n- <work>/submission/tb.sv:86: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R17": 0
+  }
+ },
+ {
+  "events": "1 4000 rx prescale 5\n1 4000 tx prescale 5\n1 204000 rx prescale 5\n1 204000 tx prescale 5\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R17/1",
+  "log_tail": "- <work>/submission/tb.sv:105: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R17": 0
+  }
+ },
+ {
+  "events": "1 20000 tx prescale 5\n1 20000 rx prescale 5\n3 36000 rx busy_rise 0\n382 3068000 rx frame_error 1\n762 6108000 rx frame_error 1\n1142 9148000 rx frame_error 1\n1522 12188000 rx frame_error 1\n1902 15228000 rx frame_error 1\n2282 18268000 rx frame_error 1\n2662 21308000 rx frame_error 1\n3042 24348000 rx frame_error 1\n3422 27388000 rx frame_error 1\n3802 30428000 rx frame_error 1\n4182 33468000 rx frame_error 1\n4562 36508000 rx frame_error 1\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R17/4",
+  "log_tail": "- <work>/submission/tb.sv:100: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R17": 0
+  }
+ },
+ {
+  "events": "1 100000 tx prescale 5\n1 100000 rx prescale 5\n3 116000 rx busy_rise 0\n1 300000 tx prescale 5\n1 300000 rx prescale 5\n3 316000 rx busy_rise 0\n382 3348000 rx frame_error 1\n763 6396000 rx busy_fall 0\n767 6428000 rx busy_rise 0\n1146 9460000 rx overrun_error 1\n1147 9468000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R17/6",
+  "log_tail": "- <work>/submission/tb.sv:101: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R17": 0
+  }
+ },
+ {
+  "events": "1 4000 tx prescale 5\n1 4000 rx prescale 5\n3 20000 rx busy_rise 0\n1 404000 tx prescale 5\n1 404000 rx prescale 5\n3 420000 rx busy_rise 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R17/7",
+  "log_tail": "- <work>/submission/tb.sv:112: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R17": 0
+  }
+ }
+]
