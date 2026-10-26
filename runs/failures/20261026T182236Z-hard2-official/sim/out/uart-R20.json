@@ -1,0 +1,29 @@
+[
+ {
+  "events": "1 15000 rx prescale 1\n3 35000 rx busy_rise 0\n78 785000 rx hs 3c\n155 1555000 rx busy_fall 0\n155 1555000 rx hs a5\n",
+  "id": "gold/uart/R20",
+  "log_tail": "- <work>/submission/tb.sv:51: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R20": 1
+  }
+ },
+ {
+  "events": "1 28000 rx prescale 5\n6 68000 rx busy_rise 0\n386 3108000 rx busy_fall 0\n386 3108000 rx hs 3c\n",
+  "id": "sub/qwen3.8-27b/R20/0",
+  "log_tail": "[10000000000] %Fatal: tb.sv:116: Assertion failed in TOP.tb: timeout\n%Error: <work>/submission/tb.sv:116: Verilog $stop\nAborting...\n",
+  "status": "runtime_error",
+  "target_hits": {
+   "R20": 0
+  }
+ },
+ {
+  "events": "1 4000 rx prescale 5\n1 36000 rx prescale 5\n5 68000 rx busy_rise 0\n384 3100000 rx hs 3c\n385 3108000 rx busy_fall 0\n",
+  "id": "sub/qwen3.8-27b/R20/4",
+  "log_tail": "[10000000000] %Fatal: tb.sv:99: Assertion failed in TOP.tb: timeout\n%Error: <work>/submission/tb.sv:99: Verilog $stop\nAborting...\n",
+  "status": "runtime_error",
+  "target_hits": {
+   "R20": 0
+  }
+ }
+]

@@ -1,0 +1,10 @@
+1 4000 tx prescale 14
+1 4000 rx prescale 14
+1 52000 tx prescale 14
+1 52000 rx prescale 14
+7 100000 rx busy_rise 0
+1526 12252000 rx hs a5
+1527 12260000 rx busy_fall 0
+1607 12900000 rx busy_rise 0
+3126 25052000 rx hs 5a
+3127 25060000 rx busy_fall 0

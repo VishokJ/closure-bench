@@ -1,0 +1,6 @@
+1 36000 tx prescale 5
+1 36000 rx prescale 5
+6 76000 tx hs c3
+7 84000 tx busy_rise 0
+408 3292000 tx hs 3c
+809 6500000 tx hs 3c

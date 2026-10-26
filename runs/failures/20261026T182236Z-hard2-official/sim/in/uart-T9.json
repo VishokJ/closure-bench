@@ -1,0 +1,24 @@
+[
+ {
+  "design": "uart",
+  "id": "gold/uart/T9",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T9"
+  ],
+  "tb": "// gold_source: formal\n// closure_core.formal.cover_witness: depth 292, input_changes 4, bound 300, witness d3708760e9b24e54\n// Formal witness for T9_tx_prescale2_back_to_back_12_34 (closure_core/formal.py): the shortest legal input\n// trace Yosys/SymbiYosys found (292 cycles), replayed on the uart_tx ports.\n// A gold candidate, never shown to an agent; Verilator decides whether it hits.\n`timescale 1ns / 1ps\n\nmodule tb;\n  logic clk = 1'b0;\n  always #5 clk = ~clk;\n  logic rst = 1'd1;\n  logic [7:0] s_axis_tdata = 8'd19;\n  logic s_axis_tvalid = 1'd0;\n  logic [15:0] prescale = 16'd2;\n  wire  s_axis_tready;\n  wire  txd;\n  wire  busy;\n\n  uart_tx dut (.clk(clk), .rst(rst), .s_axis_tdata(s_axis_tdata), .s_axis_tvalid(s_axis_tvalid), .prescale(prescale), .s_axis_tready(s_axis_tready), .txd(txd), .busy(busy));\n\n  initial begin\n    @(negedge clk);\n    rst = 1'd0; s_axis_tdata = 8'd18; s_axis_tvalid = 1'd1;\n    repeat (2) @(negedge clk);\n    s_axis_tdata = 8'd52;\n    repeat (290) @(negedge clk);\n    $finish;\n  end\nendmodule\n"
+ },
+ {
+  "design": "uart",
+  "id": "sub/nemotron-3-nano-30b-a3b/T9/6",
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+  "kind": "events",
+  "run_timeout": 60.0,
+  "targets": [
+   "T9"
+  ],
+  "tb": "module tb;\n  // ------------------------------------------------------------\n  //  Testbench signals\n  // ------------------------------------------------------------\n  logic        clk        = 0;\n  logic        rst        = 0;\n  logic [7:0]  s_axis_tdata = '0;\n  logic        s_axis_tvalid = 0;\n  logic        s_axis_tready;\n  logic [15:0] prescale     = 16'h0002;  // preset = 2\n  // DUT output connections (unused but must be tied)\n  logic        txd;\n  logic        busy;\n  logic [7:0]  m_axis_tdata_dummy;\n  logic        m_axis_tvalid_dummy;\n  logic        m_axis_tready_dummy;\n  logic        tx_busy_dummy;\n  logic        rx_busy_dummy;\n  logic        rx_overrun_error_dummy;\n  logic        rx_frame_error_dummy;\n\n  // ------------------------------------------------------------\n  //  Clock generation\n  // ------------------------------------------------------------\n  always #5 clk = ~clk;  // 100\u202fMHz clock\n\n  // ------------------------------------------------------------\n  //  Reset sequence\n  // ------------------------------------------------------------\n  initial begin\n    rst = 1;\n    #20;\n    rst = 0;\n    #20;\n  end\n\n  // ------------------------------------------------------------\n  //  DUT instantiation (uart, default PARAMETER values)\n  // ------------------------------------------------------------\n  uart #(.DATA_WIDTH(8)) dut (\n    .clk          (clk),\n    .rst          (rst),\n    .s_axis_tdata (s_axis_tdata),\n    .s_axis_tvalid(s_axis_tvalid),\n    .s_axis_tready(s_axis_tready),\n    .m_axis_tdata (m_axis_tdata_dummy),\n    .m_axis_tvalid(m_axis_tvalid_dummy),\n    .m_axis_tready(m_axis_tready_dummy),\n    .rxd          (1'b1),\n    .txd          (txd),\n    .tx_busy      (tx_busy_dummy),\n    .rx_busy      (rx_busy_dummy),\n    .rx_overrun_error(rx_overrun_error_dummy),\n    .rx_frame_error (rx_frame_error_dummy),\n    .prescale     (prescale)\n  );\n\n  // ------------------------------------------------------------\n  //  Simple stimulus: send two back\u2011to\u2011back frames\n  //      first  = 8'h12\n  //      second = 8'h34\n  //  Then wait long enough for the coverage point to be hit.\n  // ------------------------------------------------------------\n  initial begin\n    // give the design time after reset\n    #50;\n\n    // ---- first frame (0x12) ----\n    @(posedge s_axis_tready);\n    s_axis_tdata  <= 8'h12;\n    s_axis_tvalid <= 1'b1;\n    @(posedge clk);\n    s_axis_tvalid <= 1'b0;\n\n    // wait until the master is ready for the next beat\n    wait(s_axis_tready);\n    // ---- second frame (0x34) ----\n    s_axis_tdata  <= 8'h34;\n    s_axis_tvalid <= 1'b1;\n    @(posedge clk);\n    s_axis_tvalid <= 1'b0;\n\n    // allow sufficient time for internal counters to reach the\n    // condition described in cov_T9 (prescale = 2, bit_cnt == 2,\n    // etc.) before terminating the simulation\n    #50000;\n\n    $finish;\n  end\n\nendmodule\n"
+ }
+]

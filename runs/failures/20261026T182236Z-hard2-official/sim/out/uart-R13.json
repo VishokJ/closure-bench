@@ -1,0 +1,38 @@
+[
+ {
+  "events": "1 15000 rx prescale 1\n3 35000 rx busy_rise 0\n78 785000 rx frame_error 1\n154 1545000 rx hs a5\n155 1555000 rx busy_fall 0\n",
+  "id": "gold/uart/R13",
+  "log_tail": "- <work>/submission/tb.sv:41: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R13": 1
+  }
+ },
+ {
+  "events": "1 5000 tx prescale 5\n1 5000 rx prescale 5\n1 65000 tx prescale 5\n1 65000 rx prescale 5\n3 85000 rx busy_rise 0\n382 3875000 rx frame_error 1\n403 4085000 rx busy_fall 0\n405 4105000 rx busy_rise 0\n784 7895000 rx hs a5\n785 7905000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R13/1",
+  "log_tail": "TIMEOUT \u2013 coverage point not observed\n- <work>/submission/tb.sv:131: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R13": 0
+  }
+ },
+ {
+  "events": "1 20000 rx prescale 5\n5 52000 rx busy_rise 0\n384 3084000 rx frame_error 1\n764 6124000 rx hs 4a\n765 6132000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R13/7",
+  "log_tail": "Target coverage point R13_rx_resync_after_frame_error hit.\n- <work>/submission/tb.sv:104: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R13": 0
+  }
+ },
+ {
+  "events": "1 4000 tx prescale 5\n1 4000 rx prescale 5\n1 36000 tx prescale 5\n1 36000 rx prescale 5\n6 76000 rx busy_rise 0\n385 3108000 rx frame_error 1\n765 6148000 rx hs 4a\n766 6156000 rx busy_fall 0\n",
+  "id": "sub/qwen3.8-27b/R13/3",
+  "log_tail": "FAIL: frame_error_seen=1 a5_delivered=0\n[38616000] %Fatal: tb.sv:121: Assertion failed in TOP.tb.unnamedblk1: R13 sequence not observed\n%Error: <work>/submission/tb.sv:121: Verilog $stop\nAborting...\n",
+  "status": "runtime_error",
+  "target_hits": {
+   "R13": 0
+  }
+ }
+]

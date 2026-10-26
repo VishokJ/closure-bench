@@ -1,0 +1,9 @@
+1 4000 rx prescale 5
+3 20000 rx busy_rise 0
+1 404000 rx prescale 5
+33 660000 rx busy_rise 0
+412 3692000 rx hs e9
+413 3700000 rx busy_fall 0
+603 5220000 rx busy_rise 0
+982 8252000 rx hs 5a
+983 8260000 rx busy_fall 0

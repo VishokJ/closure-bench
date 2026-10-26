@@ -1,0 +1,47 @@
+[
+ {
+  "events": "1 15000 tx prescale 1\n2 25000 tx busy_rise 0\n2 25000 tx hs c3\n83 835000 tx hs 3c\n",
+  "id": "gold/uart/T6",
+  "log_tail": "- <work>/submission/tb.sv:31: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "T6": 1
+  }
+ },
+ {
+  "events": "1 12000 tx prescale 1\n10 84000 tx hs c3\n11 92000 tx busy_rise 0\n92 740000 tx busy_fall 0\n92 740000 tx hs 3c\n93 748000 tx busy_rise 0\n174 1396000 tx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/T6/0",
+  "log_tail": "- <work>/submission/tb.sv:101: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "T6": 0
+  }
+ },
+ {
+  "events": "1 20000 tx prescale 5\n31 260000 tx hs c3\n32 268000 tx busy_rise 0\n433 3476000 tx busy_fall 0\n433 3476000 tx hs 3c\n434 3484000 tx busy_rise 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/T6/3",
+  "log_tail": "- <work>/submission/tb.sv:81: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "T6": 0
+  }
+ },
+ {
+  "events": "1 84000 tx prescale 5\n6 124000 tx hs c3\n7 132000 tx busy_rise 0\n408 3340000 tx busy_fall 0\n408 3340000 tx hs 3c\n409 3348000 tx busy_rise 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/T6/5",
+  "log_tail": "- <work>/submission/tb.sv:100: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "T6": 0
+  }
+ },
+ {
+  "events": "1 36000 tx prescale 5\n1 36000 rx prescale 5\n6 76000 tx hs c3\n7 84000 tx busy_rise 0\n408 3292000 tx hs 3c\n809 6500000 tx hs 3c\n",
+  "id": "sub/qwen3.8-27b/T6/6",
+  "log_tail": "PASS T6\n- <work>/submission/tb.sv:89: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "T6": 0
+  }
+ }
+]

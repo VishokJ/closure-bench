@@ -1,0 +1,29 @@
+[
+ {
+  "events": "1 15000 rx prescale 1\n3 35000 rx busy_rise 0\n154 1545000 rx frame_error 1\n",
+  "id": "gold/uart/R19",
+  "log_tail": "- <work>/submission/tb.sv:35: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R19": 1
+  }
+ },
+ {
+  "events": "",
+  "id": "sub/nemotron-3-nano-30b-a3b/R19/0",
+  "log_tail": "[16880000] %Error: tb.sv:71: Assertion failed in TOP.tb.wait_for_frame_error: frame_error never asserted\n%Error: <work>/submission/tb.sv:71: Verilog $stop\nAborting...\n",
+  "status": "runtime_error",
+  "target_hits": {
+   "R19": 0
+  }
+ },
+ {
+  "events": "1 4000 rx prescale 5\n1 404000 rx prescale 5\n3 420000 rx busy_rise 0\n382 3452000 rx frame_error 1\n763 6500000 rx busy_fall 0\n783 6660000 rx busy_rise 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R19/7",
+  "log_tail": "R19 coverage point observed \u2013 simulation ending.\n- <work>/submission/tb.sv:121: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R19": 0
+  }
+ }
+]

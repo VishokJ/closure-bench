@@ -1,0 +1,29 @@
+[
+ {
+  "events": "1 15000 rx prescale 1\n3 35000 rx busy_rise 0\n78 785000 rx hs 69\n154 1545000 rx hs 96\n155 1555000 rx busy_fall 0\n",
+  "id": "gold/uart/R21",
+  "log_tail": "- <work>/submission/tb.sv:53: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R21": 1
+  }
+ },
+ {
+  "events": "1 35000 rx prescale 1\n37 395000 rx busy_rise 0\n112 1145000 rx hs 62\n113 1155000 rx busy_fall 0\n133 1355000 rx busy_rise 0\n208 2105000 rx frame_error 1\n213 2155000 rx busy_fall 0\n235 2375000 rx busy_rise 0\n310 3125000 rx hs e2\n311 3135000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R21/0",
+  "log_tail": "- <work>/submission/tb.sv:91: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R21": 0
+  }
+ },
+ {
+  "events": "1 204000 tx prescale 1\n1 204000 rx prescale 1\n3 220000 rx busy_rise 0\n79 828000 rx busy_fall 0\n82 852000 rx busy_rise 0\n157 1452000 rx overrun_error 1\n158 1460000 rx busy_fall 0\n",
+  "id": "sub/nemotron-3-nano-30b-a3b/R21/2",
+  "log_tail": "- <work>/submission/tb.sv:87: Verilog $finish\n",
+  "status": "ok",
+  "target_hits": {
+   "R21": 0
+  }
+ }
+]
