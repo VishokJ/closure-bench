@@ -23,7 +23,7 @@ import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from closure_core import grader, sim
+from closure_core import grader, infra, sim
 from closure_core.design import Design
 
 REL_SWAP = {"==": "!=", "!=": "==", ">": ">=", ">=": ">", "<": "<=", "<=": "<"}
@@ -172,6 +172,10 @@ def simulate(design: Design, tb_text: str, top: str, mutant: Mutant | None = Non
 
     Returns {"status": sim status, "modules": design modules the testbench
     instantiates (from line coverage)}. Cached under cache_key().
+
+    A timeout is retried once (infra.retry_once). A second run timeout on a
+    mutant is a real hang (a kill) and is cached; on the unmutated RTL, or a
+    second compile timeout, it is load: infra.InfraError, nothing cached.
     """
     rtl = {p: p.read_text() for p in design.rtl}
     if mutant:
@@ -180,14 +184,21 @@ def simulate(design: Design, tb_text: str, top: str, mutant: Mutant | None = Non
     key = cache_key(rtl, tb_text, top, run_timeout)
     if cache is not None and key in cache:
         return cache[key]
-    with tempfile.TemporaryDirectory(prefix="cb-mut-") as d:
-        paths = []
-        for p, t in rtl.items():
-            (Path(d) / p.name).write_text(t)
-            paths.append(Path(d) / p.name)
-        s = grader.simulate(replace(design, rtl=tuple(paths), covers=(), plan=()), tb_text,
-                            top=top, run_timeout=run_timeout)
-    res = {"status": s.sim.status,
+
+    def run():
+        with tempfile.TemporaryDirectory(prefix="cb-mut-") as d:
+            paths = []
+            for p, t in rtl.items():
+                (Path(d) / p.name).write_text(t)
+                paths.append(Path(d) / p.name)
+            s = grader.simulate(replace(design, rtl=tuple(paths), covers=(), plan=()), tb_text,
+                                top=top, run_timeout=run_timeout)
+        return s, s.sim.status
+
+    s, status = infra.retry_once(run)
+    if status == "compile_timeout" or (status == "timeout" and mutant is None):
+        raise infra.InfraError(f"{top} {'on ' + mutant.id if mutant else 'on the RTL'}: {status} twice")
+    res = {"status": status,
            "modules": sorted({p.module for p in s.points if p.kind == "v_line"})}
     if cache is not None:
         cache[key] = res

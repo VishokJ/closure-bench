@@ -62,8 +62,27 @@ model and sampling from its manifest. It re-runs the run's flow and reuses
 everything recorded: a model call only if this code sends exactly the recorded
 messages (otherwise it stops), gate and set results as recorded. Only the
 missing steps run, and `manifest.json` gets a `resumed` entry with the commit.
-It refuses a finished run or changed prompt templates. `--replay` then checks
-the whole run as for one that was never interrupted.
+It refuses changed prompt templates, and a finished run unless it has
+infrastructure aborts to retry. `--replay` then checks the whole run as for
+one that was never interrupted.
+
+**Infrastructure failures are not decisions** (`closure_core/infra.py`). A
+simulation that hits its compile or run timeout says more about machine load
+than about the testbench, so the gates never reject on one: it is retried
+once, one retry at a time per process, and a second timeout raises
+`InfraError` (formal tool failures are one too). `gate_candidate` then exits 2
+and writes no result. In Stage B the candidate stops, `infra/<cid>.json`
+records why, and the run goes on without it: it is left out of every count
+(`summary.infra_aborted` lists it), nothing is cached, and the CLI exits 2. In
+the set stage the run stops instead, since later candidates are gated against
+the cumulative pack and skipping one would change their duplicate decisions.
+`--resume` retries the aborts; `--write-from` refuses until there are none;
+a replay never compares an attempt the run did not decide, and reports an
+abort of its own as such, so load can make a replay fail but never flip a
+decision. In mutation runs a second run timeout on a mutant is still a kill
+(a real hang, cached); on the unmutated RTL, or at compile time, it is load.
+Cost: a testbench that really hangs is aborted, not repaired. Parallelism
+defaults to cores - 2 (`-j`) to keep timeouts rare.
 
 Every gate in a run and in its replay uses `base_pack/`, a snapshot of the
 pack taken when the run starts, so a later change to `designs/` (including
@@ -74,14 +93,73 @@ this run's own `--write`) cannot change a replayed decision.
 `format` (blocks parse, names consistent) → `cover_sync` → `cover_policy`
 (AST allowlist, `closure_core/policy.py`) → `description_sync` (every design
 signal and sized/hex constant the description names is read by the cover;
-same parse) → `citations` → `baseline` (0 hits;
-hits by the fixed-seed random testbenches reported) → `gold` (policy: no
-assertions, must `$fatal`; then scores 1; baseline holes it closes recorded)
+same parse) → `citations` → `formal` (only without `gold.sv` or with
+`twin.sv`, below) → `baseline` (0 hits;
+hits by the fixed-seed random testbenches reported) → `gold` (checking gold:
+no assertions, must `$fatal`; reach gold: denylist only; then scores 1;
+baseline holes it closes recorded)
 → `near_miss` (at least one, each scores 0, line overlap with the gold
 reported; or a written `near_miss_waiver`, which passes and is always
 audited) → `determinism` → `value` (mutant or spec evidence; mutants run
-against every gold) → `duplicate`. See
+against every checking gold) → `duplicate`. See
 `closure_core/gates.py` for what each checks. No gate calls a model.
+
+## Gold-less candidates and `--target-only`
+
+A candidate without `gold.sv` gets its gold from formal:
+`closure_core.formal.cover_witness(pack, cover, bound=, timeout=)` searches
+for stimulus that reaches the cover under the pack's formal environment
+(`designs/<d>/formal/`: `formal.yaml` with `bound` and `timeout`, and one env
+file per bound module). Formal measures; Verilator judges: the witness
+testbench becomes the overlay's gold (a **reach gold**, first line
+`// gold_source: formal`, then its depth), and the `gold` gate must still
+score it 1. Unreachable, timeout, an untranslatable cover (`UnsupportedCover`)
+and an invalid one (`ValueError`) are distinct rejections; a `RuntimeError`
+or missing tools is an infrastructure error, handled as above. A formal
+`timeout` (the budget in `formal.yaml`) may be load, so it is retried once
+while no other formal job of the run is running: every solve holds a shared
+POSIX lock on `<witness cache>/.formal.lock`, the retry an exclusive one
+(`lockf`; `flock` does not exclude across containers on Docker Desktop). A
+second timeout is a decision, cached with `retried: true` so a replay reuses
+it; the repair turn reads "target too hard to verify within the time budget:
+simplify one mechanism or reduce depth".
+`--min-depth D` rejects witnesses shallower than D ("make the target require
+more"), the hardening signal.
+
+A candidate may add `twin.sv`, a cover `cov_<ID>_twin` of the off-by-one
+condition. Its witness becomes `near_miss/<ID>_twin.sv` and must score 0 on
+the target; an unreachable twin is rejected ("boundary not exact").
+
+Reach golds check nothing, so they never run against mutants: kills, and
+mutant evidence for `value`, come only from checking golds (`$fatal`
+required). A gold-less item therefore needs spec evidence. A composed item
+(`composed_from`, `template`) inherits its components' verified requirements
+(in `tools/check` too), and its components' testbenches as near-misses that
+must miss the composite: every component near-miss, plus component golds for
+`cross`, `seq` and `count`, and for `excl(A, B)` A's gold if it hits B.
+`--write` stores the reach gold with its header and `gold_source: formal`
+in the plan entry.
+
+`--target-only` makes Stage B write only the plan entry, the cover and an
+optional twin (`prompts/author_target.md`); the context includes every file
+of the formal environment, and repair turns get the formal gate's detail.
+The survivor pass is off in this mode: no reach gold can kill a survivor.
+Witnesses are cached in `runs/propose/<run_id>/formal/<key>.json`, keyed by
+the cover, the RTL, the whole formal folder and the Yosys version, so the
+set stage and `--replay` reuse them instead of re-solving.
+
+Every target in this mode declares `mechanism: [a, b, ...]`: at least two
+distinct difficulty mechanisms, at Stage A and in the plan entry. The
+`mechanism` gate checks each one on the cover where a check is cheap, and
+reports every failure in one repair message: `boundary` needs a twin (or a
+`near_miss_waiver`), `sequence` a tracking register of the cover's own,
+`interaction` reads of two or more design signals besides clk/rst, and `data`
+a multi-bit constant; `reset_timing` is declared only, so the set stage
+accepts at most two targets listing it per run (`reset_timing_cap`). Outside
+this mode a mechanism is optional, and one is enough. The checks are
+necessary, not sufficient: a cover can carry a register and still be easy,
+so `--min-depth D` (witness depth) is the measured difficulty signal.
+`summary.mechanisms` lists the accepted targets per mechanism.
 
 ## Records: `runs/propose/<run_id>/`
 
@@ -93,9 +171,11 @@ against every gold) → `duplicate`. See
 | `base_pack/` | the design pack the run gated against |
 | `responses/stage_a/<attempt>.json`, `responses/stage_a2/<attempt>.json`, `responses/<cid>/<attempt>.json` | exact messages sent, sampling parameters, response text, usage (Stage A pass 1, pass 2, Stage B) |
 | `candidates.json` | parsed candidates of both passes (`pass`), per pass the Stage A error if any and (pass 2) the survivors listed, and the `unkillable` reasons |
-| `candidates/<cid>/<attempt>/` | the bundle as gated (`item.yaml`, `cover.sv`, `gold.sv`, `near_miss/`) |
+| `candidates/<cid>/<attempt>/` | the bundle as gated (`item.yaml`, `cover.sv`, `gold.sv` or `twin.sv`, `near_miss/`) |
+| `formal/<key>.json` | formal witnesses (status, testbench, depth, input changes) |
 | `gates/<cid>/<attempt>.json` | every gate result for that attempt |
 | `set/<cid>.json` | set-stage result |
+| `infra/<cid>.json` | infrastructure abort (stage, attempt, error); removed by `--resume` |
 | `written.json`, `check.json` | with `--write`: final IDs, `tools/check` outcome |
 | `summary.json` | below |
 
@@ -120,6 +200,10 @@ survivor pass adds. `progress_total` covers both.
   The `near_miss` row also counts `opted_out`: passes without a near-miss.
 - `near_miss_opt_outs`, `hit_by_random`: accepted candidates that are always
   audited, or that the random testbenches reach by accident.
+- `witnesses`: accepted candidates with a reach gold or a twin, with their
+  witness depths.
+- `infra_aborted`: candidates aborted as infrastructure, with the error; they
+  are in no other count until `--resume` decides them.
 - `cites_outside_context_pages`: candidates whose Stage A sources cite a page
   not in `context_pages`. Comparing a `--full-docs --stage-a-only` run with a
   default one shows what the page selection costs in candidates.

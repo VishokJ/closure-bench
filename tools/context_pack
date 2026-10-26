@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from closure_core import load_design, propose  # noqa: E402
+from closure_core.infra import default_jobs  # noqa: E402
 
 
 def main() -> int:
@@ -22,7 +23,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--design", default="uart")
     ap.add_argument("--full-docs", action="store_true", help="every page, not only context_pages")
-    ap.add_argument("-j", type=int, default=8, help="parallel simulations (mutants, golds)")
+    ap.add_argument("-j", type=int, default=default_jobs(),
+                    help="parallel simulations (mutants, golds; default: cores - 2)")
     args = ap.parse_args()
     propose.dump(args.out, propose.build_context_pack(load_design(args.design), full_docs=args.full_docs,
                                                       j=args.j))

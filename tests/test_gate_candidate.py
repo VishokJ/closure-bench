@@ -53,13 +53,13 @@ def tree_hash(d: Path) -> str:
     return h.hexdigest()
 
 
-def run(tmp_path: Path, cand: Path, base: Path | None = None) -> dict:
+def run(tmp_path: Path, cand: Path, base: Path | None = None, **kw) -> dict:
     cache = tmp_path / "mutation_cache.json"
     shared = ROOT / "results" / "check" / "mutation_cache.json"
     if shared.exists() and not cache.exists():
         shutil.copy(shared, cache)  # reuse cached baseline runs; never write the shared cache
     before = tree_hash(ROOT / "designs")
-    res = candidate.gate(base or empty_pack(tmp_path / "base"), cand, cache_path=cache, j=8)
+    res = candidate.gate(base or empty_pack(tmp_path / "base"), cand, cache_path=cache, j=2, **kw)
     assert tree_hash(ROOT / "designs") == before, "gating wrote into designs/"
     return res
 
@@ -70,11 +70,18 @@ def gate_of(res: dict, name: str) -> dict:
 
 # --- format: pure, no simulator ---------------------------------------------------------
 
-def test_format_rejects_missing_gold(tmp_path):
+def test_format_rejects_missing_cover(tmp_path):
+    cand = r1_candidate(tmp_path / "c")
+    (cand / "cover.sv").unlink()
+    res = candidate.gate(PACK, cand, cache_path=tmp_path / "cache.json")
+    assert res["failed_gate"] == "format" and "cover.sv" in gate_of(res, "format")["detail"]
+
+
+def test_format_allows_missing_gold(tmp_path):
+    """Without gold.sv the formal gate finds one (tests/test_formal_gate.py)."""
     cand = r1_candidate(tmp_path / "c")
     (cand / "gold.sv").unlink()
-    res = candidate.gate(PACK, cand, cache_path=tmp_path / "cache.json")
-    assert res["failed_gate"] == "format" and "gold.sv" in gate_of(res, "format")["detail"]
+    assert candidate.check_format(cand, set()).ok is True
 
 
 def test_format_rejects_existing_id(tmp_path):
@@ -90,6 +97,9 @@ def test_r1_bundle_is_accepted(tmp_path):
     assert res["accepted"], res
     assert [g["gate"] for g in res["gates"]] == candidate.ORDER and not res["skipped"]
     assert gate_of(res, "value")["data"]["evidence"] == "both"
+    # A candidate with its own gold: formal does not run, the gold keeps today's rules.
+    assert gate_of(res, "formal")["ok"] == "n/a" and gate_of(res, "formal")["data"]["gold_source"] == "llm"
+    assert gate_of(res, "gold")["data"]["gold_source"] == "llm"
 
 
 @needs_sim

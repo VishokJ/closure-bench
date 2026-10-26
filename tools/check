@@ -25,7 +25,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from closure_core import citations, gates, load_design  # noqa: E402
-from closure_core.grader import grade, score, simulate  # noqa: E402
+from closure_core.grader import grade, score  # noqa: E402
+from closure_core.infra import default_jobs, simulate  # noqa: E402
 
 ORDER = ["citations", "cover_sync", "cover_policy", "description_sync", "baseline", "gold", "near_miss", "determinism", "value", "duplicate"]
 
@@ -35,7 +36,7 @@ def main() -> int:
     ap.add_argument("--design", default="uart")
     ap.add_argument("--item", action="append", help="limit to these plan IDs")
     ap.add_argument("--offline", action="store_true", help="do not download cited documents")
-    ap.add_argument("-j", type=int, default=4, help="parallel simulations")
+    ap.add_argument("-j", type=int, default=default_jobs(), help="parallel simulations (default: cores - 2)")
     ap.add_argument("--report", type=Path, default=ROOT / "results" / "check" / "report.json")
     args = ap.parse_args()
     report = args.report.resolve()
@@ -71,6 +72,9 @@ def main() -> int:
                        for i, p in golds.items()}
         near_policy = {it.id: {p.name: pool.submit(gates.testbench_policy, design, p, gold=False)
                                for p in design.near_misses.get(it.id, ())} for it in items}
+        # Composed items inherit their components' golds and near-misses (gates.composed_near_misses).
+        inh_futs = {it.id: {n: pool.submit(simulate, design, p.read_text())
+                            for n, p in gates.composed_testbenches(design, it).items()} for it in items}
 
         baselines = {name: f.result() for name, f in base_futs.items()}
         randoms = {name: f.result() for name, f in rand_futs.items()}
@@ -92,6 +96,7 @@ def main() -> int:
             put(it.id, gates.determinism(a, b))
             nm = [(n, f.result()) for n, f in near_futs[it.id]]
             corpus.update({f"near_miss:{n}": s.plan_hits for n, s in nm if s.sim.status == "ok"})
+            nm += gates.composed_near_misses(it, {n: f.result() for n, f in inh_futs[it.id].items()})
             put(it.id, gates.near_miss(
                 it, [(n, score(design, [it.id], s)) for n, s in nm],
                 {n: f.result() for n, f in near_policy[it.id].items()},
@@ -108,7 +113,8 @@ def main() -> int:
         c = gates.citations(design, it, store, base_points)
         put(it.id, c)
         put(it.id, gates.value(mutation["gold_kills"].get(it.id, []),
-                               mutation["only_gold_kills"].get(it.id, []), c.data["verified"]))
+                               mutation["only_gold_kills"].get(it.id, []), c.data["verified"],
+                               gates.inherited_requirements(design, it, store, base_points)))
     value = {i: r["value"].data for i, r in res.items()}
     by_path = {p: sorted(i for i, v in value.items() if v["evidence"] == p)
                for p in ("mutant", "spec", "both", "none")}

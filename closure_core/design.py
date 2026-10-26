@@ -18,6 +18,8 @@ class PlanItem:
     sources: tuple[dict, ...] = field(default_factory=tuple)  # role: evidence (default) | requirement
     provenance: dict = field(default_factory=dict)
     near_miss_waiver: str | None = None  # why no near-miss is meaningful; audited
+    composed_from: tuple[str, ...] = ()  # plan IDs a composed item is built from (tools/compose)
+    template: str | None = None          # its composition template: seq, count, cross, excl, budget
 
 
 @dataclass(frozen=True)
@@ -80,6 +82,8 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
             sources=tuple(it.get("sources", [])),
             provenance=dict(it.get("provenance", {})),
             near_miss_waiver=(str(it["near_miss_waiver"]).strip() or None) if it.get("near_miss_waiver") else None,
+            composed_from=tuple(map(str, it.get("composed_from") or ())),
+            template=it.get("template"),
         )
         for it in plan_spec["items"]
     )
@@ -90,6 +94,9 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
     ids = [it.id for it in plan]
     if len(ids) != len(set(ids)):
         raise ValueError(f"duplicate plan IDs in {pack}")
+    for it in plan:
+        if set(it.composed_from) - set(ids) or it.id in it.composed_from:
+            raise ValueError(f"{it.id}: composed_from must name other plan items, got {list(it.composed_from)}")
     multi = {m["id"]: tuple(m["targets"])
              for m in (yaml.safe_load((pack / spec["multi"]).read_text()) or {}).get("multi", [])} \
         if "multi" in spec else {}

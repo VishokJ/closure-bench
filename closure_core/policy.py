@@ -30,9 +30,10 @@ One walker, two policies:
              default makes no copy and passes. Testbenches are legitimately
              rich, so only listed constructs are rejected; hierarchical reads
              are allowed. Our own golds and
-             near-misses get the same denylist; golds also may not use
-             assert/assume (inert without --assert) and must call $fatal
-             (check_gold).
+             near-misses get the same denylist; checking golds also may not
+             use assert/assume (inert without --assert) and must call $fatal
+             (check_gold). Reach golds (formal witnesses) get the denylist
+             only: they reach the behaviour and check nothing.
 
 Verilator keeps the first definition of a module and drops later ones from
 the XML, so parse_testbench puts the testbench first: a redefinition is then
@@ -324,15 +325,21 @@ def check_testbench(ast: Ast, tb_file: str, reserved: set[str] = frozenset()) ->
     return out
 
 
-def check_gold(ast: Ast, tb_file: str, reserved: set[str] = frozenset()) -> list[Violation]:
-    """Our gold testbenches: the denylist, no assertions, and at least one $fatal.
+def check_gold(ast: Ast, tb_file: str, reserved: set[str] = frozenset(), *,
+               role: str = "checking") -> list[Violation]:
+    """Our gold testbenches. role "checking": the denylist, no assertions, and at
+    least one $fatal; role "reach" (a formal witness): the denylist only.
 
     The grader compiles without --assert, so an assertion never fires and a
     gold relying on one can never fail. Needs XML parsed with TESTBENCH_FLAGS,
     where every assertion is an `if` guarded by a cexpr (assertOn()).
     """
+    if role not in ("checking", "reach"):
+        raise ValueError(f"unknown gold role {role!r}")
     mods = ast.defined_in(tb_file)
     out = check_testbench(ast, tb_file, reserved)
+    if role == "reach":
+        return out
     # One report per source line: `assert ... else $error` guards both parts.
     lines = dict.fromkeys(ast.where(n) for m in mods for n in m.iter("if") if len(n) and n[0].tag == "cexpr")
     out += [Violation(w, "assert", "assert/assume never fires in grading (no --assert); use if (...) $fatal")

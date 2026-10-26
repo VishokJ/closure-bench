@@ -81,6 +81,89 @@ def test_parse_candidates():
         propose.parse_candidates("no block")
 
 
+TWIN_GOOD = """module cov_ITEM_twin (
+  input logic clk,
+  input logic rst,
+  input logic m_axis_tvalid
+);
+  ITEM_twin_good_stop: cover property (@(posedge clk) disable iff (rst) m_axis_tvalid);
+endmodule
+
+bind uart_rx cov_ITEM_twin u_cov_ITEM_twin (.*);
+"""
+
+
+# R1's cover reads one signal: with a twin it carries boundary; reset_timing is declared only.
+STAGE_A_TARGET = STAGE_A.replace("  kind: task\n", "  kind: task\n  mechanism: [boundary, reset_timing]\n")
+
+
+def target_bundle(twin: str | None = TWIN_GOOD) -> str:
+    """R1's plan entry and cover without a gold (target-only mode), with an optional twin."""
+    text = r1_bundle().replace("<plan>\n", "<plan>\nmechanism: [boundary, reset_timing]\n", 1)
+    text = text[:text.index("<gold>")]
+    return text + (f"<twin>\n{twin}</twin>\n" if twin else "")
+
+
+@pytest.mark.parametrize("bad", [
+    None,                                   # no mechanism
+    "mechanism: [boundary, hard]",          # unknown name
+    "mechanism: [boundary]",                # only one
+    "mechanism: boundary",                  # only one, not a list
+    "mechanism: [boundary, boundary]",      # not distinct
+])
+def test_parse_target_candidates_needs_two_mechanisms(bad):
+    assert [c.get("mechanism") for c in propose.parse_target_candidates(STAGE_A_TARGET)] == \
+        [["boundary", "reset_timing"]] * 2 + [None]  # waivers need none
+    text = STAGE_A if bad is None else STAGE_A_TARGET.replace("mechanism: [boundary, reset_timing]", bad, 1)
+    with pytest.raises(propose.ParseError, match="without a valid mechanism list"):
+        propose.parse_target_candidates(text)
+
+
+def test_set_stage_caps_reset_timing(scratch):
+    """Three accepted candidates that list reset_timing: the set stage takes two, in cid order."""
+    from test_gate_candidate import r1_candidate
+    run_dir = scratch / "run"
+    shutil.copytree(empty_pack(scratch / "base"), run_dir / "base_pack")
+    cands = []
+    for n in (1, 2, 3):
+        cid, pid = f"c0{n}", f"P{n}"
+        d = r1_candidate(run_dir / "candidates" / cid / "0", pid)
+        item = yaml.safe_load((d / "item.yaml").read_text())
+        (d / "item.yaml").write_text(yaml.safe_dump({**item, "mechanism": ["boundary", "reset_timing"]},
+                                                    sort_keys=False))
+        propose.dump(run_dir / "gates" / cid / "0.json", {"item": pid, "accepted": True, "gates": []})
+        cands.append({"cid": cid, "pass": 1, "kind": "task"})
+    propose.dump(run_dir / "candidates.json", {"passes": {"1": {"error": None}}, "candidates": cands})
+
+    class Accept:
+        def gate(self, cand, out, base=None, formal=None):
+            res = {"item": yaml.safe_load((cand / "item.yaml").read_text())["id"], "accepted": True, "gates": []}
+            propose.dump(out, res)
+            return res
+
+    propose.set_stage(run_dir, Accept())
+    got = {c: json.loads((run_dir / "set" / f"{c}.json").read_text()) for c in ("c01", "c02", "c03")}
+    assert [g["accepted"] for g in got.values()] == [True, True, False]
+    assert got["c03"]["failed_gate"] == "reset_timing_cap"
+
+
+def test_parse_bundle_target_only():
+    b = propose.parse_bundle(target_bundle(), target_only=True)
+    assert b["gold"] is None and b["near_miss"] == {} and "module cov_ITEM_twin" in b["twin"]
+    assert propose.parse_bundle(target_bundle(None), target_only=True)["twin"] is None
+    with pytest.raises(propose.ParseError, match="write no <gold>"):
+        propose.parse_bundle(r1_bundle(), target_only=True)
+    with pytest.raises(propose.ParseError, match="<gold>"):
+        propose.parse_bundle(target_bundle())  # the default mode still needs a gold
+
+
+def test_write_candidate_target_only(tmp_path):
+    propose.write_candidate(propose.parse_bundle(target_bundle(), target_only=True), "P3", tmp_path / "c")
+    assert not (tmp_path / "c" / "gold.sv").exists()
+    twin = (tmp_path / "c" / "twin.sv").read_text()
+    assert "module cov_P3_twin" in twin and "P3_twin_good_stop:" in twin and "u_cov_P3_twin" in twin
+
+
 def test_substitute_only_the_token():
     text = "module cov_ITEM; u_cov_ITEM; ITEM_frame_error; ITEMS; XITEM; P1; P10"
     assert propose.substitute(text, "ITEM", "P1") == \
@@ -176,7 +259,7 @@ def test_scripted_run_and_replay(scratch):
 
     model = propose.ScriptedModel([bad_yaml, STAGE_A, r1_bundle("  initial $finish;\n"), r1_bundle(), r1_bundle(),
                                    survivor_answer, crash])
-    ex = propose.Executor(image=None, j=8)
+    ex = propose.Executor(image=None, j=2)
     run_dir = scratch / "run"
     # Interrupted in pass 2 Stage B; also lose one gate result and pass 1's set stage.
     with pytest.raises(ConnectionError):
@@ -231,6 +314,76 @@ def test_scripted_run_and_replay(scratch):
     rec["accepted"] = False
     g.write_text(json.dumps(rec))
     assert "c02 attempt 0: gate result differs" in propose.replay(run_dir, ex)
+
+
+class SeedingExecutor(propose.Executor):
+    """A local executor that plays the formal tool: before each gate it writes canned
+    witnesses (by label suffix, e.g. 'frame_error') into the run's witness cache."""
+
+    def __init__(self, witnesses: dict[str, dict]):
+        super().__init__(image=None, j=2)
+        self.witnesses = witnesses
+
+    def gate(self, cand, out, base=None, formal=None):
+        from closure_core import gates
+        from closure_core.design import load_design
+        design = load_design(base)
+        covers = [(cand / "cover.sv", yaml.safe_load((cand / "item.yaml").read_text())["cover"])]
+        if (cand / "twin.sv").is_file():
+            covers.append((cand / "twin.sv", gates.twin_label(cand / "twin.sv")))
+        formal["cache"].mkdir(parents=True, exist_ok=True)
+        for cover, label in covers:
+            if (w := self.witnesses.get(label.split("_", 1)[1])) is not None:
+                gates.save_cache(formal["cache"] / f"{gates.witness_key(design, cover.read_text())}.json", w)
+        return super().gate(cand, out, base, formal)
+
+
+@needs_sim
+def test_scripted_target_only_run_and_replay(scratch):
+    """Target-only: c01's first twin is unreachable (repaired); c02 repeats c01 and is a set-stage
+    duplicate; no survivor pass in this mode. Replay reuses the recorded witnesses."""
+    fatal = 'if (!saw_frame_error) $fatal(1, "frame_error never pulsed");'
+    stim = (PACK / "gold" / "R1.sv").read_text().replace(fatal, "")
+    good = (PACK / "near_miss" / "R1_good_stop.sv").read_text()
+    witnesses = {"frame_error": {"status": "reachable", "tb_text": stim, "depth": 120, "input_changes": 22},
+                 "twin_bad": {"status": "unreachable"},
+                 "twin_good_stop": {"status": "reachable", "tb_text": good, "depth": 121, "input_changes": 22}}
+    bad = target_bundle(TWIN_GOOD.replace("twin_good_stop", "twin_bad"))
+    model = propose.ScriptedModel([STAGE_A_TARGET, bad, target_bundle(), target_bundle()])
+    run_dir = scratch / "run"
+    base = empty_pack(scratch / "base")
+    (base / "formal").mkdir(exist_ok=True)
+    (base / "formal" / "formal.yaml").write_text("bound: 300\ntimeout: 900\ntops: {}\n")
+    (base / "formal" / "env_rx.sv").write_text("module formal_rx; endmodule\n")
+    s = propose.run(run_dir, model, SeedingExecutor(witnesses), base=base, survivor_pass=True, target_only=True)
+    manifest = json.loads((run_dir / "manifest.json").read_text())
+    assert manifest["target_only"] is True and manifest["survivor_pass"] is False
+    assert manifest["min_depth"] is None
+
+    prompt = json.loads((run_dir / "responses/c01/0.json").read_text())["messages"][0]["content"]
+    assert "## Formal environment" in prompt and "### designs/uart/formal/env_rx.sv" in prompt
+    assert "bound: 300" in prompt and "Do not write a gold" in prompt and "mechanism: [boundary, data]" in prompt
+    a = json.loads((run_dir / "responses/stage_a/0.json").read_text())["messages"][0]["content"]
+    assert "## Difficulty mechanism (this run)" in a
+    assert s["mechanisms"] == {"boundary": ["c01"], "reset_timing": ["c01"]}
+    first = json.loads((run_dir / "gates/c01/0.json").read_text())
+    assert first["failed_gate"] == "formal"
+    assert next(g for g in first["gates"] if g["gate"] == "mechanism")["ok"] is True
+    repair = json.loads((run_dir / "responses/c01/1.json").read_text())["messages"][-1]["content"]
+    assert "`formal`" in repair and "boundary not exact" in repair and "designs/uart/formal/" in repair
+
+    assert list(s["passes"]) == ["1"]
+    p1 = s["passes"]["1"]
+    assert p1["accepted"] == ["c01"] and p1["rejected_at_set"] == {"c02": "duplicate"}
+    assert p1["repair"] == {"failed_first_attempt": 1, "repaired": 1, "rate": 1.0}
+    assert s["witnesses"] == {"c01": {"gold_source": "formal", "witness_depth": 120, "input_changes": 22,
+                                      "twin_depth": 121}}
+    assert p1["progress"]["mutants"]["killed_by_run"] == []  # reach golds kill nothing
+    # Keyed by the cover text, so per ID: P1 target, bad twin, good twin; P2 target and twin.
+    assert len(list((run_dir / "formal").glob("*.json"))) == 5
+
+    # A plain executor cannot solve (no closure_core.formal here): replay must use the record.
+    assert propose.replay(run_dir, propose.Executor(image=None, j=2)) == []
 
 
 def test_author_all_parallel(scratch):
@@ -292,3 +445,73 @@ def test_cache_save_parallel_containers():
         assert not list(d.glob("*.tmp"))
     finally:
         shutil.rmtree(d, ignore_errors=True)
+
+
+@needs_sim
+def test_target_only_min_depth_repair(scratch):
+    """--min-depth: a shallow witness is rejected at formal, and the repair turn tells the
+    model to make the target require more; a deeper target is then accepted."""
+    fatal = 'if (!saw_frame_error) $fatal(1, "frame_error never pulsed");'
+    stim = (PACK / "gold" / "R1.sv").read_text().replace(fatal, "")
+    good = (PACK / "near_miss" / "R1_good_stop.sv").read_text()
+    deeper = target_bundle().replace("ITEM_frame_error: cover", "ITEM_frame_error_deep: cover") \
+                            .replace("cover: ITEM_frame_error", "cover: ITEM_frame_error_deep")
+    witnesses = {"frame_error": {"status": "reachable", "tb_text": stim, "depth": 80, "input_changes": 1},
+                 "frame_error_deep": {"status": "reachable", "tb_text": stim, "depth": 200, "input_changes": 9},
+                 "twin_good_stop": {"status": "reachable", "tb_text": good, "depth": 81, "input_changes": 1}}
+    one_task = STAGE_A_TARGET[:STAGE_A_TARGET.index("- title: frame error again")] + "</candidates>\n"
+    model = propose.ScriptedModel([one_task, target_bundle(), deeper])
+    base = empty_pack(scratch / "base")
+    (base / "formal").mkdir(exist_ok=True)
+    (base / "formal" / "formal.yaml").write_text("bound: 300\ntimeout: 900\ntops: {}\n")
+    run_dir = scratch / "run"
+    s = propose.run(run_dir, model, SeedingExecutor(witnesses), base=base, target_only=True, min_depth=150)
+    first = json.loads((run_dir / "gates/c01/0.json").read_text())
+    assert first["failed_gate"] == "formal"
+    repair = json.loads((run_dir / "responses/c01/1.json").read_text())["messages"][-1]["content"]
+    assert "`formal`" in repair and "witness depth 80 < 150: make the target require more" in repair
+    assert s["passes"]["1"]["accepted"] == ["c01"]
+    assert s["witnesses"]["c01"]["witness_depth"] == 200
+    assert json.loads((run_dir / "manifest.json").read_text())["min_depth"] == 150
+    assert propose.replay(run_dir, propose.Executor(image=None, j=2)) == []
+
+
+@needs_sim
+def test_infra_abort_is_not_a_decision(scratch):
+    """A gate that fails on infrastructure (a simulation timing out twice) records nothing:
+    the candidate is left out of the summary, replay and write refuse to treat it as a
+    decision, and --resume gates it again. In the set stage the run stops instead, since
+    later candidates are gated against the cumulative pack."""
+    from closure_core.infra import InfraError
+
+    class Flaky(propose.Executor):
+        def __init__(self, fail_on):
+            super().__init__(image=None, j=2)
+            self.fail_on = fail_on  # "author" or "set": which stage's next gate fails
+
+        def gate(self, cand, out, base=None, formal=None):
+            stage = "set" if base and base.name == "setpack" else "author"
+            if stage == self.fail_on:
+                self.fail_on = None
+                raise InfraError("simulation hit timeout twice")
+            return super().gate(cand, out, base, formal)
+
+    run_dir = scratch / "run"
+    s = propose.run(run_dir, propose.ScriptedModel([STAGE_A, r1_bundle()]), Flaky("author"),
+                    base=empty_pack(scratch / "base"), max_candidates=1)
+    assert list(s["infra_aborted"]) == ["c01"] and s["accepted"] == [] and s["proposed"]["tasks"] == 0
+    assert not (run_dir / "gates" / "c01").exists()
+    assert propose.replay(run_dir, propose.Executor(image=None, j=2)) == []
+    assert "the run has infrastructure aborts (infra/); --resume it first" in propose.write_from(run_dir, Flaky(None))
+
+    # Resume reuses the recorded response (no model call); this time the set stage fails.
+    with pytest.raises(InfraError):
+        propose.resume(run_dir, propose.ScriptedModel([]), Flaky("set"))
+    assert json.loads((run_dir / "gates/c01/0.json").read_text())["accepted"]
+    assert json.loads((run_dir / "infra/c01.json").read_text())["stage"] == "set"
+    assert not (run_dir / "summary.json").exists() and not (run_dir / "set" / "c01.json").exists()
+
+    s = propose.resume(run_dir, propose.ScriptedModel([]), Flaky(None))
+    assert s["infra_aborted"] == {} and s["accepted"] == ["c01"]
+    assert [r["retried_infra"] for r in json.loads((run_dir / "manifest.json").read_text())["resumed"]] == [["c01"], ["c01"]]
+    assert propose.replay(run_dir, propose.Executor(image=None, j=2)) == []

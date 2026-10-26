@@ -5,7 +5,17 @@ that returns a GateResult. Running the simulations is left to the caller, so
 tools/check can run everything in parallel while tools/gate_candidate runs
 gates one at a time, cheapest first, stopping at the first failure.
 
+  mechanism     each declared difficulty mechanism (boundary, sequence, interaction,
+                data, reset_timing) is structurally there; at least two
+                required in target-only proposer runs, checked whenever declared
   citations     every cited source verifies (RTL/README anchors, DOC page+hash, BASE point)
+  formal        only for a candidate without its own gold (or with a twin.sv):
+                closure_core.formal.cover_witness must find a witness for the
+                target cover; the witness testbench becomes the item's reach
+                gold, which the gold gate then scores under Verilator (formal
+                measures, Verilator judges). A twin cover (the off-by-one
+                condition) must be reachable too; its witness becomes a
+                near-miss that must score 0. Optional minimum witness depth.
   cover_sync    exactly one cover with the item's label, in the module the plan names
   cover_policy  the cover file only observes: allowlisted constructs, one module
                 cov_<ID>, one bind (closure_core/policy.py, on Verilator's AST)
@@ -14,9 +24,14 @@ gates one at a time, cheapest first, stopping at the first failure.
                 does not count): the description cannot promise what the
                 grader does not check. Names and constants only.
   baseline      no baseline testbench hits the item (the task is not free)
-  gold          the gold testbench scores 1 (the task is solvable)
+  gold          the gold testbench scores 1 (the task is solvable). Two roles:
+                a checking gold (written by a person or the proposer) must
+                $fatal when the behaviour is wrong; a reach gold (a formal
+                witness, first line REACH_HEADER) only has to reach it
   near_miss     at least one near-miss testbench, and every one scores 0 (the
-                boundary is exact); an item may instead give a
+                boundary is exact); a composed item (composed_from) also
+                inherits its components' golds and near-misses
+                (composed_near_misses); an item may instead give a
                 near_miss_waiver, a written reason why no near-miss is
                 meaningful, which passes and is always audited
   determinism   grading the gold twice gives an identical result
@@ -24,7 +39,11 @@ gates one at a time, cheapest first, stopping at the first failure.
                 mutant: the gold kills at least one mutant every baseline
                   survives (closure_core/mutants.py; a kill = passes on the
                   original RTL, fails on the mutant);
-                spec: a verified DOC or README source with role: requirement.
+                spec: a verified DOC or README source with role: requirement
+                  (a composed item, composed_from, also inherits its
+                  components' verified requirements).
+                Only checking golds run against mutants: a reach gold checks
+                nothing, so it cannot kill one.
                 Mutants are one-line edits and cannot represent missing
                 features or spec mismatches, so no kill is only absence of
                 evidence. Kills are computed for every item either way.
@@ -46,17 +65,26 @@ pilot; items no pilot model solves get a fairness check (docs/PLAN.md §6).
 
 from __future__ import annotations
 
+import fcntl
+import functools
+import hashlib
+import importlib
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from concurrent.futures import as_completed
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import yaml
+
 from closure_core import citations as cit
 from closure_core import mutants, policy
+from closure_core.infra import InfraError
 from closure_core.design import Design, PlanItem
 from closure_core.grader import GradeResult, Simulation
 
@@ -117,6 +145,70 @@ def description_sync(design: Design, item: PlanItem, parsed: tuple | None = None
     return GateResult("description_sync", not missing, "\n".join(
         f"the description names {x} but the cover does not check it; either check it in the cover "
         f"or remove it from the description" for x in missing), {"missing": missing})
+
+
+MECHANISMS = ("boundary", "sequence", "interaction", "data", "reset_timing")
+RESET_TIMING_CAP = 2  # accepted items declaring reset_timing per proposer run (set stage)
+MIN_MECHANISMS = 2    # distinct mechanisms per target when required (target-only runs)
+_WIDE_LITERAL = re.compile(r"(?<![\w'])(\d*)'[sS]?[hHdDbBoO][0-9a-fA-F_]+\b|\b0[xX][0-9a-fA-F_]+\b")
+
+
+def declared_mechanisms(raw: dict) -> list:
+    """item.yaml `mechanism`: one name or a list of names."""
+    m = raw.get("mechanism")
+    return [] if m is None else list(m) if isinstance(m, list) else [m]
+
+
+def mechanism(design: Design, item: PlanItem, raw: dict, has_twin: bool, parsed: tuple | None = None,
+              required: bool = False) -> GateResult:
+    """The declared difficulty mechanisms (item.yaml `mechanism`), each checked where cheap.
+
+    boundary     a twin cover (or a near_miss_waiver) shows the off-by-one side
+    sequence     the cover keeps a tracking register of its own
+    interaction  the cover reads at least two design signals besides clk and rst
+    data         the cover compares against a multi-bit constant (8'h55, 0xA5)
+    reset_timing declared only; at most RESET_TIMING_CAP per run (propose set stage)
+    Required only in target-only runs, then at least MIN_MECHANISMS distinct ones;
+    checked whenever declared. Every failing mechanism is reported at once.
+    """
+    ms = declared_mechanisms(raw)
+    if not ms:
+        return GateResult("mechanism", False if required else "n/a",
+                          f"declare mechanism: a list of at least {MIN_MECHANISMS} of {', '.join(MECHANISMS)}"
+                          if required else "not declared")
+    bad = [m for m in ms if m not in MECHANISMS]
+    if bad:
+        return GateResult("mechanism", False, f"mechanism {bad} must each be one of {', '.join(MECHANISMS)}")
+    if len(set(ms)) != len(ms):
+        return GateResult("mechanism", False, f"mechanism {ms} lists one twice")
+    if required and len(ms) < MIN_MECHANISMS:
+        return GateResult("mechanism", False, f"mechanism {ms}: combine at least {MIN_MECHANISMS} distinct "
+                                              f"mechanisms (of {', '.join(MECHANISMS)})")
+    ast, log = parsed or parse_cover(design, item)
+    if ast is None:
+        return GateResult("mechanism", False, f"verilator --xml-only failed:\n{log[-1500:]}")
+    cover_file = str(design.pack / "covers" / f"{item.id}.sv")
+    cover = next((x for x in ast.defined_in(cover_file) if x.get("name") == item.cover_module), None)
+    vars_ = [v for v in cover if v.tag == "var"] if cover is not None else []
+    inputs = {v.get("name") for v in vars_ if v.get("dir") == "input"}
+    read = ({n.get("name") for n in cover.iter("varref")} & inputs) - {"clk", "rst"} if cover is not None else set()
+    local = [v.get("name") for v in vars_ if v.get("dir") is None and not (v.get("param") or v.get("localparam"))
+             and not v.get("name", "").startswith("_V")]  # _Vpast_*: generated by $past
+    text = re.sub(r"//[^\n]*|/\*.*?\*/", "", (design.pack / "covers" / f"{item.id}.sv").read_text(), flags=re.S)
+    wide = [x.group(0) for x in _WIDE_LITERAL.finditer(text) if x.group(1) != "1"]
+    rules = {
+        "boundary": None if has_twin or item.near_miss_waiver else
+                    "boundary needs a twin cover (twin.sv) for the off-by-one condition",
+        "sequence": None if local else "sequence needs a tracking register in the cover (a local reg)",
+        "interaction": None if len(read) >= 2 else
+                       f"interaction needs the cover to read two or more design signals besides clk/rst; "
+                       f"it reads {sorted(read) or 'none'}",
+        "data": None if wide else "data needs the cover to compare against a multi-bit constant (e.g. 8'h55)",
+        "reset_timing": None,
+    }
+    why = [rules[m] for m in ms if rules[m]]
+    return GateResult("mechanism", not why, "; ".join(why) or ", ".join(ms),
+                      {"mechanisms": ms, "reads": sorted(read), "locals": local, "constants": wide})
 
 
 def citations(design: Design, item: PlanItem, store: cit.DocStore,
@@ -190,14 +282,25 @@ def waived_holes(design: Design) -> dict[str, str]:
     return out
 
 
+REACH_HEADER = "// gold_source: formal"  # first line of every reach gold; nothing else may use it
+
+
+def gold_source(tb: Path) -> str:
+    """'formal' for a reach gold (a formal witness), 'llm' for a checking gold."""
+    return "formal" if tb.read_text().startswith(REACH_HEADER + "\n") else "llm"
+
+
 def testbench_policy(design: Design, tb: Path, *, gold: bool) -> list[str]:
     """Policy violations of one of our testbenches (gold or near-miss)."""
     ours = [*design.rtl, *design.covers]
     root, log = policy.parse_testbench(tb, ours, extra=policy.TESTBENCH_FLAGS)
     if root is None:
         return [f"verilator --xml-only failed:\n{log[-1500:]}"]
-    check = policy.check_gold if gold else policy.check_testbench
-    return [str(v) for v in check(policy.Ast(root), str(tb), policy.module_names(ours))]
+    ast, reserved = policy.Ast(root), policy.module_names(ours)
+    if not gold:
+        return [str(v) for v in policy.check_testbench(ast, str(tb), reserved)]
+    role = "reach" if gold_source(tb) == "formal" else "checking"
+    return [str(v) for v in policy.check_gold(ast, str(tb), reserved, role=role)]
 
 
 def gold(item: PlanItem, a: GradeResult | None, violations: list[str] = ()) -> GateResult:
@@ -208,6 +311,209 @@ def gold(item: PlanItem, a: GradeResult | None, violations: list[str] = ()) -> G
     return GateResult("gold", a.reward == 1.0,
                       f"status {a.status}, hits {a.target_hits[item.id]}"
                       + (f"\n{a.diagnostics[-600:]}" if a.reward != 1.0 else ""))
+
+
+# --- formal ---------------------------------------------------------------------------------
+
+FORMAL_DIR = "formal"  # the pack's formal environment: formal.yaml (tops, bound, timeout) + env files
+
+
+class FormalError(InfraError):
+    """Infrastructure failure (no formal tools, sby crashed, no environment): not a
+    decision about the candidate. The gate aborts; nothing is cached or counted."""
+
+
+def formal_dir(design: Design) -> Path:
+    return design.pack / FORMAL_DIR
+
+
+def formal_settings(design: Design) -> dict:
+    """bound (cycles) and timeout (seconds) for cover_witness, from formal.yaml."""
+    f = formal_dir(design) / "formal.yaml"
+    spec = yaml.safe_load(f.read_text()) if f.is_file() else None
+    if not isinstance(spec, dict) or not {"bound", "timeout"} <= set(spec):
+        raise FormalError(f"{f} must exist and set bound and timeout")
+    return {"bound": int(spec["bound"]), "timeout": float(spec["timeout"])}
+
+
+def formal_files(design: Design) -> dict[str, str]:
+    """Every file of the formal environment (the assumptions), by path within it."""
+    d = formal_dir(design)
+    return {str(q.relative_to(d)): q.read_text() for q in sorted(d.rglob("*")) if q.is_file()} if d.is_dir() else {}
+
+
+@functools.lru_cache(maxsize=1)
+def formal_version() -> str | None:
+    """`yosys -V` of the formal tools (closure_core.formal.FORMAL_HOME), None if absent."""
+    try:
+        home = importlib.import_module("closure_core.formal").FORMAL_HOME
+        return subprocess.run([str(home / "bin" / "yosys"), "-V"], capture_output=True, text=True,
+                              timeout=60).stdout.strip() or None
+    except (ImportError, AttributeError, OSError, subprocess.SubprocessError):
+        return None
+
+
+def witness_key(design: Design, cover_text: str) -> str:
+    """What a witness depends on: the cover, the RTL, the whole formal environment
+    (assumptions, bound, timeout) and the formal tools' version.
+
+    Not the rest of the pack, so the set stage (a different pack, same design)
+    reuses the witness found for the candidate alone.
+    """
+    return hashlib.sha256(json.dumps({
+        "cover": cover_text, "rtl": {q.name: q.read_text() for q in design.rtl},
+        "formal": formal_files(design), "tools": formal_version(),
+    }, sort_keys=True).encode()).hexdigest()
+
+
+def solve_witness(design: Design, cover: Path) -> dict:
+    """The only call into closure_core.formal: cover_witness(pack_dir, cover_file, *, bound, timeout).
+
+    UnsupportedCover and ValueError are decisions about the cover (statuses
+    'unsupported' and 'invalid'); RuntimeError and missing tools raise FormalError.
+    """
+    try:
+        formal_mod = importlib.import_module("closure_core.formal")
+    except ImportError as e:
+        raise FormalError(f"closure_core.formal unavailable: {e}") from e
+    st = formal_settings(design)
+    try:
+        w = formal_mod.cover_witness(design.pack, cover, bound=st["bound"], timeout=st["timeout"])
+    except formal_mod.UnsupportedCover as e:  # a ValueError: caught first
+        return {"status": "unsupported", "detail": str(e)}
+    except ValueError as e:
+        return {"status": "invalid", "detail": str(e)}
+    except RuntimeError as e:
+        raise FormalError(f"cover_witness failed: {e}") from e
+    return {**w, "detail": w.get("detail") or ""}
+
+
+TIMEOUT_DETAIL = "target too hard to verify within the time budget: simplify one mechanism or reduce depth"
+
+
+@contextmanager
+def formal_slot(cache_dir: Path | None, exclusive: bool):
+    """A POSIX lock on <cache_dir>/.formal.lock. Every solve holds it shared; the
+    retry of a timeout holds it exclusive, so it runs with no other formal job of
+    the run, across the run's containers (lockf, not flock: flock does not exclude
+    across containers on a Docker Desktop bind mount, lockf does; checked). POSIX
+    locks belong to the process, so this assumes one solve at a time per process,
+    as in gate_candidate. Linux gives no writer preference: under a steady stream
+    of solves the retry waits until a gap."""
+    if cache_dir is None:
+        yield
+        return
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    with open(cache_dir / ".formal.lock", "a+") as f:
+        fcntl.lockf(f, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
+        try:
+            yield
+        finally:
+            fcntl.lockf(f, fcntl.LOCK_UN)
+
+
+def witness(design: Design, cover: Path, cache_dir: Path | None) -> dict:
+    """A cached witness: cache_dir/<key>.json, so a replay never re-solves.
+
+    A timeout may be load, so it is retried once with no other formal job running
+    (formal_slot); only the retry's outcome is cached (`retried: true`). A second
+    timeout is a decision: TIMEOUT_DETAIL. Every other outcome cover_witness
+    returns is cached as is (reachable, unreachable, unsupported, invalid);
+    infrastructure errors raise and are not.
+    """
+    key = witness_key(design, cover.read_text())
+    path = cache_dir / f"{key}.json" if cache_dir else None
+    if path and path.exists():
+        return {**json.loads(path.read_text()), "key": key}
+    with formal_slot(cache_dir, exclusive=False):
+        w = solve_witness(design, cover)
+    if w["status"] == "timeout":
+        with formal_slot(cache_dir, exclusive=True):
+            w = {**solve_witness(design, cover), "retried": True}
+    if path:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        save_cache(path, w)
+    return {**w, "key": key}
+
+
+def twin_label(twin: Path) -> str | None:
+    labels = COVER_RE.findall(twin.read_text())
+    return labels[0] if len(labels) == 1 else None
+
+
+def twin_policy(design: Design, twin: Path, item_id: str) -> list[str]:
+    """A twin is a cover like any other (module cov_<ID>_twin, one bind), with one label."""
+    root, log = policy.xml_ast([*map(str, design.rtl), str(twin)])
+    if root is None:
+        return [f"verilator --xml-only failed:\n{log[-1500:]}"]
+    vs = [str(v) for v in policy.check_cover(policy.Ast(root), str(twin), f"{item_id}_twin",
+                                             [str(q) for q in design.rtl])]
+    return vs + ([] if twin_label(twin) else ["must contain exactly one cover property"])
+
+
+def _summary(w: dict) -> dict:
+    return {"status": w["status"], "witness_depth": w.get("depth"), "input_changes": w.get("input_changes"),
+            "input_changes_exact": w.get("input_changes_exact"), "key": w.get("key")}
+
+
+def _not_found(what: str, w: dict, where: str) -> str | None:
+    """Why there is no witness for `what`, or None if there is one."""
+    st = w["status"]
+    if st == "reachable" and w.get("tb_text"):
+        return None
+    if st == "unreachable":
+        return (f"{what} is unreachable {where}: no stimulus the environment allows reaches it. Check the "
+                f"cover condition against the RTL and the assumptions.")
+    if st == "timeout":
+        return (f"{TIMEOUT_DETAIL}. Formal timed out twice on {what} {where}, the second time with "
+                f"no other formal job running.")
+    if st == "unsupported":
+        return (f"formal cannot translate {what}: {w.get('detail', '')}. Use only labelled "
+                f"`cover property (@(posedge clk) [disable iff (rst)] expr);` and clocked tracking registers.")
+    if st == "invalid":
+        return f"formal rejected {what}: {w.get('detail', '')}"
+    return f"cover_witness returned status {st!r} for {what} without a witness"
+
+
+def formal(item: PlanItem, w: dict | None, twin: dict | None = None, *, assumptions: str = "",
+           bound: int | None = None, min_depth: int | None = None, twin_violations: list[str] = ()) -> GateResult:
+    """w: the target's witness, None if the candidate has its own (checking) gold.
+    twin: the twin cover's witness, None if there is no twin.
+    """
+    data = {"gold_source": "llm" if w is None else "formal", "bound": bound, "min_depth": min_depth,
+            "assumptions": assumptions}
+    where = f"(bound {bound} cycles, formal environment in {assumptions})"
+    msgs = []
+    if w is not None:
+        data |= _summary(w)
+        if why := _not_found(f"the target cover {item.cover}", w, where):
+            return GateResult("formal", False, why, data)
+        if min_depth is not None and w["depth"] < min_depth:
+            return GateResult("formal", False, f"witness depth {w['depth']} < {min_depth}: make the target "
+                                               f"require more", data)
+        msgs.append(f"witness depth {w['depth']}, {w['input_changes']} input changes {where}")
+    if twin_violations:
+        return GateResult("formal", False, "twin.sv: policy: " + "\n".join(twin_violations), data)
+    if twin is not None:
+        data["twin"] = _summary(twin)
+        if why := _not_found("the twin cover", twin, where):
+            if twin["status"] == "unreachable":
+                why = (f"the twin cover is unreachable {where}: boundary not exact. The twin must be the "
+                       f"reachable off-by-one condition next to the target.")
+            return GateResult("formal", False, why, data)
+        msgs.append(f"twin witness depth {twin['depth']}")
+    return GateResult("formal", True if msgs else "n/a", "; ".join(msgs) or "the candidate has its own gold", data)
+
+
+def reach_gold_text(w: dict, bound: int) -> str:
+    """A reach gold: the witness testbench under a header naming its source and depth."""
+    return (f"{REACH_HEADER}\n// closure_core.formal.cover_witness: depth {w['depth']}, input_changes "
+            f"{w['input_changes']}, bound {bound}, witness {w['key'][:16]}\n{w['tb_text']}")
+
+
+def twin_near_miss_text(w: dict, bound: int) -> str:
+    return (f"// near_miss_source: formal witness of the twin cover; depth {w['depth']}, bound {bound}, "
+            f"witness {w['key'][:16]}\n{w['tb_text']}")
 
 
 def determinism(a: GradeResult | None, b: GradeResult | None) -> GateResult:
@@ -230,6 +536,34 @@ def line_overlap(gold_sim: Simulation, other: Simulation) -> float | None:
                        if p.kind == "v_line" and p.hits > 0 and "/rtl/" in p.file}
     g = lines(gold_sim)
     return round(len(g & lines(other)) / len(g), 3) if g else None
+
+
+def composed_testbenches(design: Design, item: PlanItem) -> dict[str, Path]:
+    """Testbenches a composed item may inherit as near-misses: every component's gold
+    (gold:<C>) and near-misses (near_miss:<file>). composed_near_misses picks among them."""
+    out = {f"gold:{c}": design.golds[c] for c in item.composed_from if c in design.golds}
+    out |= {f"near_miss:{q.name}": q for c in item.composed_from for q in design.near_misses.get(c, ())}
+    return out
+
+
+def composed_near_misses(item: PlanItem, sims: dict[str, Simulation]) -> list[tuple[str, Simulation]]:
+    """The inherited near-misses of a composed item, each of which must miss the composite.
+
+    Component near-misses always. Component golds by template: cross, seq and
+    count take every component's gold (each reaches a part, not the
+    combination); excl(A, B) takes A's gold only if it also hits B (then "A
+    without B" must not hold); budget takes none (A's gold may well be within
+    the budget).
+    """
+    t, comps = item.template, item.composed_from
+    golds = []
+    if t in ("cross", "seq", "count"):
+        golds = [f"gold:{c}" for c in comps]
+    elif t == "excl" and len(comps) == 2:
+        golds = [f"gold:{comps[0]}"] if (g := sims.get(f"gold:{comps[0]}")) and g.plan_hits.get(comps[1], 0) > 0 \
+            else []
+    names = golds + sorted(n for n in sims if n.startswith("near_miss:"))
+    return [(n, sims[n]) for n in names if n in sims]
 
 
 def near_miss(item: PlanItem, results: list[tuple[str, GradeResult]],
@@ -261,14 +595,23 @@ def source_label(src: dict) -> str:
     return " ".join(str(x) for x in (src["type"], where, at) if x)
 
 
-def value(kills: list[str], only: list[str], verified: list[tuple[dict, bool | None]]) -> GateResult:
+def _requirements(verified: list[tuple[dict, bool | None]]) -> list[dict]:
+    return [s for s, ok in verified
+            if s.get("role") == "requirement" and s["type"] in REQUIREMENT_TYPES and ok is True]
+
+
+def value(kills: list[str], only: list[str], verified: list[tuple[dict, bool | None]],
+          inherited: dict[str, list[tuple[dict, bool | None]]] | None = None) -> GateResult:
     """verified: (source, citation verified) per plan source. Only verified DOC or
     README sources with role: requirement count; RTL and BASE say what the
     design does, not what it must do.
+
+    inherited: for a composed item, component ID -> its (source, verified); the
+    components' verified requirements count as this item's spec evidence.
     """
-    reqs = [s for s, ok in verified
-            if s.get("role") == "requirement" and s["type"] in REQUIREMENT_TYPES and ok is True]
-    spec = [source_label(s) for s in reqs]
+    reqs = _requirements(verified)
+    inh = {c: _requirements(v) for c, v in (inherited or {}).items()}
+    spec = [source_label(s) for s in reqs] + [f"{source_label(s)} (from {c})" for c, rs in inh.items() for s in rs]
     evidence = {(True, True): "both", (True, False): "mutant",
                 (False, True): "spec", (False, False): "none"}[(bool(kills), bool(spec))]
     return GateResult(
@@ -277,7 +620,16 @@ def value(kills: list[str], only: list[str], verified: list[tuple[dict, bool | N
         + (f" ({len(only)} only by this gold: {', '.join(only)})" if only else "")
         + f"; requirements: {'; '.join(spec) or '-'}",
         {"evidence": evidence, "kills": kills, "only_by_this_gold": only, "requirements": spec,
-         "requirement_keys": [requirement_key(s) for s in reqs]})
+         "requirement_keys": [requirement_key(s) for s in reqs],
+         **({"inherited_from": sorted(c for c, rs in inh.items() if rs)} if inherited else {})})
+
+
+def inherited_requirements(design: Design, item: PlanItem, store: cit.DocStore,
+                           base_points: list) -> dict[str, list] | None:
+    """For a composed item: component ID -> its (source, verified), for value(inherited=...)."""
+    if not item.composed_from:
+        return None
+    return {c: citations(design, design.item(c), store, base_points).data["verified"] for c in item.composed_from}
 
 
 def requirement_key(src: dict) -> str:
@@ -324,10 +676,13 @@ def mutation_runs(design: Design, golds: dict[str, Path], pool, cache_path: Path
     """Run the mutants against the baselines, then the golds against the survivors.
 
     Not a gate: the kills are evidence for the value gate and feed the survivor
-    bookkeeping. Every testbench runs only against mutants of modules it
+    bookkeeping. Only checking golds run: a reach gold (formal witness) has no
+    checks, so a mutant it "kills" would only show a changed path, not a
+    caught bug. Every testbench runs only against mutants of modules it
     instantiates. Golds skip mutants a baseline already kills: every output
     here is computed from survivors or from baseline kills.
     """
+    golds = {i: p for i, p in golds.items() if gold_source(p) != "formal"}  # reach golds check nothing
     cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
     ms = [m for f, (lo, hi) in design.mutate.items() for m in mutants.generate(f, lo, hi)]
     tbs = {f"baseline:{n}": (b["file"].read_text(), b["top"]) for n, b in design.baselines.items()}

@@ -5,6 +5,7 @@ Runs on the host (model calls need the network and PRIME_API_KEY); every
 simulation runs in the toolchain image with networking off.
 
   tools/propose_plan [--stage-a-only] [--full-docs] [--write] [--max-candidates N]
+  tools/propose_plan --target-only [--min-depth D]   # covers only; formal finds the gold (no survivor pass)
   tools/propose_plan --replay runs/propose/<run_id>      # no model calls
   tools/propose_plan --summarize runs/propose/<run_id>   # recompute summary.json
   tools/propose_plan --write-from runs/propose/<run_id>  # write its accepted items into designs/
@@ -22,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from closure_core import propose  # noqa: E402
+from closure_core.infra import InfraError, default_jobs  # noqa: E402
 
 
 def main() -> int:
@@ -36,11 +38,16 @@ def main() -> int:
     ap.add_argument("--write", action="store_true", help="write accepted items into designs/ and run tools/check")
     ap.add_argument("--no-survivor-pass", action="store_true",
                     help="skip pass 2 (Stage A again with the remaining baseline survivors)")
+    ap.add_argument("--target-only", action="store_true",
+                    help="Stage B writes plan, cover and optional twin only; formal finds the gold "
+                         "(turns off the survivor pass)")
+    ap.add_argument("--min-depth", type=int, help="formal gate: reject witnesses shallower than this")
     ap.add_argument("--tag", default="", help="suffix for the run directory name")
     ap.add_argument("--image", default=os.environ.get("CLOSURE_BENCH_IMAGE", propose.IMAGE),
                     help="toolchain image (on Apple silicon pass the arm64 manifest digest)")
     ap.add_argument("--local", action="store_true", help="use the local Verilator instead of the image")
-    ap.add_argument("-j", type=int, default=8)
+    ap.add_argument("-j", type=int, default=default_jobs(),
+                    help="parallel simulations per gate run (default: cores - 2)")
     ap.add_argument("-p", type=int, default=4, help="Stage B candidates at a time (model calls overlap)")
     ap.add_argument("--replay", type=Path)
     ap.add_argument("--summarize", type=Path)
@@ -70,19 +77,42 @@ def main() -> int:
     if args.resume:
         mp = propose.load(args.resume / "manifest.json")["model"]
         model = propose.PrimeModel(mp["model"], mp["temperature"], mp["max_tokens"])
-        s = propose.resume(args.resume.resolve(), model, executor, parallel=args.p)
+        try:
+            s = propose.resume(args.resume.resolve(), model, executor, parallel=args.p)
+        except InfraError as e:
+            return infra_abort(args.resume, e)
         print(json.dumps(s, indent=2))
         print(f"\nrun: {args.resume}")
-        return 0
+        return report_aborts(args.resume, s)
 
     model = propose.PrimeModel(args.model, args.temperature, args.max_tokens)
     run_dir = propose.new_run_dir(args.tag)
-    s = propose.run(run_dir, model, executor, design_name=args.design, max_candidates=args.max_candidates,
-                    stage_a_only=args.stage_a_only, full_docs=args.full_docs, write=args.write,
-                    survivor_pass=not args.no_survivor_pass, parallel=args.p)
+    try:
+        s = propose.run(run_dir, model, executor, design_name=args.design, max_candidates=args.max_candidates,
+                        stage_a_only=args.stage_a_only, full_docs=args.full_docs, write=args.write,
+                        survivor_pass=not args.no_survivor_pass, parallel=args.p, target_only=args.target_only,
+                        min_depth=args.min_depth)
+    except InfraError as e:
+        return infra_abort(run_dir.relative_to(ROOT), e)
     print(json.dumps(s, indent=2))
     print(f"\nrun: {run_dir.relative_to(ROOT)}")
-    return 0
+    return report_aborts(run_dir.relative_to(ROOT), s)
+
+
+def infra_abort(run: Path, e: Exception) -> int:
+    """The set stage stopped on an infrastructure failure: nothing after it was decided."""
+    print(f"INFRASTRUCTURE ERROR (run stopped, no decision recorded): {e}\n"
+          f"run: {run}\nretry with: tools/propose_plan --resume {run}", file=sys.stderr)
+    return 2
+
+
+def report_aborts(run: Path, s: dict) -> int:
+    """Stage B candidates aborted as infrastructure are left out of the summary; --resume retries them."""
+    if not s.get("infra_aborted"):
+        return 0
+    print(f"\n{len(s['infra_aborted'])} candidate(s) aborted as infrastructure (not counted): "
+          f"{', '.join(s['infra_aborted'])}\nretry with: tools/propose_plan --resume {run}", file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":
