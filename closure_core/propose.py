@@ -902,7 +902,7 @@ def tree_sha(d: Path) -> str:
     return h.hexdigest()
 
 
-def write_from(run_dir: Path, executor: Executor) -> list[str]:
+def write_from(run_dir: Path, executor: Executor, parallel: int = 1) -> list[str]:
     """Write a finished run's accepted items into designs/ without new model calls.
 
     Refuses (returns the reasons) unless the run gated candidates and wrote
@@ -922,7 +922,7 @@ def write_from(run_dir: Path, executor: Executor) -> list[str]:
     if not errs and tree_sha(ROOT / "designs" / design_name) != tree_sha(run_dir / "base_pack"):
         errs.append(f"designs/{design_name} differs from the run's base_pack; re-run the proposer")
     if not errs:
-        errs += [f"replay: {d}" for d in replay(run_dir, executor)]
+        errs += [f"replay: {d}" for d in replay(run_dir, executor, parallel)]
     if errs:
         return errs
     write_accepted(run_dir, design_name)
@@ -1172,30 +1172,39 @@ def _replay_stage_a(run_dir: Path, tag: str, parse, diffs: list[str]) -> tuple[o
 
 
 def _replay_stage_b(run_dir: Path, work: Path, cands: list[dict], executor: Executor, diffs: list[str],
-                    target_only: bool = False, formal: dict | None = None) -> None:
-    for c in cands:
-        if c.get("kind") != "task":
-            continue
-        cid, att = c["cid"], 0
-        while (resp := run_dir / "responses" / cid / f"{att}.json").exists():
-            if not (run_dir / "gates" / cid / f"{att}.json").exists():
-                break  # aborted as infrastructure in the run: nothing was decided
-            try:
-                res = gate_response(work / "candidates" / cid / str(att), load(resp)["response"]["text"],
-                                    _pid(cid), executor, work / "gates" / cid / f"{att}.json",
-                                    run_dir / "base_pack", target_only, formal)
-            except InfraError as e:
-                diffs.append(f"{cid} attempt {att}: infrastructure abort in replay (not a decision): {e}")
-                break
-            if res != load(run_dir / "gates" / cid / f"{att}.json"):
-                diffs.append(f"{cid} attempt {att}: gate result differs")
-            nxt = run_dir / "responses" / cid / f"{att + 1}.json"
-            if nxt.exists() and load(nxt)["messages"][-1]["content"] != repair_message(res):
-                diffs.append(f"{cid} attempt {att + 1}: repair message differs")
-            att += 1
+                    target_only: bool = False, formal: dict | None = None, parallel: int = 1) -> None:
+    """`parallel` candidates at a time, as author_all; diffs are appended in cid order."""
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max(1, parallel)) as pool:
+        for f in [pool.submit(_replay_candidate, run_dir, work, c, executor, target_only, formal)
+                  for c in cands if c.get("kind") == "task"]:
+            diffs += f.result()
 
 
-def replay(run_dir: Path, executor: Executor) -> list[str]:
+def _replay_candidate(run_dir: Path, work: Path, c: dict, executor: Executor, target_only: bool,
+                      formal: dict | None) -> list[str]:
+    diffs: list[str] = []
+    cid, att = c["cid"], 0
+    while (resp := run_dir / "responses" / cid / f"{att}.json").exists():
+        if not (run_dir / "gates" / cid / f"{att}.json").exists():
+            break  # aborted as infrastructure in the run: nothing was decided
+        try:
+            res = gate_response(work / "candidates" / cid / str(att), load(resp)["response"]["text"],
+                                _pid(cid), executor, work / "gates" / cid / f"{att}.json",
+                                run_dir / "base_pack", target_only, formal)
+        except InfraError as e:
+            diffs.append(f"{cid} attempt {att}: infrastructure abort in replay (not a decision): {e}")
+            break
+        if res != load(run_dir / "gates" / cid / f"{att}.json"):
+            diffs.append(f"{cid} attempt {att}: gate result differs")
+        nxt = run_dir / "responses" / cid / f"{att + 1}.json"
+        if nxt.exists() and load(nxt)["messages"][-1]["content"] != repair_message(res):
+            diffs.append(f"{cid} attempt {att + 1}: repair message differs")
+        att += 1
+    return diffs
+
+
+def replay(run_dir: Path, executor: Executor, parallel: int = 1) -> list[str]:
     """Re-gate every recorded response; returns mismatches (empty = reproduced).
 
     Follows the run: pass 1 Stage A, Stage B and set stage; then (if recorded)
@@ -1242,7 +1251,7 @@ def replay(run_dir: Path, executor: Executor) -> list[str]:
                             len(seeds) + 1, 1)
     if cands != recorded["1"] or err != rec["passes"]["1"]["error"] or skipped != rec.get("seed_skipped", []):
         return diffs + ["stage A (pass 1): parsed candidates differ from candidates.json"]
-    _replay_stage_b(run_dir, work, cands, executor, diffs, target_only, formal)
+    _replay_stage_b(run_dir, work, cands, executor, diffs, target_only, formal, parallel)
     sync()
     if (run_dir / "set").exists():
         set_stage(again, executor, run_dir / "base_pack", only={c["cid"] for c in cands}, formal=formal)
@@ -1258,7 +1267,7 @@ def replay(run_dir: Path, executor: Executor) -> list[str]:
         if (new != recorded["2"] or unk != rec["unkillable"] or err2 != rec["passes"]["2"]["error"]
                 or remaining != rec["passes"]["2"]["remaining_survivors"]):
             return diffs + ["stage A (pass 2): parsed answer differs from candidates.json"]
-        _replay_stage_b(run_dir, work, new, executor, diffs, target_only, formal)
+        _replay_stage_b(run_dir, work, new, executor, diffs, target_only, formal, parallel)
         sync()
         set_stage(again, executor, run_dir / "base_pack", only={c["cid"] for c in new}, formal=formal)
     for p in sorted((run_dir / "set").glob("*.json")):

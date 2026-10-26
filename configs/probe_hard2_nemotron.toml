@@ -1,0 +1,36 @@
+# Probe: the 26 items written from runs/propose/20261026T095426Z-hard2 (R12-R29,
+# T5-T12) only, null harness, k=2, Nemotron. Same settings as pilot_null.toml
+# otherwise. Each rollout's testbench is kept in traces.jsonl (info.submission,
+# info.submission_source) for regrading. Tags (padded vs the rest) are in
+# configs/probe_hard2_tags.yaml. From the repo root with the venv activated:
+#   vf-eval @ configs/probe_hard2_nemotron.toml -o outputs/probe-hard2
+#   tools/analyze_eval outputs/probe-hard2 --out results/probe-hard2 \
+#     --group-by-tag configs/probe_hard2_tags.yaml
+model = "nvidia/nemotron-3-nano-30b-a3b"
+num_rollouts = 2                 # rollouts per task (-r)
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+push = false
+
+[sampling]
+temperature = 1.0
+max_tokens = 32768
+
+[env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+harness = "null"
+agent_timeout = 900.0
+items = ["R12", "R13", "R14", "R15", "R16", "R17", "R18", "R19", "R20", "R21", "R22", "R23",
+         "R24", "R25", "R26", "R27", "R28", "R29", "T5", "T6", "T7", "T8", "T9", "T10",
+         "T11", "T12"]
+
+[env.agent.harness]
+id = "null"
+
+[env.agent.runtime]
+type = "prime"
+
+[env.agent.scoring]
+mode = "isolated"

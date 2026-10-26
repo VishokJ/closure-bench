@@ -377,7 +377,7 @@ def test_scripted_run_and_replay(scratch):
     assert p2["progress"]["mutants"]["killed_by_plan"] == prog["mutants"]["killed_by_run"].__len__()
     assert s["progress_total"]["mutants"]["killed_by_run"] == prog["mutants"]["killed_by_run"]
 
-    assert propose.replay(run_dir, ex) == []
+    assert propose.replay(run_dir, ex, parallel=3) == []  # candidates replayed concurrently
     # --write-from refuses: the run gated against an empty pack, not designs/uart.
     assert propose.write_from(run_dir, ex) == ["designs/uart differs from the run's base_pack; re-run the proposer"]
 
@@ -386,7 +386,7 @@ def test_scripted_run_and_replay(scratch):
     rec = json.loads(g.read_text())
     rec["accepted"] = False
     g.write_text(json.dumps(rec))
-    assert "c02 attempt 0: gate result differs" in propose.replay(run_dir, ex)
+    assert "c02 attempt 0: gate result differs" in propose.replay(run_dir, ex, parallel=3)
 
 
 class SeedingExecutor(propose.Executor):

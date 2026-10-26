@@ -232,3 +232,17 @@ def test_set_level_band(tmp_path):
     assert ae.band_verdict((0.1, 0.2), (0.3, 0.6)) == "below"
     assert ae.band_verdict((0.7, 0.9), (0.3, 0.6)) == "above"
     assert ae.band_verdict((0.2, 0.5), (0.3, 0.6)) == "overlaps"
+
+
+def test_group_by_tag(tmp_path):
+    write_run(tmp_path / "run", RECORDS)
+    (tmp_path / "tags.yaml").write_text("padded: [uart/R1, uart/R10]\n")
+    tags = ae.load_tags(tmp_path / "tags.yaml")
+    g = ae.summarise(*ae.load([tmp_path / "run"]), tags)["groups"][0]
+    assert list(g["by_tag"]) == ["padded", "untagged"]
+    pad, rest = g["by_tag"]["padded"], g["by_tag"]["untagged"]
+    assert pad["tasks"] == ["uart/R1", "uart/R10"] and rest["tasks"] == ["uart/R2"]
+    assert (pad["graded"], pad["hits"], rest["graded"], rest["hits"]) == (5, 1, 4, 0)
+    assert pad["graded"] + rest["graded"] == g["aggregate"]["graded"]
+    assert "by_tag" not in ae.summarise(*ae.load([tmp_path / "run"]))["groups"][0]
+    assert "## pass@1 by tag" in ae.markdown(ae.summarise(*ae.load([tmp_path / "run"]), tags))

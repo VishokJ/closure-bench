@@ -539,3 +539,1093 @@ items:
       prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
       status: auto_accepted
       audited_by: null
+
+  - id: R12
+    description: On uart_rx, the sink accepts a pending word 8'h3C (m_axis_tvalid and m_axis_tready both
+      high) on the same clock that a second good frame completes. On the next clock m_axis_tvalid is still
+      high and m_axis_tdata is 8'hA5, so the second word is presented and not lost.
+    tier: T2
+    mechanism:
+    - boundary
+    - interaction
+    - data
+    cover: R12_accept_same_cycle_new_word
+    sources:
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 34
+      - 36
+      anchor: Data is transferred from the source to the
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 101
+      - 103
+      anchor: if (m_axis_tvalid && m_axis_tready) begin
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 125
+      anchor: overrun_error_reg <= m_axis_tvalid_reg;
+    cover_module: cov_R12
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c01
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R13
+    description: frame_error pulses while rxd_reg is already low, so the receiver treats the low level as
+      the next start bit and restarts at once. With bit_cnt not returning to 0 in between, that new frame
+      completes and m_axis_tvalid rises with m_axis_tdata equal to 8'hA5.
+    tier: T3
+    mechanism:
+    - sequence
+    - data
+    - boundary
+    cover: R13_rx_resync_after_frame_error
+    sources:
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 16
+      anchor: The UART will try to resynchronize after a framing error.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 137
+      anchor: frame_error_reg <= 1;
+    - type: BASE
+      point:
+        kind: v_branch
+        file: uart_rx.v
+        line: 122
+        name: else
+    cover_module: cov_R13
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c02
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R14
+    description: 'After the receiver delivers a word (m_axis_tvalid rises while bit_cnt is 0), it accepts
+      the next start bit (bit_cnt loads 4''d10) one or two clocks after that rise, with no false start or
+      frame error in between. That second frame then completes: m_axis_tvalid rises again with m_axis_tdata
+      8''h5A and frame_error low.'
+    tier: T2
+    mechanism:
+    - boundary
+    - sequence
+    - data
+    cover: R14_short_stop_back_to_back
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 44
+      anchor: If the receiver does not get a
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 137
+      anchor: bit_cnt <= DATA_WIDTH+2;
+    cover_module: cov_R14
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c03
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R15
+    description: Two consecutive frames each carry a glitch inside a data bit (bit_cnt from 2 to 9), where
+      the synchronised input rxd_reg toggles and toggles back while prescale_reg is non-zero and is unchanged
+      on the sample cycle. The first frame delivers m_axis_tvalid rising with m_axis_tdata 8'hA5. The next
+      frame delivers m_axis_tvalid rising with m_axis_tdata 8'h5A. frame_error and overrun_error stay low
+      in between, and frame_error is low at the second delivery.
+    tier: T3
+    mechanism:
+    - sequence
+    - interaction
+    - data
+    - boundary
+    cover: R15_rx_glitch_off_sample_point_ignored
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 105
+      - 119
+      anchor: data_reg <= {rxd_reg, data_reg[DATA_WIDTH-1:1]};
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 1
+      anchor: The UART performs serial-to-parallel conversion on data characters received from a peripheral
+        device or a MODEM
+    cover_module: cov_R15
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c04
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R16
+    description: uart_rx raises m_axis_tvalid with m_axis_tdata 8'hA5 while prescale is 16'd1. prescale
+      then changes to 16'd2 on a clock where busy is low. The next rise of m_axis_tvalid shows m_axis_tdata
+      8'h5A with prescale still 16'd2, and frame_error stays low from the change until that rise.
+    tier: T3
+    mechanism:
+    - sequence
+    - data
+    - boundary
+    cover: R16_rx_prescale_change_between_frames
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: of a parameter so it can be changed at run time
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 111
+      - 133
+      anchor: prescale_reg <= (prescale << 3)-1;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 62
+        name: prescale[1]
+    cover_module: cov_R16
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c05
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T5
+    description: uart_tx loads a frame with prescale 1. After it, with busy low, s_axis_tvalid loads a frame
+      with prescale 3. While prescale stays 3, every data bit (bit_cnt 8 down to 1) starts with prescale_reg
+      reloaded to 19'd23. The txd values at those bit starts, including the last one at bit_cnt 1, form
+      8'h5A.
+    tier: T3
+    mechanism:
+    - sequence
+    - data
+    - boundary
+    cover: T5_tx_rate_change_5a_data
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: so it can be changed at run time
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 93
+      - 110
+      anchor: prescale_reg <= (prescale << 3)-1;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_tx.v
+        line: 60
+        name: prescale[1]
+    cover_module: cov_T5
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c06
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R17
+    description: With m_axis_tready held low and no handshake, overrun_error pulses a second time since
+      m_axis_tready was last high. At that second overrun_error pulse m_axis_tvalid is high and m_axis_tdata
+      is 8'h5A.
+    tier: T3
+    mechanism:
+    - sequence
+    - data
+    - boundary
+    cover: R17_rx_double_overrun_third_word
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 44
+      anchor: from overrun_error and the word is discarded
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 16
+      anchor: was not read by the CPU before the next character was transferred into the Receiver Buffer
+        Register
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 125
+      anchor: overrun_error_reg <= m_axis_tvalid_reg;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 56
+        name: overrun_error
+    cover_module: cov_R17
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c07
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R18
+    description: On uart_rx, overrun_error pulses while m_axis_tvalid is high and m_axis_tready is low.
+      At the next handshake (m_axis_tvalid and m_axis_tready both high), m_axis_tdata is 8'hC3, overrun_error
+      is low, and overrun_error has not pulsed again since the tracked pulse.
+    tier: T2
+    mechanism:
+    - sequence
+    - interaction
+    - boundary
+    cover: R18_overrun_then_accept_newest
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 44
+      anchor: If the data word currently in the tdata output register is not read
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 101
+      - 125
+      anchor: overrun_error_reg <= m_axis_tvalid_reg;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 72
+        name: overrun_error_reg
+    cover_module: cov_R18
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c08
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R19
+    description: While uart_rx holds an unread word (m_axis_tvalid high, m_axis_tdata 8'h3C, m_axis_tready
+      low on the previous clock), a frame ends with a low stop bit. frame_error pulses while m_axis_tvalid
+      is still high, m_axis_tdata is still 8'h3C and overrun_error is low.
+    tier: T2
+    mechanism:
+    - interaction
+    - data
+    cover: R19_frame_error_with_pending_word
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 43
+      - 44
+      anchor: stop bit of the right level, then a single pulse will be emitted from the
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 16
+      anchor: Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit
+        is detected as a logic 0 bit
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: The valid data bytes and control information from the Transmitter must remain unchanged once
+        TVALID has been asserted by the Transmitter.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 128
+      anchor: frame_error_reg <= 1;
+    - type: BASE
+      point:
+        kind: v_branch
+        file: uart_rx.v
+        line: 122
+        name: else
+    cover_module: cov_R19
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c09
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R20
+    description: On uart_rx, after a first word with m_axis_tdata equal to 8'h3C has been accepted (m_axis_tvalid
+      and m_axis_tready both high), a later word raises m_axis_tvalid on a clock where m_axis_tready is
+      low. On the very next clock m_axis_tvalid is still high and m_axis_tready is high, so this second
+      word, m_axis_tdata equal to 8'hA5, is accepted after exactly one stall cycle.
+    tier: T2
+    mechanism:
+    - boundary
+    - interaction
+    cover: R20_rx_single_cycle_stall_accept
+    sources:
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: Once TVALID is asserted, it must remain asserted until the handshake occurs.
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 34
+      - 36
+      anchor: Data is transferred from the source to the
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 101
+      - 103
+      anchor: if (m_axis_tvalid && m_axis_tready) begin
+    cover_module: cov_R20
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c10
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R21
+    description: Two frames are received back to back with prescale held at 16'd1 and frame_error never
+      high. The first word is accepted (m_axis_tvalid rises with m_axis_tdata 8'h69, then falls). The second
+      word then raises m_axis_tvalid with m_axis_tdata 8'h96.
+    tier: T2
+    mechanism:
+    - boundary
+    - data
+    - sequence
+    cover: R21_rx_min_prescale_two_words
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: it should be set to Fclk / (baud * 8)
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 33
+      - 36
+      anchor: Data is transferred from the source to the
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 130
+      - 137
+      anchor: prescale_reg <= (prescale << 2)-2;
+    cover_module: cov_R21
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c11
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R22
+    description: Two consecutive words are delivered on m_axis_tdata (m_axis_tvalid high), 8'h12 and then
+      8'h34, with no frame_error pulse between them. The frame carrying 8'h34 is received with prescale
+      held at 16'd2 from its start-bit detection until the word is delivered.
+    tier: T3
+    mechanism:
+    - sequence
+    - data
+    - boundary
+    cover: R22_rx_prescale2_two_words
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: The prescale input determines the
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 42
+      - 44
+      anchor: stop bit of the right level, then a single pulse will be emitted from the
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 62
+        name: prescale[1]
+    cover_module: cov_R22
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c12
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R23
+    description: After a frame_error pulse, the receiver goes idle with busy low and rxd high for at least
+      16 consecutive clocks. The next frame then delivers m_axis_tdata 8'hA5 as m_axis_tvalid rises, with
+      no further frame_error pulse in between.
+    tier: T3
+    mechanism:
+    - sequence
+    - data
+    - boundary
+    cover: R23_recover_after_frame_error_idle
+    sources:
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 16
+      anchor: The UART will try to resynchronize after a framing error.
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 42
+      - 44
+      anchor: frame_error output and the received word will be discarded
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 126
+      - 137
+      anchor: frame_error_reg <= 1;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 57
+        name: frame_error
+    cover_module: cov_R23
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c13
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R24
+    description: On uart_rx, frame_error pulses for a frame whose shifted-in data_reg is 8'h5A, while m_axis_tvalid
+      is low and m_axis_tdata still holds the previously accepted word 8'hA5. The bad word is discarded
+      and the old output data is kept.
+    tier: T2
+    mechanism:
+    - boundary
+    - interaction
+    - data
+    cover: R24_frame_error_keeps_old_tdata
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 42
+      - 44
+      anchor: frame_error output and the received word will be discarded.
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 16
+      anchor: Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit
+        is detected as a logic 0 bit
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 128
+      anchor: frame_error_reg <= 1;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 73
+        name: frame_error_reg
+    cover_module: cov_R24
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c14
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R25
+    description: 'While m_axis_tvalid is high with m_axis_tdata 8''h3C and m_axis_tready low, the word is
+      later accepted (m_axis_tready high) in a cycle where busy is high and bit_cnt is between 2 and 9 of
+      the next frame. Without busy falling, that frame then completes: m_axis_tvalid rises with m_axis_tdata
+      8''hA5 and overrun_error low.'
+    tier: T3
+    mechanism:
+    - sequence
+    - interaction
+    - data
+    - boundary
+    cover: R25_rx_accept_during_next_frame
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 42
+      anchor: If the data word currently in the tdata output register is not read
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 101
+      - 125
+      anchor: overrun_error_reg <= m_axis_tvalid_reg;
+    cover_module: cov_R25
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c15
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R26
+    description: 'While m_axis_tvalid stays high holding m_axis_tdata 8''h3C with m_axis_tready low and
+      no handshake, frame_error first pulses for a bad frame. Later a good frame completes: overrun_error
+      is high, m_axis_tvalid is still high and m_axis_tdata has changed from 8''h3C to 8''hA5.'
+    tier: T3
+    mechanism:
+    - sequence
+    - interaction
+    - data
+    - boundary
+    cover: R26_frame_error_then_overrun
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 44
+      anchor: from overrun_error and the word is discarded.
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 44
+      anchor: frame_error output and the received word will be discarded.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 128
+      anchor: overrun_error_reg <= m_axis_tvalid_reg;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 56
+        name: overrun_error
+    cover_module: cov_R26
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c16
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R27
+    description: rst is first sampled high on exactly the clock where a good stop bit is sampled (prescale_reg
+      is 0, bit_cnt is 1, rxd_reg high) while m_axis_tvalid is low. After rst is released, m_axis_tvalid
+      shows no word other than 8'h5A, and its first rise brings m_axis_tdata equal to 8'h5A from a new frame.
+    tier: T2
+    mechanism:
+    - reset_timing
+    - boundary
+    - data
+    cover: R27_rx_rst_at_stop_sample
+    sources:
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 28
+      anchor: During reset, TVALID must be driven LOW.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 86
+      - 125
+      anchor: m_axis_tvalid_reg <= 1;
+    cover_module: cov_R27
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c17
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R28
+    description: 'While m_axis_tvalid is high with m_axis_tdata 8''h3C and m_axis_tready low, the receiver
+      rejects a start bit (prescale_reg 0, bit_cnt 10, rxd_reg high); m_axis_tvalid stays high with overrun_error
+      low until a handshake (m_axis_tvalid and m_axis_tready high) transfers 8''h3C. After that, the receiver
+      still takes in a complete new frame: m_axis_tvalid rises again with m_axis_tdata 8''hA5 and overrun_error
+      low.'
+    tier: T3
+    mechanism:
+    - sequence
+    - interaction
+    - data
+    - boundary
+    cover: R28_pending_word_survives_false_start
+    sources:
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 1
+      anchor: False start bit detection.
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: Once TVALID is asserted, it must remain asserted until the handshake occurs.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 108
+      - 115
+      anchor: if (!rxd_reg) begin
+    - type: BASE
+      point:
+        kind: v_branch
+        file: uart_rx.v
+        line: 109
+        name: else
+    cover_module: cov_R28
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c18
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: R29
+    description: 'On a clock where frame_error is high, m_axis_tvalid and m_axis_tready are both high and
+      m_axis_tdata is 8''h3C, so the pending word is accepted during the frame-error strobe. On the next
+      clock m_axis_tvalid is low and m_axis_tdata is still 8''h3C: the bad frame does not overwrite or re-validate
+      the word just handed off.'
+    tier: T2
+    mechanism:
+    - boundary
+    - interaction
+    - data
+    cover: R29_accept_during_frame_error
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 42
+      - 44
+      anchor: If the receiver does not get a
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 101
+      - 103
+      anchor: if (m_axis_tvalid && m_axis_tready) begin
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 126
+      - 128
+      anchor: frame_error_reg <= 1;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 73
+        name: frame_error_reg
+    cover_module: cov_R29
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c19
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T6
+    description: 'On uart_tx, s_axis_tvalid rises on exactly the clock where the transmitter finishes its
+      stop period (prescale_reg 0, bit_cnt 0, s_axis_tready low), right after a frame whose data bits on
+      txd were 8''hC3. On the next clock txd is low and s_axis_tready is high. The byte loaded on that clock
+      is then shifted out completely: its eight data bits on txd form 8''h3C, and txd is high (stop bit)
+      with bit_cnt 0 after the last data bit.'
+    tier: T3
+    mechanism:
+    - boundary
+    - data
+    - sequence
+    cover: T6_tvalid_rise_on_frame_end
+    sources:
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: Either TVALID or TREADY can be asserted first, or both can be asserted in the same ACLK cycle.
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 34
+      - 36
+      anchor: destination only when both tvalid and tready are high
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 89
+      - 100
+      anchor: s_axis_tready_reg <= !s_axis_tready_reg;
+    cover_module: cov_T6
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c20
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T7
+    description: On the first clock after rst falls, s_axis_tvalid is high while s_axis_tready is still
+      low, with prescale_reg and bit_cnt both 0; on the next clock txd is low, s_axis_tready is high and
+      bit_cnt is 9, and the data bits read on txd at the bit boundaries form 8'hA5. The transmitter then
+      accepts exactly one further byte (s_axis_tvalid high with prescale_reg and bit_cnt 0) whose data bits
+      on txd form 8'h3C.
+    tier: T3
+    mechanism:
+    - reset_timing
+    - data
+    - boundary
+    - sequence
+    cover: T7_tvalid_first_clock_after_reset
+    sources:
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 28
+      anchor: A Transmitter interface must only begin driving TVALID at a rising ACLK edge following a rising
+        edge at which ARESETn is asserted HIGH.
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 35
+      - 35
+      anchor: destination only when both tvalid and tready are high
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 89
+      - 100
+      anchor: s_axis_tready_reg <= !s_axis_tready_reg;
+    cover_module: cov_T7
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c21
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T8
+    description: 'With prescale held at 16''d1, uart_tx sends two words back to back: the first, sampled
+      on txd at its eight data-bit boundaries, forms 8''h96, and the second forms 8''h69. Every data bit
+      lasts exactly 8 clocks between boundaries (prescale_reg 0). The second word is accepted (s_axis_tvalid
+      high) on the very first idle clock after the first word''s stop bit (prescale_reg 0, bit_cnt 0). The
+      cover hits on the cycle after the second word''s last data bit, with txd high and bit_cnt 0.'
+    tier: T2
+    mechanism:
+    - boundary
+    - data
+    cover: T8_tx_min_prescale_b2b_96_69
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: it should be set to Fclk / (baud * 8)
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 101
+      - 105
+      anchor: '{data_reg, txd_reg} <= {1''b0, data_reg};'
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 86
+      - 100
+      anchor: if (s_axis_tvalid) begin
+    cover_module: cov_T8
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c22
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T9
+    description: With prescale at 16'd2 throughout, uart_tx sends a frame whose txd samples at the eight
+      data-bit boundaries (prescale_reg 19'd0, bit_cnt 8 down to 1) form 8'h12. busy then stays high with
+      no idle cycle into the next frame, which is loaded with s_axis_tvalid high. At that frame's bit_cnt
+      2 boundary, the txd samples of data bits 0 to 6 together with data_reg[0] (bit 7, not yet sent) form
+      8'h34.
+    tier: T3
+    mechanism:
+    - sequence
+    - data
+    - boundary
+    cover: T9_tx_prescale2_back_to_back_12_34
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: it should be set to Fclk / (baud * 8)
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 39
+      anchor: Both interfaces also present a 'busy' signal that is high when an operation is
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 89
+      - 100
+      anchor: s_axis_tready_reg <= !s_axis_tready_reg;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_tx.v
+        line: 60
+        name: prescale[1]
+    cover_module: cov_T9
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c23
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T10
+    description: With prescale held at 16'd1 and three frames sent back-to-back, each of the first two frames
+      ends with a 0 last data bit. txd rises at the stop bit, on the clock where bit_cnt goes from 1 to
+      0, and then stays high for exactly 9 clocks before falling as the next start bit, with bit_cnt reloaded
+      to 9. The cover is reached when the second such 9-clock stop gap in a row ends.
+    tier: T3
+    mechanism:
+    - boundary
+    - sequence
+    cover: T10_two_stop_gaps_9_clocks_prescale1
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: The prescale input determines the
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 106
+      - 110
+      anchor: prescale_reg <= (prescale << 3);
+    cover_module: cov_T10
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c24
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T11
+    description: On uart_tx, s_axis_tvalid rises (it was low on the previous clock) while busy is high and
+      bit_cnt is between 1 and 8, with s_axis_tdata at 8'h3C. s_axis_tvalid and s_axis_tdata then stay unchanged
+      until the byte is loaded, and the next frame shifts 8'h3C out on txd, sampled at its eight data-bit
+      boundaries.
+    tier: T2
+    mechanism:
+    - boundary
+    - interaction
+    - data
+    - sequence
+    cover: T11_tvalid_rise_mid_frame
+    sources:
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: Either TVALID or TREADY can be asserted first, or both can be asserted in the same ACLK cycle.
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 86
+      - 100
+      anchor: if (s_axis_tvalid) begin
+    cover_module: cov_T11
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c25
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null
+
+  - id: T12
+    description: 'With prescale at 16''d1, two words go out back-to-back: s_axis_tready pulses high while
+      busy stays high, after s_axis_tvalid was high on the previous clock. At the end of the second word,
+      with s_axis_tvalid low on the previous clock, busy falls and s_axis_tready rises on the same clock,
+      exactly 9 clocks after bit_cnt was first seen 0 after being 1 (start of the stop bit).'
+    tier: T3
+    mechanism:
+    - boundary
+    - interaction
+    - sequence
+    cover: T12_tx_b2b_busy_fall_ready_rise_9
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 39
+      anchor: Both interfaces also present a 'busy' signal that is high when an operation is
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 86
+      - 110
+      anchor: prescale_reg <= (prescale << 3);
+    cover_module: cov_T12
+    gold_source: formal
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261026T095426Z-hard2
+      candidate: c26
+      prompt_sha: 08cd88b82f92455fc7349b822c3cade989606bda04f1a6465b9e70a70586f54f
+      status: auto_accepted
+      audited_by: null

@@ -296,10 +296,14 @@ class ClosureConfig(vf.TasksetConfig):
     golds, reward = fraction of targets hit."""
     max_files: int | None = None
     """campaign: testbench files graded per task; None takes the task's number of targets."""
+    items: list[str] | None = None
+    """single: load only these plan item IDs (each must exist and have a gold); None: all."""
 
 
 class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
     def load(self) -> list[ClosureTask]:
+        if self.config.items is not None and self.config.tasks != "single":
+            raise ValueError(f"items applies to tasks='single' only, not {self.config.tasks!r}")
         if self.config.tasks == "campaign":
             return self._load_campaigns()
         design = load_design(self.config.design)
@@ -308,6 +312,12 @@ class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
         tasks = []
         specs = ({it.id: (it.id,) for it in design.plan} if self.config.tasks == "single"
                  else design.multi)
+        if self.config.items is not None:
+            bad = [i for i in self.config.items
+                   if i not in specs or not (design.pack / "gold" / f"{i}.sv").exists()]
+            if bad:
+                raise ValueError(f"items not in the {design.name} plan or without a gold: {bad}")
+            specs = {name: t for name, t in specs.items() if name in self.config.items}
         for name, targets in specs.items():
             if not (design.pack / "gold" / f"{name}.sv").exists():
                 continue  # no proof of reachability, not a task

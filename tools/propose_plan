@@ -78,7 +78,7 @@ def main() -> int:
         print(json.dumps(s, indent=2))
         return 0
     if args.write_from:
-        errs = propose.write_from(args.write_from.resolve(), executor)
+        errs = propose.write_from(args.write_from.resolve(), executor, parallel=args.p)
         if errs:
             print("NOT WRITTEN:\n  " + "\n  ".join(errs))
             return 1
@@ -86,7 +86,7 @@ def main() -> int:
         print(f"written: {s.get('written')}; tools/check exit {s.get('check_exit')}")
         return 0 if s.get("check_exit") == 0 else 1
     if args.replay:
-        diffs = propose.replay(args.replay.resolve(), executor)
+        diffs = propose.replay(args.replay.resolve(), executor, parallel=args.p)
         print("\n".join(diffs) or "REPRODUCED: every recorded decision, repair message and the summary")
         return 1 if diffs else 0
 

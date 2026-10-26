@@ -40,12 +40,18 @@ Calibration (calibration.json, calibration.md), per group, on graded rollouts:
 run_sh_calls counts assistant tool calls whose payload mentions run.sh (bash
 harness: the agent simulating its own testbench); 0 under the null harness.
 
+--group-by-tag TAGS.yaml (a sidecar {tag: [task id, ...]}, at most one tag per
+task) adds, per group, the aggregate over each tag's tasks (untagged tasks under
+"untagged"): summary.json groups[].by_tag and a table in tables.md.
+
 Writes <out>/summary.json, <out>/tables.md, <out>/pass_at_1.png and
 <out>/outcomes.png. Same inputs give byte-identical outputs.
 
 Usage:  uv run --extra analyze tools/analyze_eval RUN_DIR|PARENT_DIR ... [--out results/eval]
                                                     [--band 0.3,0.6] [--no-charts]
-(the analyze extra brings matplotlib for the charts; --no-charts needs only the stdlib)
+                                                    [--group-by-tag TAGS.yaml]
+(the analyze extra brings matplotlib for the charts; --no-charts needs only the stdlib,
+--group-by-tag also pyyaml)
 """
 
 from __future__ import annotations
@@ -236,22 +242,46 @@ def stats(rs: list[dict]) -> dict:
     }
 
 
-def summarise(groups: dict, rollouts: dict) -> dict:
+def aggregate(tasks: dict, rollouts: dict) -> dict:
+    """Pooled stats over these tasks ({task: stats}), with task-bootstrap intervals."""
+    agg = stats([r for t in tasks for r in rollouts[t]])
+    del agg["wilson95"], agg["wilson95_untruncated"]   # per-task intervals only
+    agg["bootstrap95"] = bootstrap_tasks([(s["hits"], s["graded"]) for s in tasks.values()])
+    agg["bootstrap95_untruncated"] = bootstrap_tasks(
+        [(s["hits"], s["graded"] - s["truncated"]) for s in tasks.values()])
+    agg["all_truncated_tasks"] = [t for t, s in tasks.items() if s["all_truncated"]]
+    rates = [s["pass_at_1"] for s in tasks.values() if s["pass_at_1"] is not None]
+    agg["task_mean_pass_at_1"] = sum(rates) / len(rates) if rates else None
+    return agg
+
+
+def load_tags(path: Path) -> dict[str, str]:
+    """Sidecar YAML {tag: [task id, ...]} -> {task id: tag}."""
+    import yaml  # only with --group-by-tag: the rest needs the stdlib only
+    out = {}
+    for tag, ids in (yaml.safe_load(path.read_text()) or {}).items():
+        for t in ids:
+            if t in out:
+                sys.exit(f"{path}: {t} has two tags ({out[t]}, {tag})")
+            out[t] = str(tag)
+    return out
+
+
+def summarise(groups: dict, rollouts: dict, tags: dict[str, str] | None = None) -> dict:
     out = {"groups": []}
     for lab in sorted(groups):
         tasks = {t: stats(rollouts[lab][t]) for t in sorted(rollouts[lab], key=task_key)}
-        agg = stats([r for t in tasks for r in rollouts[lab][t]])
-        del agg["wilson95"], agg["wilson95_untruncated"]   # per-task intervals only
-        agg["bootstrap95"] = bootstrap_tasks([(s["hits"], s["graded"]) for s in tasks.values()])
-        agg["bootstrap95_untruncated"] = bootstrap_tasks(
-            [(s["hits"], s["graded"] - s["truncated"]) for s in tasks.values()])
-        agg["all_truncated_tasks"] = [t for t, s in tasks.items() if s["all_truncated"]]
-        rates = [s["pass_at_1"] for s in tasks.values() if s["pass_at_1"] is not None]
-        agg["task_mean_pass_at_1"] = sum(rates) / len(rates) if rates else None
         g = groups[lab]
-        out["groups"].append(rnd({"label": lab, "model": g["model"], "harness": g["harness"],
-                                  "max_tokens": g["max_tokens"], "max_turns": g["max_turns"],
-                                  "runs": sorted(g["runs"]), "aggregate": agg, "tasks": tasks}))
+        grp = {"label": lab, "model": g["model"], "harness": g["harness"],
+               "max_tokens": g["max_tokens"], "max_turns": g["max_turns"],
+               "runs": sorted(g["runs"]), "aggregate": aggregate(tasks, rollouts[lab]), "tasks": tasks}
+        if tags is not None:
+            split = defaultdict(dict)
+            for t, s in tasks.items():
+                split[tags.get(t, "untagged")][t] = s
+            grp["by_tag"] = {tag: {"tasks": list(ts), **aggregate(ts, rollouts[lab])}
+                             for tag, ts in sorted(split.items())}
+        out["groups"].append(rnd(grp))
     return out
 
 
@@ -493,6 +523,16 @@ def markdown(summary: dict) -> str:
     parts += [table(["", "rollouts", "pass@1 [bootstrap 95%]", "task mean",
                      "pass@1 untruncated [bootstrap 95%]", "truncated", "in tokens", "out tokens",
                      "turns", "run.sh calls (rollouts)", "sim s", "submission"], rows), ""]
+    if any("by_tag" in g for g in gs):
+        parts += ["## pass@1 by tag", "",
+                  table(["", "tag", "tasks", "rollouts", "pass@1 [bootstrap 95%]", "task mean",
+                         "pass@1 untruncated [bootstrap 95%]", "truncated"],
+                        [[short[g["label"]], tag, str(len(a["tasks"])),
+                          f"{a['graded']} (+{a['infra_errors']} infra)",
+                          ci(a["pass_at_1"], a["bootstrap95"]), pct(a["task_mean_pass_at_1"]),
+                          ci(a["pass_at_1_untruncated"], a["bootstrap95_untruncated"]),
+                          pct(a["truncation_rate"])]
+                         for g in gs for tag, a in g.get("by_tag", {}).items()]), ""]
     flagged = [(short[g["label"]], g["aggregate"]["all_truncated_tasks"]) for g in gs]
     if any(ts for _, ts in flagged):
         parts += ["Every rollout truncated: " + "; ".join(
@@ -611,13 +651,15 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=ROOT / "results" / "eval")
     ap.add_argument("--no-charts", action="store_true")
     ap.add_argument("--band", default="0.3,0.6", help="target band for mean pass@1: LO,HI")
+    ap.add_argument("--group-by-tag", type=Path, metavar="TAGS.yaml",
+                    help="sidecar {tag: [task id, ...]}: also report each group per tag")
     args = ap.parse_args()
     band = tuple(float(x) for x in args.band.split(","))
     if len(band) != 2 or not 0 <= band[0] < band[1] <= 1:
         ap.error("--band takes LO,HI with 0 <= LO < HI <= 1")
 
     groups, rollouts = load(args.dirs)
-    summary = summarise(groups, rollouts)
+    summary = summarise(groups, rollouts, load_tags(args.group_by_tag) if args.group_by_tag else None)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     md = markdown(summary)

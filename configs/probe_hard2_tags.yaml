@@ -1,0 +1,3 @@
+# tools/analyze_eval --group-by-tag: items written from hard2 candidates c10, c11,
+# c18, c20, c21 (runs/propose/20261026T095426Z-hard2/written.json).
+padded: [uart/R20, uart/R21, uart/R28, uart/T6, uart/T7]
