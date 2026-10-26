@@ -1,6 +1,6 @@
 """tools/analyze_eval on a small synthetic run: Wilson and task-bootstrap
 intervals, truncation, outcome categories, thinking-token split, run.sh calls,
-grouping by max_tokens, determinism."""
+grouping by max_tokens, calibration classes, determinism."""
 
 from __future__ import annotations
 
@@ -119,7 +119,8 @@ def test_outputs_deterministic(tmp_path, summary):
                         "--out", str(tmp_path / name), "--no-charts"],
                        check=True, capture_output=True)
         outs.append({p.name: p.read_bytes() for p in sorted((tmp_path / name).iterdir())})
-    assert outs[0] == outs[1] and set(outs[0]) == {"summary.json", "tables.md"}
+    assert outs[0] == outs[1]
+    assert set(outs[0]) == {"summary.json", "tables.md", "calibration.json", "calibration.md"}
 
 
 def test_bootstrap_resamples_tasks():
@@ -158,3 +159,76 @@ def test_run_sh_calls():
     r = ae.classify(trace("uart/R1", nodes=nodes)["traces"][0])
     assert r["run_sh_calls"] == 2                         # tool output and prose do not count
     assert ae.classify(trace("uart/R1")["traces"][0])["run_sh_calls"] == 0
+
+
+# --- calibration ------------------------------------------------------------
+
+MID = [(2, 4), (1, 4), (3, 4), (2, 4), (2, 4), (1, 4), (3, 4), (2, 4), (2, 4), (3, 4)]
+
+
+def calibration_for(tmp_path, counts, band=(0.3, 0.6)):
+    """counts: {task: (hits, rollouts)} -> calibration of one synthetic run."""
+    records = [trace(t, reward=float(i < k)) for t, (k, n) in counts.items() for i in range(n)]
+    write_run(tmp_path / "run", records)
+    groups, rollouts = ae.load([tmp_path])
+    return ae.calibrate(ae.summarise(groups, rollouts), groups, band)["groups"][0]
+
+
+def test_betainc_closed_forms():
+    for x in (0.05, 0.2, 0.5, 0.9):
+        assert ae.betainc(1, 1, x) == pytest.approx(x, abs=1e-12)
+        assert ae.betainc(9, 1, x) == pytest.approx(x ** 9, abs=1e-12)
+        assert ae.betainc(1, 9, x) == pytest.approx(1 - (1 - x) ** 9, abs=1e-12)
+        assert ae.beta_ppf(ae.betainc(3, 5, x), 3, 5) == pytest.approx(x, abs=1e-9)
+
+
+def test_two_of_two_among_mid_tasks_is_not_too_easy(tmp_path):
+    counts = {f"uart/M{i}": c for i, c in enumerate(MID)} | {"uart/X": (2, 2)}
+    g = calibration_for(tmp_path, counts)
+    assert g["tasks"]["uart/X"]["class"] in ("unclear", "in_band")
+    assert g["tasks"]["uart/M0"]["class"] == "in_band"          # 2/4 among mid tasks
+
+
+def test_eight_of_eight_is_too_easy(tmp_path):
+    # a probe-like set: some saturated, some unsolved, some mid tasks
+    counts = ({f"uart/E{i}": (4, 4) for i in range(5)} | {f"uart/H{i}": (0, 4) for i in range(2)}
+              | {f"uart/M{i}": c for i, c in enumerate(MID[:5])} | {"uart/X": (8, 8)})
+    g = calibration_for(tmp_path, counts)
+    assert g["tasks"]["uart/X"]["class"] == "too_easy"
+    assert g["tasks"]["uart/X"]["p_gt_0.9"] > 0.8
+
+
+def test_too_hard_and_unclear_rerun(tmp_path):
+    counts = {f"uart/H{i}": (0, 8) for i in range(6)} | {f"uart/M{i}": c for i, c in enumerate(MID[:4])}
+    g = calibration_for(tmp_path, counts)
+    assert g["tasks"]["uart/H0"]["class"] == "too_hard"
+    assert g["unclear"] and g["unclear"] == [t for t, r in g["tasks"].items()
+                                             if r["class"] == "unclear"]
+    cmd = g["rerun_command"]
+    assert cmd.startswith("vf-eval @ ") and "/run/configs/eval.toml" in cmd
+    assert "-m m/a --sampling.max_tokens 16000" in cmd
+    assert f"--select.include.ids {' '.join(g['unclear'])} -r 2 -o " in cmd
+    assert calibration_for(tmp_path / "all_easy", {"uart/E": (8, 8), "uart/F": (8, 8)})[
+        "rerun_command"] is None
+
+
+def test_prior_strength_capped_when_tasks_look_identical(tmp_path):
+    # every task 2/4: the fit finds no spread and runs to the bound; the cap keeps
+    # the prior at one task's worth of data, so a 4/4 task is not pulled to 0.5
+    counts = {f"uart/M{i}": (2, 4) for i in range(10)} | {"uart/X": (4, 4)}
+    g = calibration_for(tmp_path, counts)
+    pr = g["prior"]
+    assert pr["capped"] and pr["alpha"] + pr["beta"] == pytest.approx(4)
+    assert g["tasks"]["uart/X"]["posterior_mean"] > 0.7
+
+
+def test_set_level_band(tmp_path):
+    g = calibration_for(tmp_path, {f"uart/M{i}": c for i, c in enumerate(MID)})
+    st = g["set"]
+    assert st["task_mean_pass_at_1"] == pytest.approx(0.525)
+    assert st["bootstrap95"][0] <= 0.525 <= st["bootstrap95"][1]
+    assert ae.band_verdict(st["bootstrap95"], (0.3, 0.6)) == st["verdict"]
+    assert ae.band_verdict((0.4, 0.5), (0.3, 0.6)) == "in_band"
+    assert ae.band_verdict((0.1, 0.2), (0.3, 0.6)) == "below"
+    assert ae.band_verdict((0.7, 0.9), (0.3, 0.6)) == "above"
+    assert ae.band_verdict((0.2, 0.5), (0.3, 0.6)) == "overlaps"

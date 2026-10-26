@@ -19,6 +19,24 @@ Wilson 95%. Per group it is a 95% percentile bootstrap that resamples tasks
 (2,000 resamples, fixed seed): rollouts cluster by task, so a pooled Wilson
 interval would be too narrow.
 
+Calibration (calibration.json, calibration.md), per group, on graded rollouts:
+  set level     mean of per-task pass@1, task-bootstrap 95% interval, against
+                --band LO,HI: in_band (interval inside), below, above, overlaps
+  per task      Beta(a, b) prior fitted to all tasks' (hits, rollouts) by
+                beta-binomial maximum likelihood (empirical Bayes), its
+                strength a + b capped at the median rollouts per task (mean
+                kept): with ~4 rollouts per task the fit often finds no spread
+                between tasks and sends a + b to the search bound, so every
+                posterior would be the set mean, whatever the task's own
+                counts. Posterior Beta(a + hits, b + misses), classified in
+                this order:
+                  too_easy  P(p > 0.9) > 0.8
+                  too_hard  P(p < 0.05) > 0.8
+                  in_band   P(0.2 < p < 0.8) > 0.6
+                  unclear   otherwise -> listed with a vf-eval command for +2
+                            rollouts each (writes next to the first run, so
+                            re-analysing the parent dir merges them)
+
 run_sh_calls counts assistant tool calls whose payload mentions run.sh (bash
 harness: the agent simulating its own testbench); 0 under the null harness.
 
@@ -26,6 +44,7 @@ Writes <out>/summary.json, <out>/tables.md, <out>/pass_at_1.png and
 <out>/outcomes.png. Same inputs give byte-identical outputs.
 
 Usage:  uv run --extra analyze tools/analyze_eval RUN_DIR|PARENT_DIR ... [--out results/eval]
+                                                    [--band 0.3,0.6] [--no-charts]
 (the analyze extra brings matplotlib for the charts; --no-charts needs only the stdlib)
 """
 
@@ -34,6 +53,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import re
 import statistics
@@ -149,7 +169,9 @@ def load(paths: list[Path]) -> tuple[dict, dict]:
     for d in run_dirs(paths):
         g = group_of(d)
         lab = label(g)
-        groups.setdefault(lab, {**g, "runs": []})["runs"].append(d.name)
+        grp = groups.setdefault(lab, {**g, "runs": [], "paths": []})
+        grp["runs"].append(d.name)
+        grp["paths"].append(d)
         with open(d / "traces.jsonl") as f:
             for line in f:
                 rec = json.loads(line)
@@ -231,6 +253,192 @@ def summarise(groups: dict, rollouts: dict) -> dict:
                                   "max_tokens": g["max_tokens"], "max_turns": g["max_turns"],
                                   "runs": sorted(g["runs"]), "aggregate": agg, "tasks": tasks}))
     return out
+
+
+# --- calibration ------------------------------------------------------------
+
+PRIOR_BOUNDS = (0.01, 1e4)   # a, b search range; a bound hit is reported
+
+
+def _lbeta(a: float, b: float) -> float:
+    return math.lgamma(a) + math.lgamma(b) - math.lgamma(a + b)
+
+
+def betainc(a: float, b: float, x: float) -> float:
+    """Regularized incomplete beta I_x(a, b) (continued fraction, Lentz)."""
+    if x <= 0:
+        return 0.0
+    if x >= 1:
+        return 1.0
+    if x > (a + 1) / (a + b + 2):
+        return 1.0 - betainc(b, a, 1.0 - x)
+    front = math.exp(a * math.log(x) + b * math.log1p(-x) - _lbeta(a, b)) / a
+    tiny = 1e-300
+    f, c, d = 1.0, 1.0, 0.0
+    for i in range(400):
+        m = i // 2
+        if i == 0:
+            num = 1.0
+        elif i % 2 == 0:
+            num = m * (b - m) * x / ((a + 2 * m - 1) * (a + 2 * m))
+        else:
+            num = -(a + m) * (a + b + m) * x / ((a + 2 * m) * (a + 2 * m + 1))
+        d = 1.0 + num * d
+        d = tiny if abs(d) < tiny else d
+        d = 1.0 / d
+        c = 1.0 + num / c
+        c = tiny if abs(c) < tiny else c
+        f *= c * d
+        if abs(1.0 - c * d) < 1e-12:
+            break
+    return front * (f - 1.0)
+
+
+def beta_ppf(q: float, a: float, b: float) -> float:
+    lo, hi = 0.0, 1.0
+    for _ in range(100):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if betainc(a, b, mid) < q else (lo, mid)
+    return (lo + hi) / 2
+
+
+def fit_beta_prior(counts: list[tuple[int, int]]) -> dict:
+    """Beta-binomial maximum likelihood over (log a, log b): a grid, then a
+    shrinking pattern search. Deterministic; no scipy."""
+    counts = [c for c in counts if c[1]]
+
+    def ll(la: float, lb: float) -> float:
+        a, b = math.exp(la), math.exp(lb)
+        return sum(_lbeta(k + a, n - k + b) - _lbeta(a, b) for k, n in counts)
+
+    lo, hi = (math.log(v) for v in PRIOR_BOUNDS)
+    grid = [lo + (hi - lo) * i / 40 for i in range(41)]
+    best = max(((ll(x, y), x, y) for x in grid for y in grid))
+    step = (hi - lo) / 40
+    while step > 1e-6:
+        moved = False
+        for dx, dy in ((step, 0), (-step, 0), (0, step), (0, -step)):
+            x, y = min(hi, max(lo, best[1] + dx)), min(hi, max(lo, best[2] + dy))
+            cand = (ll(x, y), x, y)
+            if cand[0] > best[0] + 1e-12:
+                best, moved = cand, True
+        if not moved:
+            step /= 2
+    a, b = math.exp(best[1]), math.exp(best[2])
+    return {"alpha": a, "beta": b, "log_likelihood": best[0],
+            "at_bound": any(abs(v - w) < 1e-9 for v in best[1:] for w in (lo, hi))}
+
+
+def classify_task(a: float, b: float) -> tuple[str, dict]:
+    probs = {"p_gt_0.9": 1.0 - betainc(a, b, 0.9),
+             "p_lt_0.05": betainc(a, b, 0.05),
+             "p_0.2_to_0.8": betainc(a, b, 0.8) - betainc(a, b, 0.2)}
+    if probs["p_gt_0.9"] > 0.8:
+        return "too_easy", probs
+    if probs["p_lt_0.05"] > 0.8:
+        return "too_hard", probs
+    if probs["p_0.2_to_0.8"] > 0.6:
+        return "in_band", probs
+    return "unclear", probs
+
+
+def band_verdict(iv, band) -> str:
+    if iv is None:
+        return "no_data"
+    if band[0] <= iv[0] and iv[1] <= band[1]:
+        return "in_band"
+    if iv[1] < band[0]:
+        return "below"
+    if iv[0] > band[1]:
+        return "above"
+    return "overlaps"
+
+
+def rerun_command(g: dict, run_dir: Path, task_ids: list[str], k: int = 2) -> str:
+    rel = lambda p: os.path.relpath(p, ROOT)  # noqa: E731  (vf-eval runs from the repo root)
+    cmd = [f"vf-eval @ {rel(run_dir / 'configs' / 'eval.toml')}", f"-m {g['model']}"]
+    if g["max_tokens"] is not None:
+        cmd.append(f"--sampling.max_tokens {g['max_tokens']}")
+    cmd += [f"--select.include.ids {' '.join(task_ids)}", f"-r {k}", f"-o {rel(run_dir.parent)}"]
+    return " ".join(cmd)
+
+
+def calibrate(summary: dict, groups: dict, band: tuple[float, float]) -> dict:
+    out = {"band": list(band), "groups": []}
+    for g in summary["groups"]:
+        tasks = {t: (s["hits"], s["graded"]) for t, s in g["tasks"].items() if s["graded"]}
+        rates = [k / n for k, n in tasks.values()]
+        mean = sum(rates) / len(rates) if rates else None
+        # each task as (rate, 1): the pooled statistic is then the mean of task rates
+        iv = bootstrap_tasks([(r, 1) for r in rates])
+        prior = fit_beta_prior(list(tasks.values()))
+        cap = statistics.median(n for _, n in tasks.values()) if tasks else None
+        prior["strength_cap"] = cap
+        prior["capped"] = bool(cap) and prior["alpha"] + prior["beta"] > cap
+        if prior["capped"]:
+            m = prior["alpha"] / (prior["alpha"] + prior["beta"])
+            prior["fitted"] = {"alpha": prior["alpha"], "beta": prior["beta"]}
+            prior["alpha"], prior["beta"] = m * cap, (1 - m) * cap
+        # 4 significant digits (rnd's 4 decimals would turn a 4e-06 into 0)
+        sig = lambda v: float(f"{v:.4g}")  # noqa: E731
+        prior_out = {**prior, "alpha": sig(prior["alpha"]), "beta": sig(prior["beta"]),
+                     "log_likelihood": round(prior["log_likelihood"], 4)}
+        if prior["capped"]:
+            prior_out["fitted"] = {k: sig(v) for k, v in prior["fitted"].items()}
+        rows = {}
+        for t, (k, n) in tasks.items():
+            a, b = prior["alpha"] + k, prior["beta"] + n - k
+            cls, probs = classify_task(a, b)
+            rows[t] = {"hits": k, "rollouts": n, "posterior_mean": a / (a + b),
+                       "interval80": [beta_ppf(0.1, a, b), beta_ppf(0.9, a, b)],
+                       "class": cls, **probs}
+        unclear = [t for t, r in rows.items() if r["class"] == "unclear"]
+        first_run = sorted(groups[g["label"]]["paths"])[0]
+        out["groups"].append(rnd({
+            "label": g["label"],
+            "set": {"task_mean_pass_at_1": mean, "bootstrap95": iv,
+                    "verdict": band_verdict(iv, band)},
+            "classes": {c: sum(r["class"] == c for r in rows.values())
+                        for c in ("too_easy", "too_hard", "in_band", "unclear")},
+            "tasks": rows,
+            "unclear": unclear,
+            "rerun_command": rerun_command(g, first_run, unclear) if unclear else None})
+                             | {"prior": prior_out})
+    return out
+
+
+def calibration_markdown(cal: dict) -> str:
+    lo, hi = cal["band"]
+    parts = ["# Calibration", "",
+             f"Target band for mean pass@1 across tasks: [{pct(lo)}, {pct(hi)}]. Set interval: "
+             f"task bootstrap 95% ({BOOTSTRAP_RESAMPLES} resamples, seed {BOOTSTRAP_SEED}). Per "
+             "task: Beta prior fitted to all tasks of the group (beta-binomial maximum "
+             "likelihood, strength a + b capped at the median rollouts per task so the prior "
+             "never outweighs a task's own data), posterior mean and 80% equal-tailed interval. too_easy: P(p > 0.9) "
+             "> 0.8; too_hard: P(p < 0.05) > 0.8; in_band: P(0.2 < p < 0.8) > 0.6; else "
+             "unclear.", ""]
+    for g in cal["groups"]:
+        st, pr = g["set"], g["prior"]
+        parts += [f"## {g['label']}", "",
+                  f"Set: mean pass@1 {ci(st['task_mean_pass_at_1'], st['bootstrap95'])} -> "
+                  f"**{st['verdict']}**. Prior Beta({pr['alpha']:.3g}, {pr['beta']:.3g})"
+                  + (f" (fit Beta({pr['fitted']['alpha']:.3g}, {pr['fitted']['beta']:.3g}), "
+                     f"strength capped at {pr['strength_cap']:g})" if pr["capped"] else "")
+                  + (" (fit at the search bound)" if pr["at_bound"] else "") + ". "
+                  + ", ".join(f"{c} {n}" for c, n in g["classes"].items()) + ".", "",
+                  table(["task", "hits/n", "posterior mean", "80% interval", "P(p>0.9)",
+                         "P(p<0.05)", "P(0.2<p<0.8)", "class"],
+                        [[t, f"{r['hits']}/{r['rollouts']}", f"{r['posterior_mean']:.2f}",
+                          f"[{r['interval80'][0]:.2f}, {r['interval80'][1]:.2f}]",
+                          f"{r['p_gt_0.9']:.2f}", f"{r['p_lt_0.05']:.2f}",
+                          f"{r['p_0.2_to_0.8']:.2f}", r["class"]]
+                         for t, r in g["tasks"].items()]), ""]
+        if g["unclear"]:
+            parts += [f"Unclear ({len(g['unclear'])}), +2 rollouts each: "
+                      + ", ".join(g["unclear"]), "", "```bash", g["rerun_command"], "```", ""]
+        else:
+            parts += ["No unclear tasks.", ""]
+    return "\n".join(parts)
 
 
 # --- markdown ---------------------------------------------------------------
@@ -402,16 +610,25 @@ def main() -> int:
     ap.add_argument("dirs", nargs="+", type=Path, help="run dirs, or dirs holding run dirs")
     ap.add_argument("--out", type=Path, default=ROOT / "results" / "eval")
     ap.add_argument("--no-charts", action="store_true")
+    ap.add_argument("--band", default="0.3,0.6", help="target band for mean pass@1: LO,HI")
     args = ap.parse_args()
+    band = tuple(float(x) for x in args.band.split(","))
+    if len(band) != 2 or not 0 <= band[0] < band[1] <= 1:
+        ap.error("--band takes LO,HI with 0 <= LO < HI <= 1")
 
-    summary = summarise(*load(args.dirs))
+    groups, rollouts = load(args.dirs)
+    summary = summarise(groups, rollouts)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     md = markdown(summary)
     (args.out / "tables.md").write_text(md + "\n")
+    cal = calibrate(summary, groups, band)
+    (args.out / "calibration.json").write_text(json.dumps(cal, indent=2) + "\n")
+    cal_md = calibration_markdown(cal)
+    (args.out / "calibration.md").write_text(cal_md + "\n")
     if not args.no_charts:
         charts(summary, args.out)
-    print(md)
+    print(md + "\n\n" + cal_md)
     return 0
 
 
