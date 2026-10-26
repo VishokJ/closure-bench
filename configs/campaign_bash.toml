@@ -1,0 +1,47 @@
+# Campaign, bash harness: one task per design module (uart_rx: R1-R11, uart_tx:
+# T1-T4), up to max_files testbenches submission/tb_*.sv, reward = fraction of
+# the module's targets hit by at least one file whose run reaches $finish cleanly.
+# run.sh grades several files at once. k=2. From the repo root with the venv
+# from the README activated:
+#   vf-eval @ configs/campaign_bash.toml -m google/gemini-4-argon
+model = "google/gemini-4-argon"
+num_rollouts = 2                 # rollouts per task (-r)
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+push = false
+
+[sampling]
+temperature = 1.0
+max_tokens = 16000               # per model response; a turn writes one or two files
+
+[env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+tasks = "campaign"
+# Files graded per task (non-empty, first by name); default: one per target.
+# max_files = 11
+# Must match the harness id below: it selects the prompt and installs run.sh.
+harness = "bash"
+# Agent wall clock (s). Single-target bash uses 1200 for one target; a campaign
+# has up to 11, and one ./run.sh over 11 files simulates ~110 s, so 3600 leaves
+# room for ~25 full-campaign runs plus model time. Timed-out runs are still
+# graded on whatever submission/ holds.
+agent_timeout = 3600
+# Stated in the prompt; must equal [env.agent] max_turns (checked at setup).
+# Single-target bash uses 40; 100 is ~9 turns per rx target. Tokens, not wall
+# clock, are the runaway risk (each turn re-sends the growing context): read
+# turn_cap_hit and prompt_tokens from the budget metric before raising it.
+max_turns = 100
+
+[env.agent]
+max_turns = 100                  # = [env.taskset] max_turns above
+
+[env.agent.harness]
+id = "bash"
+
+[env.agent.runtime]
+type = "prime"
+
+[env.agent.scoring]
+mode = "isolated"

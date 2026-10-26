@@ -1,0 +1,37 @@
+# Campaign, null harness: one task per design module (uart_rx: R1-R11, uart_tx:
+# T1-T4); a single reply with up to max_files ```systemverilog blocks, each graded as
+# its own testbench; reward = fraction of the module's targets hit by at least
+# one block whose run reaches $finish cleanly. k=2. From the repo root with the
+# venv from the README activated:
+#   vf-eval @ configs/campaign_null.toml -m google/gemini-4-argon
+model = "google/gemini-4-argon"
+num_rollouts = 2                 # rollouts per task (-r)
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+push = false
+
+[sampling]
+temperature = 1.0
+# 11 gold-sized testbenches are ~26 KB (~9k tokens) before any reasoning; the
+# single-target 16000 would truncate. A truncated reply keeps its closed blocks.
+max_tokens = 32000
+
+[env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+tasks = "campaign"
+# Files graded per task (non-empty, first by name); default: one per target.
+# max_files = 11
+harness = "null"
+# Agent wall clock (s): one long reply; single-target null uses 600.
+agent_timeout = 900
+
+[env.agent.harness]
+id = "null"
+
+[env.agent.runtime]
+type = "prime"
+
+[env.agent.scoring]
+mode = "isolated"
