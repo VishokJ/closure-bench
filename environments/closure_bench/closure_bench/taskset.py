@@ -299,13 +299,12 @@ class ClosureConfig(vf.TasksetConfig):
     max_files: int | None = None
     """campaign: testbench files graded per task; None takes the task's number of targets."""
     items: list[str] | None = None
-    """single: load only these plan item IDs (each must exist and have a gold); None: all."""
+    """Load only these (each must exist and have a gold); None: all. single: plan item IDs;
+    multi: multi-target task names; campaign: plan item IDs, the campaigns' targets."""
 
 
 class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
     def load(self) -> list[ClosureTask]:
-        if self.config.items is not None and self.config.tasks != "single":
-            raise ValueError(f"items applies to tasks='single' only, not {self.config.tasks!r}")
         if self.config.tasks == "campaign":
             return self._load_campaigns()
         design = load_design(self.config.design)
@@ -351,9 +350,15 @@ class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
         design = load_design(self.config.design)
         harness = self.config.harness
         agent_timeout = self.config.agent_timeout or DEFAULT_CAMPAIGN_AGENT_TIMEOUT[harness]
+        if self.config.items is not None:
+            bad = [i for i in self.config.items if i not in design.golds]
+            if bad:
+                raise ValueError(f"items not in the {design.name} plan or without a gold: {bad}")
         modules: dict[str, list] = {}
         for item in design.plan:
-            if item.id in design.golds:  # no proof of reachability, not a target
+            if item.id not in design.golds:  # no proof of reachability, not a target
+                continue
+            if self.config.items is None or item.id in self.config.items:
                 modules.setdefault(prompt.module_of(design, item), []).append(item)
         tasks = []
         for module, items in modules.items():

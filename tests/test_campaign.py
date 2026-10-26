@@ -47,9 +47,14 @@ def design():
     return load_design("uart")
 
 
+# The items the campaign tests are written for: pinned, so adding plan items never
+# changes them (the taskset's `items` selects a campaign's targets the same way).
+ITEMS = [f"R{i}" for i in range(1, 12)] + ["T1", "T2", "T3", "T4"]
+
+
 def _targets(p, design, module):
     return [it.id for it in design.plan
-            if it.id in design.golds and p.module_of(design, it) == module]
+            if it.id in ITEMS and it.id in design.golds and p.module_of(design, it) == module]
 
 
 def test_targets_per_module(p, design):
