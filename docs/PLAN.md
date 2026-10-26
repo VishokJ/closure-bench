@@ -100,7 +100,7 @@ No RAG and no model in the loop: a citation either verifies or it does not.
 |---|---|---|---|
 | `RTL` | `third_party/verilog-uart/rtl/*.v` | commit `1b867e5` + lines | anchor string appears on the cited lines |
 | `README` | upstream `README.md` | commit `1b867e5` + lines | same |
-| `DOC` | external document in `sources.yaml` | URL + SHA-256 in `sources.lock` + page | hash matches; anchor (whitespace-normalised) appears on exactly that page |
+| `DOC` | external document in `sources.yaml` | URL + SHA-256 in `sources.lock` + page | hash matches; anchor (all whitespace removed, case-sensitive: PDF text drops spaces) appears on that page and no other |
 | `BASE` | baseline coverage point | structured point (kind, file, line, name) | exists with 0 hits |
 
 Documents (not vendored, copyrighted; downloaded and hash-checked):

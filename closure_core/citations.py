@@ -2,7 +2,9 @@
 
 RTL / README: the anchor string must appear on the cited lines of the pinned file.
 DOC:          the document (from sources.yaml) must match its pinned SHA-256 and
-              the anchor must appear on the cited page (whitespace-normalised).
+              the anchor must appear on the cited page and on no other, compared
+              with all whitespace removed (PDF extraction drops and adds spaces:
+              "TheUART will try") but case-sensitive.
 BASE:         the cited coverage point must exist in the baseline with 0 hits.
 """
 
@@ -32,6 +34,12 @@ class CitationResult:
 
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def _squash(s: str) -> tuple[str, list[int]]:
+    """s without whitespace, and each kept character's index in s."""
+    keep = [i for i, c in enumerate(s) if not c.isspace()]
+    return "".join(s[i] for i in keep), keep
 
 
 def check_file_anchor(root: Path, item: str, src: dict) -> CitationResult:
@@ -82,26 +90,33 @@ def check_doc(store: DocStore, item: str, src: dict) -> CitationResult:
         pages = store.pages(src["doc"])
     except (ConnectionError, OSError) as e:
         return CitationResult(item, "DOC", None, f"{src['doc']}: not verified ({e})")
-    anchor = _norm(src["anchor"])
-    found_on = [i + 1 for i, text in enumerate(pages) if anchor in _norm(text)]
+    anchor, _ = _squash(src["anchor"])
+    found_on = [i + 1 for i, text in enumerate(pages) if anchor and anchor in _squash(text)[0]]
     page = src.get("page")
     if page is None:
         return CitationResult(item, "DOC", False,
                               f"{src['doc']}: page not set; anchor found on pages {found_on or 'none'}"
                               + _snippets(pages, found_on, anchor))
-    ok = page in found_on
-    return CitationResult(item, "DOC", ok, f"{src['doc']} p.{page}" + (
-        "" if ok else f": anchor {src['anchor']!r} not on page (found on {found_on or 'none'})"
-        + _snippets(pages, found_on, anchor)))
+    if found_on == [page]:
+        return CitationResult(item, "DOC", True, f"{src['doc']} p.{page}")
+    if page in found_on:
+        why = f"anchor {src['anchor']!r} is on pages {found_on}; quote a longer passage that is only on p.{page}"
+    else:
+        why = f"anchor {src['anchor']!r} not on page (found on {found_on or 'none'})"
+    return CitationResult(item, "DOC", False, f"{src['doc']} p.{page}: {why}" + _snippets(pages, found_on, anchor))
 
 
 def _snippets(pages: list[str], found_on: list[int], anchor: str, width: int = 80) -> str:
-    """First match per page with some context, to help pick the right page."""
+    """First match per page with some context (as extracted, whitespace collapsed),
+    to help pick the right page. anchor: whitespace already removed."""
     out = []
     for p in found_on:
-        text = _norm(pages[p - 1])
-        i = text.index(anchor)
-        out.append(f"\n    p.{p}: ...{text[max(0, i - width):i + len(anchor) + width]}...")
+        text = pages[p - 1]
+        squashed, pos = _squash(text)
+        i = squashed.index(anchor)
+        lo, hi = pos[i], pos[i + len(anchor) - 1] + 1
+        snip = re.sub(r"\s+", " ", text[max(0, lo - width):hi + width]).strip()
+        out.append(f"\n    p.{p}: ...{snip}...")
     return "".join(out)
 
 

@@ -5,7 +5,7 @@ Runs on the host (model calls need the network and PRIME_API_KEY); every
 simulation runs in the toolchain image with networking off.
 
   tools/propose_plan [--stage-a-only] [--full-docs] [--write] [--max-candidates N]
-  tools/propose_plan --target-only [--min-depth D]   # covers only; formal finds the gold (no survivor pass)
+  tools/propose_plan --target-only [--min-frames F]   # covers only; formal finds the gold (no survivor pass)
   tools/propose_plan --replay runs/propose/<run_id>      # no model calls
   tools/propose_plan --summarize runs/propose/<run_id>   # recompute summary.json
   tools/propose_plan --write-from runs/propose/<run_id>  # write its accepted items into designs/
@@ -41,7 +41,9 @@ def main() -> int:
     ap.add_argument("--target-only", action="store_true",
                     help="Stage B writes plan, cover and optional twin only; formal finds the gold "
                          "(turns off the survivor pass)")
-    ap.add_argument("--min-depth", type=int, help="formal gate: reject witnesses shallower than this")
+    ap.add_argument("--min-frames", type=float,
+                    help="formal gate: reject target witnesses shorter than this many frames "
+                         f"(default with --target-only: {propose.TARGET_MIN_FRAMES}, i.e. two frames)")
     ap.add_argument("--tag", default="", help="suffix for the run directory name")
     ap.add_argument("--image", default=os.environ.get("CLOSURE_BENCH_IMAGE", propose.IMAGE),
                     help="toolchain image (on Apple silicon pass the arm64 manifest digest)")
@@ -56,9 +58,8 @@ def main() -> int:
     args = ap.parse_args()
     executor = propose.Executor(None if args.local else args.image, j=args.j)
 
-    if args.summarize:
-        s = propose.summarize(args.summarize.resolve())
-        propose.dump(args.summarize / "summary.json", s)
+    if args.summarize:  # measures the plan's progress first if the run left it out (target-only)
+        s = propose.finish(args.summarize.resolve(), executor)
         print(json.dumps(s, indent=2))
         return 0
     if args.write_from:
@@ -91,7 +92,8 @@ def main() -> int:
         s = propose.run(run_dir, model, executor, design_name=args.design, max_candidates=args.max_candidates,
                         stage_a_only=args.stage_a_only, full_docs=args.full_docs, write=args.write,
                         survivor_pass=not args.no_survivor_pass, parallel=args.p, target_only=args.target_only,
-                        min_depth=args.min_depth)
+                        min_frames=args.min_frames if args.min_frames is not None or not args.target_only
+                        else propose.TARGET_MIN_FRAMES)
     except InfraError as e:
         return infra_abort(run_dir.relative_to(ROOT), e)
     print(json.dumps(s, indent=2))

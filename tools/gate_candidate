@@ -4,7 +4,7 @@
 Runs in the pipeline image (closure_core.propose.IMAGE).
 
 Usage:  tools/gate_candidate <candidate_dir> [--design uart | --base PACK] [-j N] [--out result.json] [--offline]
-                             [--witness-cache DIR] [--min-depth D] [--require-mechanism]
+                             [--witness-cache DIR] [--min-frames F] [--require-mechanism]
 Prints one line per gate and writes the full result as JSON.
 Exit 0 if the candidate is accepted, 1 if rejected, 2 on an infrastructure error
 (formal tools, or a simulation timing out twice): no result written, not a decision.
@@ -34,7 +34,7 @@ def main() -> int:
     ap.add_argument("--cache", type=Path, default=ROOT / "results" / "check" / "mutation_cache.json")
     ap.add_argument("--witness-cache", type=Path, default=ROOT / "results" / "check" / "witnesses",
                     help="formal witnesses by key (a proposer run passes its own)")
-    ap.add_argument("--min-depth", type=int, help="reject formal witnesses shallower than this")
+    ap.add_argument("--min-frames", type=float, help="reject target witnesses shorter than this many frames")
     ap.add_argument("--require-mechanism", action="store_true",
                     help="item.yaml must declare at least two difficulty mechanisms (target-only proposer runs)")
     args = ap.parse_args()
@@ -43,7 +43,7 @@ def main() -> int:
     try:
         res = candidate.gate(base, args.candidate.resolve(),
                              cache_path=args.cache.resolve(), j=args.j, offline=args.offline,
-                             witness_cache=args.witness_cache.resolve(), min_depth=args.min_depth,
+                             witness_cache=args.witness_cache.resolve(), min_frames=args.min_frames,
                              require_mechanism=args.require_mechanism)
     except infra.InfraError as e:
         print(f"INFRASTRUCTURE ERROR (no decision recorded): {e}", file=sys.stderr)

@@ -65,6 +65,7 @@ pilot; items no pilot model solves get a fairness check (docs/PLAN.md §6).
 
 from __future__ import annotations
 
+import ast
 import fcntl
 import functools
 import hashlib
@@ -328,12 +329,78 @@ def formal_dir(design: Design) -> Path:
 
 
 def formal_settings(design: Design) -> dict:
-    """bound (cycles) and timeout (seconds) for cover_witness, from formal.yaml."""
+    """bound (cycles) and timeout (seconds) for cover_witness, from formal.yaml; and
+    frame_cycles, the design's frame length expression, and active_signal, the
+    output that marks protocol activity (None if not set)."""
     f = formal_dir(design) / "formal.yaml"
     spec = yaml.safe_load(f.read_text()) if f.is_file() else None
     if not isinstance(spec, dict) or not {"bound", "timeout"} <= set(spec):
         raise FormalError(f"{f} must exist and set bound and timeout")
-    return {"bound": int(spec["bound"]), "timeout": float(spec["timeout"])}
+    fc = spec.get("frame_cycles")
+    return {"bound": int(spec["bound"]), "timeout": float(spec["timeout"]),
+            "frame_cycles": None if fc is None else str(fc), "active_signal": spec.get("active_signal")}
+
+
+_ARITH = {ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b, ast.Mult: lambda a, b: a * b,
+          ast.FloorDiv: lambda a, b: a // b}
+
+
+def _eval_cycles(expr: str, values: dict[str, int]) -> int:
+    """formal.yaml frame_cycles (integers, input names, + - * //) at one cycle's inputs."""
+    def ev(n):
+        if isinstance(n, ast.Expression):
+            return ev(n.body)
+        if isinstance(n, ast.Constant) and type(n.value) is int:
+            return n.value
+        if isinstance(n, ast.Name) and n.id in values:
+            return values[n.id]
+        if isinstance(n, ast.BinOp) and type(n.op) in _ARITH:
+            return _ARITH[type(n.op)](ev(n.left), ev(n.right))
+        raise ValueError(f"frame_cycles {expr!r}: only integers, input names and + - * // are allowed")
+    return ev(ast.parse(expr, mode="eval"))
+
+
+_TB_DECL = re.compile(r"^\s*logic\s+(?:\[\d+:0\]\s+)?(\w+)\s*=\s*\d+'d(\d+);\s*$")
+_TB_WAIT = re.compile(r"^\s*(?:repeat \((\d+)\) )?@\(negedge clk\);\s*$")
+_TB_SET = re.compile(r"(\w+) = \d+'d(\d+);")
+
+
+def witness_frames(tb_text: str, depth: int, frame_cycles: str) -> float:
+    """Elapsed time of a witness in frames: the sum over its `depth` cycles of
+    1 / frame_cycles(inputs at that cycle). A witness at prescale 2 then counts
+    the same as its prescale-1 equivalent, so slowing the clock never deepens a
+    target; waiting the cover itself demands still counts.
+
+    Reads the testbench formal.witness_testbench writes: step 0 from the
+    declarations, `repeat (n) @(negedge clk);` advances n steps, the assignments
+    after it hold from that step on; the trailing padding after the last step
+    is not counted. Raises ValueError on anything else.
+    """
+    values: dict[str, int] = {}
+    step, changes = 0, []
+    for line in tb_text.splitlines():
+        if m := _TB_DECL.match(line):
+            values[m.group(1)] = int(m.group(2))
+        elif m := _TB_WAIT.match(line):
+            if not changes:
+                changes.append((0, dict(values)))
+            step += int(m.group(1) or 1)
+        elif sets := _TB_SET.findall(line):
+            if not changes:
+                raise ValueError("witness testbench: an assignment before the first wait")
+            values.update({n: int(v) for n, v in sets})
+            changes.append((step, dict(values)))
+    if not changes:
+        raise ValueError("witness testbench: no stimulus found")
+    total = 0.0
+    for (start, vals), (end, _) in zip(changes, [*changes[1:], (depth, None)]):
+        n = min(end, depth) - min(start, depth)
+        if n > 0:
+            c = _eval_cycles(frame_cycles, vals)
+            if c <= 0:
+                raise ValueError(f"frame_cycles {frame_cycles!r} is {c} at {vals}")
+            total += n / c
+    return total
 
 
 def formal_files(design: Design) -> dict[str, str]:
@@ -344,13 +411,24 @@ def formal_files(design: Design) -> dict[str, str]:
 
 @functools.lru_cache(maxsize=1)
 def formal_version() -> str | None:
-    """`yosys -V` of the formal tools (closure_core.formal.FORMAL_HOME), None if absent."""
+    """`yosys -V` of the formal tools (closure_core.formal.FORMAL_HOME), None if they
+    are not installed. If they are but the call fails (e.g. a timeout under load),
+    FormalError: a silent None would change every witness key, so the cache would
+    miss and a replay would re-solve. Not cached when it raises."""
     try:
         home = importlib.import_module("closure_core.formal").FORMAL_HOME
-        return subprocess.run([str(home / "bin" / "yosys"), "-V"], capture_output=True, text=True,
-                              timeout=60).stdout.strip() or None
-    except (ImportError, AttributeError, OSError, subprocess.SubprocessError):
+    except (ImportError, AttributeError):
         return None
+    yosys = home / "bin" / "yosys"
+    if not yosys.exists():
+        return None
+    try:
+        out = subprocess.run([str(yosys), "-V"], capture_output=True, text=True, timeout=60).stdout.strip()
+    except (OSError, subprocess.SubprocessError) as e:
+        raise FormalError(f"yosys -V failed: {e}") from e
+    if not out:
+        raise FormalError("yosys -V printed nothing")
+    return out
 
 
 def witness_key(design: Design, cover_text: str) -> str:
@@ -451,9 +529,71 @@ def twin_policy(design: Design, twin: Path, item_id: str) -> list[str]:
     return vs + ([] if twin_label(twin) else ["must contain exactly one cover property"])
 
 
-def _summary(w: dict) -> dict:
-    return {"status": w["status"], "witness_depth": w.get("depth"), "input_changes": w.get("input_changes"),
-            "input_changes_exact": w.get("input_changes_exact"), "key": w.get("key")}
+def _probe_names(frame_cycles: str) -> list[str]:
+    return sorted({n.id for n in ast.walk(ast.parse(frame_cycles, mode="eval")) if isinstance(n, ast.Name)})
+
+
+def active_probe(tb_text: str, depth: int, signal: str, frame_cycles: str) -> str:
+    """The witness testbench plus a probe: at each rising edge t < depth it prints
+    `CBA t <signal> <inputs of frame_cycles>` when any of them changed (t = 0
+    always), and `CBA_END` at t = depth. Cycle t is the t-th rising edge, as in
+    the witness; the signal is read before that edge's update (its value during
+    cycle t). Only changes are printed, so the run log's tail holds them."""
+    names = [signal, *_probe_names(frame_cycles)]
+    last = [f"cb_last{k}" for k in range(len(names))]
+    changed = " || ".join(f"{n} != {v}" for n, v in zip(names, last))
+    probe = [
+        "  // closure-bench probe (gates.active_frames): not part of the witness",
+        "  int cb_t = 0;",
+        *(f"  longint {v} = 0;" for v in last),
+        "  always @(posedge clk) begin",
+        f"    if (cb_t < {depth} && (cb_t == 0 || {changed}))",
+        f'      $display("CBA %0d{" %0d" * len(names)}", cb_t, {", ".join(names)});',
+        f'    if (cb_t == {depth}) $display("CBA_END");',
+        *(f"    {v} <= {n};" for n, v in zip(names, last)),
+        "    cb_t <= cb_t + 1;",
+        "  end",
+    ]
+    i = tb_text.rindex("endmodule")
+    return tb_text[:i] + "\n".join(probe) + "\n" + tb_text[i:]
+
+
+def active_frames_from_log(log: str, depth: int, signal: str, frame_cycles: str) -> float:
+    """Sum over cycles t < depth of signal_t / frame_cycles(inputs_t), from the probe's lines."""
+    names = [signal, *_probe_names(frame_cycles)]
+    rows = [list(map(int, ln.split()[1:])) for ln in log.splitlines() if ln.startswith("CBA ")]
+    if "CBA_END" not in log or not rows or rows[0][0] != 0:
+        raise ValueError("probe output incomplete (no CBA_END, or no line for cycle 0)")
+    total = 0.0
+    for row, nxt in zip(rows, [*rows[1:], [depth]]):
+        vals = dict(zip(names, row[1:]))
+        if vals[signal]:
+            total += (nxt[0] - row[0]) / _eval_cycles(frame_cycles, vals)
+    return total
+
+
+def active_frames(design: Design, w: dict, frame_cycles: str, signal: str) -> dict:
+    """{active_frames} of a reachable witness, by simulating it with the probe; a
+    measurement only: on failure {active_frames: None, active_frames_error}."""
+    from closure_core.infra import simulate
+    try:
+        s = simulate(design, active_probe(w["tb_text"], w["depth"], signal, frame_cycles))
+        if s.sim.status != "ok":
+            raise ValueError(f"probe simulation: {s.sim.status}")
+        return {"active_frames": round(active_frames_from_log(s.sim.run_log, w["depth"], signal, frame_cycles), 3)}
+    except ValueError as e:
+        return {"active_frames": None, "active_frames_error": str(e)}
+
+
+def _summary(w: dict, frame_cycles: str | None = None) -> dict:
+    out = {"status": w["status"], "witness_depth": w.get("depth"), "input_changes": w.get("input_changes"),
+           "input_changes_exact": w.get("input_changes_exact"), "key": w.get("key")}
+    if frame_cycles and w["status"] == "reachable" and w.get("tb_text"):
+        try:
+            out["witness_frames"] = round(witness_frames(w["tb_text"], w["depth"], frame_cycles), 3)
+        except ValueError as e:  # the testbench comes from formal.py, the formula from the pack
+            raise FormalError(f"cannot measure the witness in frames: {e}") from e
+    return out
 
 
 def _not_found(what: str, w: dict, where: str) -> str | None:
@@ -476,26 +616,34 @@ def _not_found(what: str, w: dict, where: str) -> str | None:
 
 
 def formal(item: PlanItem, w: dict | None, twin: dict | None = None, *, assumptions: str = "",
-           bound: int | None = None, min_depth: int | None = None, twin_violations: list[str] = ()) -> GateResult:
+           bound: int | None = None, min_frames: float | None = None, frame_cycles: str | None = None,
+           twin_violations: list[str] = ()) -> GateResult:
     """w: the target's witness, None if the candidate has its own (checking) gold.
     twin: the twin cover's witness, None if there is no twin.
+    min_frames: reject a target witness shorter than this many frames (hardening);
+    needs frame_cycles, the pack's frame length expression (formal.yaml).
     """
-    data = {"gold_source": "llm" if w is None else "formal", "bound": bound, "min_depth": min_depth,
+    if min_frames is not None and not frame_cycles:
+        raise FormalError("min_frames needs frame_cycles in the pack's formal/formal.yaml")
+    data = {"gold_source": "llm" if w is None else "formal", "bound": bound, "min_frames": min_frames,
             "assumptions": assumptions}
     where = f"(bound {bound} cycles, formal environment in {assumptions})"
     msgs = []
     if w is not None:
-        data |= _summary(w)
+        data |= _summary(w, frame_cycles)
         if why := _not_found(f"the target cover {item.cover}", w, where):
             return GateResult("formal", False, why, data)
-        if min_depth is not None and w["depth"] < min_depth:
-            return GateResult("formal", False, f"witness depth {w['depth']} < {min_depth}: make the target "
-                                               f"require more", data)
-        msgs.append(f"witness depth {w['depth']}, {w['input_changes']} input changes {where}")
+        frames = data.get("witness_frames")
+        if min_frames is not None and frames < min_frames:
+            return GateResult("formal", False, f"witness is {frames:.2f} frames, below {min_frames:g}: make the "
+                                               f"target need more protocol activity (a further phase or an "
+                                               f"interaction), not more waiting or a slower prescale", data)
+        msgs.append(f"witness depth {w['depth']} cycles" + (f" ({frames:.2f} frames)" if frames is not None else "")
+                    + f", {w['input_changes']} input changes {where}")
     if twin_violations:
         return GateResult("formal", False, "twin.sv: policy: " + "\n".join(twin_violations), data)
     if twin is not None:
-        data["twin"] = _summary(twin)
+        data["twin"] = _summary(twin, frame_cycles)
         if why := _not_found("the twin cover", twin, where):
             if twin["status"] == "unreachable":
                 why = (f"the twin cover is unreachable {where}: boundary not exact. The twin must be the "

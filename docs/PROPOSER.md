@@ -123,8 +123,22 @@ POSIX lock on `<witness cache>/.formal.lock`, the retry an exclusive one
 second timeout is a decision, cached with `retried: true` so a replay reuses
 it; the repair turn reads "target too hard to verify within the time budget:
 simplify one mechanism or reduce depth".
-`--min-depth D` rejects witnesses shallower than D ("make the target require
-more"), the hardening signal.
+`--min-frames F` rejects a target witness shorter than F frames, the
+hardening signal: "witness is N frames, below F: make the target need more
+protocol activity (a further phase or an interaction), not more waiting or a
+slower prescale". A witness's length in frames (`witness_frames`) is the sum
+over its cycles of 1 / `frame_cycles`, the pack's frame length at that
+cycle's inputs (`designs/uart/formal/formal.yaml`: `80 * prescale`, 10 bits
+of `prescale << 3` clocks), so a slower prescale never makes a target deeper.
+A floor in cycles did: in a smoke run with a 160-cycle floor, all three
+targets were reachable at 156 cycles (two frames at prescale 1), and the model
+padded them with stall cycles, an extra word, or a forced prescale >= 2.
+`witness_depth` (cycles) is still recorded. Calibration on the formal
+witnesses of the 13 reachable plan items and those 3 targets: two-frame
+witnesses measure 1.950-1.966 frames, one-frame ones 1.000-1.050, single
+events below 0.09; `--target-only` defaults to F = 1.9 (two frames). Frames
+measure elapsed time, so waiting the cover itself demands still counts: the
+message discourages it, the floor does not prevent it.
 
 A candidate may add `twin.sv`, a cover `cov_<ID>_twin` of the off-by-one
 condition. Its witness becomes `near_miss/<ID>_twin.sv` and must score 0 on
@@ -158,7 +172,7 @@ a multi-bit constant; `reset_timing` is declared only, so the set stage
 accepts at most two targets listing it per run (`reset_timing_cap`). Outside
 this mode a mechanism is optional, and one is enough. The checks are
 necessary, not sufficient: a cover can carry a register and still be easy,
-so `--min-depth D` (witness depth) is the measured difficulty signal.
+so `--min-frames F` (witness length in frames) is the measured difficulty signal.
 `summary.mechanisms` lists the accepted targets per mechanism.
 
 ## Records: `runs/propose/<run_id>/`
@@ -167,7 +181,8 @@ so `--min-depth D` (witness depth) is the measured difficulty signal.
 |---|---|
 | `manifest.json` | git commit and dirty flag, image, toolchain, model and sampling, retry limit, prompt hash, context pack hash, flags |
 | `prompts/` | the prompt templates used (their hash is `prompt_sha`) |
-| `context_pack.json` | everything the model was shown, as data |
+| `context_pack.json` | everything the model was shown, as data; plus `progress_before` (the plan's progress before the run: a mutation sweep and every gold), except in `--target-only` runs |
+| `progress_before.json` | `--target-only`: the same, measured by the summary step on `base_pack/` so the run starts in seconds (there is no survivor pass to show it to) |
 | `base_pack/` | the design pack the run gated against |
 | `responses/stage_a/<attempt>.json`, `responses/stage_a2/<attempt>.json`, `responses/<cid>/<attempt>.json` | exact messages sent, sampling parameters, response text, usage (Stage A pass 1, pass 2, Stage B) |
 | `candidates.json` | parsed candidates of both passes (`pass`), per pass the Stage A error if any and (pass 2) the survivors listed, and the `unkillable` reasons |

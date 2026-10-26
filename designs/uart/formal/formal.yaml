@@ -11,8 +11,23 @@
 #   cycles each) plus reset, enough for every two-frame item (deepest: 158).
 # timeout: seconds per item for tools/formal, including the input-change
 #   minimisation (which may stop early: input_changes_exact false).
+# frame_cycles: clocks per UART frame as an expression in the formal top's
+#   inputs, used to measure a witness in frames (gates.witness_frames: the sum
+#   over its cycles of 1 / frame_cycles at that cycle's inputs), so a slower
+#   prescale does not make a target deeper. 80 = 10 bit periods (start, 8 data
+#   bits at DATA_WIDTH 8, stop) of 8 * prescale clocks each: the bit counter
+#   reloads with (prescale << 3) - 1 in uart_rx.v:111,118 and with
+#   (prescale << 3) - 1 / (prescale << 3) in uart_tx.v:95,104,108.
+# active_signal: a DUT output that is 1 while the module is working on a frame,
+#   for the measure active_frames (the sum over witness cycles of
+#   active_signal / frame_cycles): how much of a witness is protocol activity
+#   rather than waiting. Recorded only, no gate uses it. busy_reg is set when a
+#   start bit is seen (uart_rx.v:136) or a word is accepted (uart_tx.v:99) and
+#   cleared when the module is idle again (uart_rx.v:131, uart_tx.v:91).
 bound: 300
 timeout: 900
+frame_cycles: 80 * prescale
+active_signal: busy
 tops:
   uart_rx:
     file: env_rx.sv
