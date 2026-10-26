@@ -1,0 +1,26 @@
+id: P9
+description: While the receiver is busy (busy 1) on a new frame and still holds an
+  already handed-off word (m_axis_tdata 8'hA5, m_axis_tvalid 0), rst is sampled high.
+  On the next clock, with rst still high, busy is 0, m_axis_tvalid is 0 and m_axis_tdata
+  is 8'h00.
+tier: T1
+cover: P9_reset_midframe_clears_outputs
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 87
+  - 95
+  anchor: m_axis_tdata_reg <= 0;
+- type: README
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 39
+  anchor: high when an operation is
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 28
+  anchor: During reset, TV ALID  must be driven LOW.
+cover_module: cov_P9

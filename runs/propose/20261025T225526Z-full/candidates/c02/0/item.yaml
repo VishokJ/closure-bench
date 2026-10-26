@@ -1,0 +1,38 @@
+id: P2
+description: While m_axis_tvalid is high holding 8'h3C and m_axis_tready is low, a
+  second good frame completes. At that point overrun_error is high, m_axis_tvalid
+  is still high and m_axis_tdata has changed to 8'hA5.
+tier: T1
+cover: P2_overrun_second_word
+sources:
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 56
+    name: overrun_error
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 72
+    name: overrun_error_reg
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 120
+  - 125
+  anchor: overrun_error_reg <= m_axis_tvalid_reg;
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 39
+  - 42
+  anchor: before another word is received, then a single cycle pulse will be emitted
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 16
+  anchor: This bit is the Overrun Error (OE) indicator.
+cover_module: cov_P2

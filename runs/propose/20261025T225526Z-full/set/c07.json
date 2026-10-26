@@ -1,0 +1,210 @@
+{
+  "item": "P7",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "it should be set to Fclk / (baud * 8)"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                116,
+                118
+              ],
+              "anchor": "prescale_reg <= (prescale << 3)-1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 62,
+                "name": "prescale[1]"
+              }
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 62,
+                "name": "prescale[3]"
+              }
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 62,
+                "name": "prescale[4]"
+              }
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 62,
+                "name": "prescale[5]"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "holes_hit": [
+          "v_toggle uart_rx.v:62 prescale[10]",
+          "v_toggle uart_rx.v:62 prescale[11]",
+          "v_toggle uart_rx.v:62 prescale[12]",
+          "v_toggle uart_rx.v:62 prescale[13]",
+          "v_toggle uart_rx.v:62 prescale[14]",
+          "v_toggle uart_rx.v:62 prescale[15]",
+          "v_toggle uart_rx.v:62 prescale[1]",
+          "v_toggle uart_rx.v:62 prescale[3]",
+          "v_toggle uart_rx.v:62 prescale[4]",
+          "v_toggle uart_rx.v:62 prescale[5]",
+          "v_toggle uart_rx.v:62 prescale[6]",
+          "v_toggle uart_rx.v:62 prescale[7]",
+          "v_toggle uart_rx.v:62 prescale[8]",
+          "v_toggle uart_rx.v:62 prescale[9]",
+          "v_toggle uart_rx.v:76 prescale_reg[10]",
+          "v_toggle uart_rx.v:76 prescale_reg[11]",
+          "v_toggle uart_rx.v:76 prescale_reg[12]",
+          "v_toggle uart_rx.v:76 prescale_reg[13]",
+          "v_toggle uart_rx.v:76 prescale_reg[14]",
+          "v_toggle uart_rx.v:76 prescale_reg[15]",
+          "v_toggle uart_rx.v:76 prescale_reg[16]",
+          "v_toggle uart_rx.v:76 prescale_reg[17]",
+          "v_toggle uart_rx.v:76 prescale_reg[18]",
+          "v_toggle uart_rx.v:76 prescale_reg[6]",
+          "v_toggle uart_rx.v:76 prescale_reg[7]",
+          "v_toggle uart_rx.v:76 prescale_reg[8]",
+          "v_toggle uart_rx.v:76 prescale_reg[9]"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P7_prescale_fffe.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence both; kills 8 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [27, 30]",
+      "data": {
+        "evidence": "both",
+        "kills": [
+          "uart_rx.v:125:stuck1:0",
+          "uart_rx.v:133:inc:0",
+          "uart_rx.v:136:drop:0",
+          "uart_rx.v:136:stuck0:0",
+          "uart_rx.v:94:stuck1:0",
+          "uart_rx.v:95:stuck1:0",
+          "uart_rx.v:98:stuck1:0",
+          "uart_rx.v:99:stuck1:0"
+        ],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [27, 30]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [27, 30] \"it should be set to Fclk / (baud * 8)\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies P3",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

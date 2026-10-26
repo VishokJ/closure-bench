@@ -1,0 +1,181 @@
+{
+  "item": "P6",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                126,
+                137
+              ],
+              "anchor": "frame_error_reg <= 1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "doc": "pc16550d",
+              "page": 16,
+              "anchor": "will try to resynchronize after a framing error"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_branch",
+                "file": "uart_rx.v",
+                "line": 122,
+                "name": "else"
+              }
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 57,
+                "name": "frame_error"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 2",
+      "data": {
+        "holes_hit": [
+          "v_branch uart_rx.v:109 else",
+          "v_branch uart_rx.v:122 else",
+          "v_toggle uart_rx.v:57 frame_error",
+          "v_toggle uart_rx.v:73 frame_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P6_break_ends_before_second_stop.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence mutant; kills 26 baseline survivors (7 only by this gold: uart_rx.v:111:dec:1, uart_rx.v:111:inc:1, uart_rx.v:118:dec:1, uart_rx.v:121:inc:0, uart_rx.v:133:dec:1, uart_rx.v:133:inc:1, uart_rx.v:99:drop:0); requirements: -",
+      "data": {
+        "evidence": "mutant",
+        "kills": [
+          "uart_rx.v:105:inc:0",
+          "uart_rx.v:108:inc:0",
+          "uart_rx.v:111:dec:1",
+          "uart_rx.v:111:inc:1",
+          "uart_rx.v:113:stuck1:0",
+          "uart_rx.v:118:dec:1",
+          "uart_rx.v:118:inc:1",
+          "uart_rx.v:121:inc:0",
+          "uart_rx.v:125:stuck1:0",
+          "uart_rx.v:127:drop:0",
+          "uart_rx.v:127:stuck0:0",
+          "uart_rx.v:132:inv:0",
+          "uart_rx.v:133:dec:0",
+          "uart_rx.v:133:dec:1",
+          "uart_rx.v:133:drop:0",
+          "uart_rx.v:133:inc:0",
+          "uart_rx.v:133:inc:1",
+          "uart_rx.v:133:stuck0:0",
+          "uart_rx.v:133:stuck1:0",
+          "uart_rx.v:136:drop:0",
+          "uart_rx.v:136:stuck0:0",
+          "uart_rx.v:94:stuck1:0",
+          "uart_rx.v:95:stuck1:0",
+          "uart_rx.v:98:stuck1:0",
+          "uart_rx.v:99:drop:0",
+          "uart_rx.v:99:stuck1:0"
+        ],
+        "only_by_this_gold": [
+          "uart_rx.v:111:dec:1",
+          "uart_rx.v:111:inc:1",
+          "uart_rx.v:118:dec:1",
+          "uart_rx.v:121:inc:0",
+          "uart_rx.v:133:dec:1",
+          "uart_rx.v:133:inc:1",
+          "uart_rx.v:99:drop:0"
+        ],
+        "requirements": [],
+        "requirement_keys": []
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies R1, P1",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

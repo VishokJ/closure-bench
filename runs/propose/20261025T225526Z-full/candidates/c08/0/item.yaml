@@ -1,0 +1,46 @@
+id: P8
+description: With prescale held at 16'hFFFF, uart_tx accepts a byte and shifts it
+  out on txd. Sampled at the eight data-bit boundaries, txd forms 8'h5A. On the cycle
+  after the last data bit, prescale_reg is 19'h7FFF8, bit_cnt is 0 and txd is high
+  (stop bit).
+tier: T1
+cover: P8_tx_max_prescale_5a
+sources:
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_tx.v
+    line: 60
+    name: prescale[1]
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_tx.v
+    line: 60
+    name: prescale[3]
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_tx.v
+    line: 60
+    name: prescale[4]
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_tx.v
+    line: 60
+    name: prescale[5]
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 102
+  - 110
+  anchor: prescale_reg <= (prescale << 3);
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: it should be set to Fclk / (baud * 8)
+cover_module: cov_P8

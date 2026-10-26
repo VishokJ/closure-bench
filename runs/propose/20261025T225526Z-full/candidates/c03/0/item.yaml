@@ -1,0 +1,27 @@
+id: P3
+description: On uart_rx, m_axis_tvalid stays high with m_axis_tready low for at least
+  four consecutive cycles, m_axis_tdata does not change and overrun_error stays low
+  throughout. On the first cycle m_axis_tready is high the word is accepted with m_axis_tvalid
+  high, m_axis_tdata equal to 8'hA5 and overrun_error low.
+tier: T1
+cover: P3_rx_backpressure_hold
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 101
+  - 103
+  anchor: if (m_axis_tvalid && m_axis_tready) begin
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: it must remain asse rted until the handshake occurs.
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 31
+  - 36
+  anchor: Data is transferred from the source to the
+cover_module: cov_P3

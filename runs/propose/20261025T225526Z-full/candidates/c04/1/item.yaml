@@ -1,0 +1,19 @@
+id: P4
+description: rst is asserted while busy and m_axis_tvalid are both high. After rst
+  is released with m_axis_tvalid and busy low, the receiver later presents a new word
+  with m_axis_tvalid high and m_axis_tdata equal to 8'hA5.
+tier: T1
+cover: P4_rst_mid_frame_pending
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 87
+  - 95
+  anchor: m_axis_tvalid_reg <= 0;
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 28
+  anchor: During reset, TV ALID  must be driven LOW.
+cover_module: cov_P4

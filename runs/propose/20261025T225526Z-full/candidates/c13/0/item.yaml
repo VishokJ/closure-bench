@@ -1,0 +1,30 @@
+id: P13
+description: 'The receiver rejects a false start: at a clock where prescale_reg is
+  0, bit_cnt is 10 and rxd_reg is high. Exactly two clocks after that rejection, busy
+  is 0.'
+tier: T1
+cover: P13_rx_false_start_busy_release
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 112
+  - 115
+  anchor: bit_cnt <= 0;
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 130
+  - 131
+  anchor: busy_reg <= 0;
+- type: BASE
+  point:
+    kind: v_branch
+    file: uart_rx.v
+    line: 109
+    name: else
+- type: DOC
+  doc: pc16550d
+  page: 1
+  anchor: YFalse start bit detection.
+cover_module: cov_P13

@@ -1,0 +1,145 @@
+{
+  "item": "P3",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                101,
+                103
+              ],
+              "anchor": "if (m_axis_tvalid && m_axis_tready) begin"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 18,
+              "anchor": "it must remain asse rted until the handshake occurs."
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                31,
+                36
+              ],
+              "anchor": "Data is transferred from the source to the"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "hit by random stimulus (rx: 1)",
+      "data": {
+        "hit_by_random": {
+          "rx": 1
+        }
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P3_stall_three_cycles.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence both; kills 5 baseline survivors; requirements: DOC axis page 18; README third_party/verilog-uart/README.md lines [31, 36]",
+      "data": {
+        "evidence": "both",
+        "kills": [
+          "uart_rx.v:125:stuck1:0",
+          "uart_rx.v:94:stuck1:0",
+          "uart_rx.v:95:stuck1:0",
+          "uart_rx.v:98:stuck1:0",
+          "uart_rx.v:99:stuck1:0"
+        ],
+        "only_by_this_gold": [],
+        "requirements": [
+          "DOC axis page 18",
+          "README third_party/verilog-uart/README.md lines [31, 36]"
+        ],
+        "requirement_keys": [
+          "DOC axis page 18 \"it must remain asse rted until the handshake occurs.\"",
+          "README third_party/verilog-uart/README.md lines [31, 36] \"Data is transferred from the source to the\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

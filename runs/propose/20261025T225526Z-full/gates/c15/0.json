@@ -1,0 +1,150 @@
+{
+  "item": "P15",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                79,
+                84
+              ],
+              "anchor": "prescale_reg <= 0;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                89,
+                91
+              ],
+              "anchor": "s_axis_tready_reg <= 1;"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "hit by random stimulus (tx: 62)",
+      "data": {
+        "hit_by_random": {
+          "tx": 62
+        }
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P15_reset_late_in_bit.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence mutant; kills 13 baseline survivors (13 only by this gold: uart_tx.v:80:stuck1:0, uart_tx.v:81:drop:0, uart_tx.v:82:drop:0, uart_tx.v:82:stuck1:0, uart_tx.v:83:drop:0, uart_tx.v:83:stuck1:0, uart_tx.v:84:drop:0, uart_tx.v:84:stuck1:0, uart_tx.v:90:drop:0, uart_tx.v:90:stuck0:0, uart_tx.v:91:stuck1:0, uart_tx.v:99:drop:0, uart_tx.v:99:stuck0:0); requirements: -",
+      "data": {
+        "evidence": "mutant",
+        "kills": [
+          "uart_tx.v:80:stuck1:0",
+          "uart_tx.v:81:drop:0",
+          "uart_tx.v:82:drop:0",
+          "uart_tx.v:82:stuck1:0",
+          "uart_tx.v:83:drop:0",
+          "uart_tx.v:83:stuck1:0",
+          "uart_tx.v:84:drop:0",
+          "uart_tx.v:84:stuck1:0",
+          "uart_tx.v:90:drop:0",
+          "uart_tx.v:90:stuck0:0",
+          "uart_tx.v:91:stuck1:0",
+          "uart_tx.v:99:drop:0",
+          "uart_tx.v:99:stuck0:0"
+        ],
+        "only_by_this_gold": [
+          "uart_tx.v:80:stuck1:0",
+          "uart_tx.v:81:drop:0",
+          "uart_tx.v:82:drop:0",
+          "uart_tx.v:82:stuck1:0",
+          "uart_tx.v:83:drop:0",
+          "uart_tx.v:83:stuck1:0",
+          "uart_tx.v:84:drop:0",
+          "uart_tx.v:84:stuck1:0",
+          "uart_tx.v:90:drop:0",
+          "uart_tx.v:90:stuck0:0",
+          "uart_tx.v:91:stuck1:0",
+          "uart_tx.v:99:drop:0",
+          "uart_tx.v:99:stuck0:0"
+        ],
+        "requirements": [],
+        "requirement_keys": []
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

@@ -1,0 +1,29 @@
+# Design pack: alexforencich/verilog-uart (pinned in third_party/, see UPSTREAM.md)
+name: uart
+
+# Compiled for every simulation, in this order. Paths are relative to the repo root.
+rtl:
+  - third_party/verilog-uart/rtl/uart.v
+  - third_party/verilog-uart/rtl/uart_rx.v
+  - third_party/verilog-uart/rtl/uart_tx.v
+
+# Each plan item's cover is covers/<ID>.sv (module cov_<ID>, with its own bind).
+plan: plan.yaml
+
+# The inherited regression: the starting state every task extends.
+baselines:
+  rx: {top: tb_uart_rx, file: designs/uart/baseline/tb_uart_rx.sv}
+  tx: {top: tb_uart_tx, file: designs/uart/baseline/tb_uart_tx.sv}
+
+# Fixed-seed random-stimulus testbenches: not a gate. tools/check reports the
+# items they hit (reachable by accident) and adds them to the duplicate corpus.
+random:
+  rx: {top: tb_rand_rx, file: designs/uart/random/tb_rand_rx.sv}
+  tx: {top: tb_rand_tx, file: designs/uart/random/tb_rand_tx.sv}
+
+# Mutation gate (tools/check): fixed-operator mutants of these line ranges,
+# the always blocks. Equivalent mutants are waived in waivers.yaml.
+mutate:
+  third_party/verilog-uart/rtl/uart_rx.v: [86, 140]
+  third_party/verilog-uart/rtl/uart_tx.v: [78, 113]
+waivers: waivers.yaml

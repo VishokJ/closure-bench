@@ -1,0 +1,45 @@
+id: P7
+description: With prescale held at 16'hFFFF, the receiver's prescale_reg must be loaded
+  with the full, untruncated 19-bit bit-period reload 19'h7FFF7. After that, m_axis_tvalid
+  must rise with m_axis_tdata == 8'hA5.
+tier: T1
+cover: P7_rx_max_prescale
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: it should be set to Fclk / (baud * 8)
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 116
+  - 118
+  anchor: prescale_reg <= (prescale << 3)-1;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 62
+    name: prescale[1]
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 62
+    name: prescale[3]
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 62
+    name: prescale[4]
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 62
+    name: prescale[5]
+cover_module: cov_P7

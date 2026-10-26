@@ -1,0 +1,20 @@
+id: P10
+description: While the receiver is mid-bit (prescale_reg above 19'd16), rst is first
+  sampled high with rxd low. rxd then stays low through the reset and after its release,
+  busy is low on the first two clocks after rst falls, and busy is high on the third.
+tier: T2
+cover: P10_rx_reset_mid_frame_prompt_restart
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 90
+  - 91
+  anchor: prescale_reg <= 0;
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 130
+  - 137
+  anchor: busy_reg <= 1;
+cover_module: cov_P10

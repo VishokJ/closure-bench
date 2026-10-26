@@ -1,0 +1,636 @@
+{
+  "candidates": [
+    {
+      "behaviour": "A low glitch on rxd starts a frame (bit_cnt loads 10), but rxd_reg is high again at the mid-start-bit sample (prescale_reg == 0, bit_cnt == 10). The receiver abandons the frame, so bit_cnt returns to 0 and neither m_axis_tvalid nor frame_error follows.",
+      "cid": "c01",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_branch",
+            "line": 109,
+            "name": "else"
+          },
+          "type": "BASE"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            108,
+            115
+          ],
+          "type": "RTL"
+        },
+        {
+          "doc": "pc16550d",
+          "page": 1,
+          "role": "requirement",
+          "type": "DOC"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_false_start_rejected",
+      "why_baseline_misses": "The baseline only drives well-formed frames, so the start bit is always still low at the mid-bit sample."
+    },
+    {
+      "behaviour": "A second complete, well-formed frame arrives while m_axis_tvalid is still high with m_axis_tready low. overrun_error pulses for one cycle, m_axis_tvalid stays high, and m_axis_tdata takes the second word.",
+      "cid": "c02",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 56,
+            "name": "overrun_error"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 72,
+            "name": "overrun_error_reg"
+          },
+          "type": "BASE"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            120,
+            125
+          ],
+          "type": "RTL"
+        },
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            39,
+            42
+          ],
+          "role": "requirement",
+          "type": "README"
+        },
+        {
+          "doc": "pc16550d",
+          "page": 16,
+          "role": "requirement",
+          "type": "DOC"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_overrun_error",
+      "why_baseline_misses": "The baseline sink holds m_axis_tready high, so every word is consumed before the next one completes."
+    },
+    {
+      "behaviour": "After a word is received, m_axis_tready is held low for several cycles. m_axis_tvalid stays high and m_axis_tdata stays unchanged throughout. The word is accepted on the first cycle m_axis_tready goes high, with no overrun.",
+      "cid": "c03",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            101,
+            103
+          ],
+          "type": "RTL"
+        },
+        {
+          "doc": "axis",
+          "page": 18,
+          "role": "requirement",
+          "type": "DOC"
+        },
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            31,
+            36
+          ],
+          "role": "requirement",
+          "type": "README"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_output_backpressure_hold",
+      "why_baseline_misses": "The baseline sink never deasserts m_axis_tready, so m_axis_tvalid never waits for a handshake."
+    },
+    {
+      "behaviour": "rst is asserted while the receiver is busy mid-frame and an unread word is pending (m_axis_tvalid high). After reset, m_axis_tvalid and busy are low, and a following well-formed frame is received correctly.",
+      "cid": "c04",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            87,
+            95
+          ],
+          "type": "RTL"
+        },
+        {
+          "doc": "axis",
+          "page": 28,
+          "role": "requirement",
+          "type": "DOC"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_reset_during_frame_with_pending_word",
+      "why_baseline_misses": "The baseline only resets while idle, with no pending output word."
+    },
+    {
+      "behaviour": "rst is asserted while the transmitter is mid-frame with txd low (start bit or a 0 data bit). On the next clock txd returns to 1 and busy drops, and a later byte is transmitted correctly.",
+      "cid": "c05",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/rtl/uart_tx.v",
+          "lines": [
+            79,
+            84
+          ],
+          "type": "RTL"
+        },
+        {
+          "doc": "pc16550d",
+          "page": 12,
+          "role": "requirement",
+          "type": "DOC"
+        }
+      ],
+      "target_module": "uart_tx",
+      "title": "tx_reset_during_frame_returns_to_mark",
+      "why_baseline_misses": "The baseline asserts reset only while the transmitter is idle and txd is already high."
+    },
+    {
+      "behaviour": "rxd is held low for longer than two full frame times. The receiver restarts immediately after each frame error, so frame_error pulses at least twice with rxd never going high in between, and m_axis_tvalid never rises.",
+      "cid": "c06",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            126,
+            137
+          ],
+          "type": "RTL"
+        },
+        {
+          "doc": "pc16550d",
+          "page": 16,
+          "type": "DOC"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_break_repeated_frame_errors",
+      "why_baseline_misses": "The baseline never holds rxd low past a stop bit, and R1 needs only a single frame error."
+    },
+    {
+      "behaviour": "With prescale = 16'hFFFF, a well-formed frame carrying 8'hA5 is received. m_axis_tvalid rises with m_axis_tdata == 8'hA5, and prescale_reg reaches the full 19-bit reload value without truncation.",
+      "cid": "c07",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[1]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[3]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[4]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[5]"
+          },
+          "type": "BASE"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            116,
+            118
+          ],
+          "type": "RTL"
+        },
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            27,
+            30
+          ],
+          "role": "requirement",
+          "type": "README"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_receive_at_max_prescale",
+      "why_baseline_misses": "The baseline runs only at prescale 5, so the low prescale bits never toggle and the high prescale_reg bits are never used."
+    },
+    {
+      "behaviour": "With prescale = 16'hFFFF, a byte 8'h5A is accepted and transmitted. Every bit lasts prescale*8 clocks (the stop bit one clock more), prescale_reg reaches 19'h7FFF8 for the stop bit, and txd carries 8'h5A LSB first.",
+      "cid": "c08",
+      "kind": "task",
+      "pass": 1,
+      "sources": [
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[1]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[3]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[4]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[5]"
+          },
+          "type": "BASE"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_tx.v",
+          "lines": [
+            102,
+            110
+          ],
+          "type": "RTL"
+        },
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            27,
+            30
+          ],
+          "role": "requirement",
+          "type": "README"
+        }
+      ],
+      "target_module": "uart_tx",
+      "title": "tx_transmit_at_max_prescale",
+      "why_baseline_misses": "The baseline runs only at prescale 5, so the low prescale bits and the high prescale_reg bits never toggle."
+    },
+    {
+      "behaviour": "The receiver has delivered and handed off a word (m_axis_tdata == 8'hA5, m_axis_tvalid low) and is busy receiving the next frame when rst is sampled high. On the next clock, with rst still high, busy is 0, m_axis_tvalid is 0 and m_axis_tdata is 8'h00.",
+      "cid": "c09",
+      "kind": "task",
+      "pass": 2,
+      "sources": [
+        {
+          "anchor": "m_axis_tdata_reg <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            87,
+            95
+          ],
+          "type": "RTL"
+        },
+        {
+          "anchor": "high when an operation is",
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            38,
+            39
+          ],
+          "type": "README"
+        }
+      ],
+      "target_module": "uart_rx",
+      "targets": [
+        "uart_rx.v:88:drop:0",
+        "uart_rx.v:88:stuck1:0",
+        "uart_rx.v:93:drop:0",
+        "uart_rx.v:93:stuck1:0"
+      ],
+      "title": "rx_reset_clears_outputs_after_accepted_word",
+      "why_baseline_misses": "The baseline resets only while idle, never mid-frame, and never checks m_axis_tdata or busy during reset."
+    },
+    {
+      "behaviour": "rst is sampled high while the receiver's prescale_reg is above 19'd16 (mid-bit), and rxd is held low through and after reset. busy then rises on exactly the third clock after rst is released (counter value 2), and no earlier, so the new start bit is detected without waiting for the old bit timer.",
+      "cid": "c10",
+      "kind": "task",
+      "pass": 2,
+      "sources": [
+        {
+          "anchor": "prescale_reg <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            90,
+            91
+          ],
+          "type": "RTL"
+        },
+        {
+          "anchor": "busy_reg <= 1;",
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            130,
+            137
+          ],
+          "type": "RTL"
+        }
+      ],
+      "target_module": "uart_rx",
+      "targets": [
+        "uart_rx.v:91:drop:0",
+        "uart_rx.v:90:drop:0"
+      ],
+      "title": "rx_reset_mid_frame_prompt_restart",
+      "why_baseline_misses": "The baseline never resets mid-bit and never holds rxd low across a reset release."
+    },
+    {
+      "behaviour": "rst is sampled high on the same clock on which frame_error is high. On the following clock, with rst still high, frame_error is low.",
+      "cid": "c11",
+      "kind": "task",
+      "pass": 2,
+      "sources": [
+        {
+          "anchor": "frame_error_reg <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            87,
+            95
+          ],
+          "type": "RTL"
+        },
+        {
+          "anchor": "single pulse will be emitted from the",
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            42,
+            44
+          ],
+          "type": "README"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 57,
+            "name": "frame_error"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_rx",
+      "targets": [
+        "uart_rx.v:95:drop:0"
+      ],
+      "title": "rx_reset_on_frame_error_strobe",
+      "why_baseline_misses": "The baseline never produces a frame error, let alone resets on the pulse cycle."
+    },
+    {
+      "behaviour": "rst is sampled high on the same clock on which overrun_error is high. On the following clock, with rst still high, overrun_error is low.",
+      "cid": "c12",
+      "kind": "task",
+      "pass": 2,
+      "sources": [
+        {
+          "anchor": "overrun_error_reg <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            87,
+            95
+          ],
+          "type": "RTL"
+        },
+        {
+          "anchor": "single cycle pulse will be emitted",
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            40,
+            42
+          ],
+          "type": "README"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 56,
+            "name": "overrun_error"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_rx",
+      "targets": [
+        "uart_rx.v:94:drop:0"
+      ],
+      "title": "rx_reset_on_overrun_error_strobe",
+      "why_baseline_misses": "The baseline sink is always ready, so overrun_error never pulses."
+    },
+    {
+      "behaviour": "A false start is rejected (prescale_reg == 0, bit_cnt == 10 and rxd_reg high). Exactly two clocks later busy is already 0.",
+      "cid": "c13",
+      "kind": "task",
+      "pass": 2,
+      "sources": [
+        {
+          "anchor": "bit_cnt <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            112,
+            115
+          ],
+          "type": "RTL"
+        },
+        {
+          "anchor": "busy_reg <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            130,
+            131
+          ],
+          "type": "RTL"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_branch",
+            "line": 109,
+            "name": "else"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_rx",
+      "targets": [
+        "uart_rx.v:114:stuck1:0"
+      ],
+      "title": "rx_false_start_busy_release_timing",
+      "why_baseline_misses": "The baseline only sends well-formed frames, so the false-start branch never executes."
+    },
+    {
+      "behaviour": "rst is sampled high while the idle transmitter has s_axis_tready high. On the next clock, with rst still high, s_axis_tready is 0, so no transfer can be accepted during reset.",
+      "cid": "c14",
+      "kind": "task",
+      "pass": 2,
+      "sources": [
+        {
+          "anchor": "s_axis_tready_reg <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_tx.v",
+          "lines": [
+            79,
+            84
+          ],
+          "type": "RTL"
+        },
+        {
+          "anchor": "The destination will accept data",
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            33,
+            36
+          ],
+          "type": "README"
+        }
+      ],
+      "target_module": "uart_tx",
+      "targets": [
+        "uart_tx.v:80:drop:0"
+      ],
+      "title": "tx_reset_while_idle_drops_tready",
+      "why_baseline_misses": "The baseline never checks s_axis_tready while rst is high."
+    },
+    {
+      "behaviour": "rst is sampled high while the transmitter's prescale_reg is above 19'd16 (mid-bit). After release, s_axis_tready rises exactly on the second clock after rst is released (counter value 1).",
+      "cid": "c15",
+      "kind": "task",
+      "pass": 2,
+      "sources": [
+        {
+          "anchor": "prescale_reg <= 0;",
+          "file": "third_party/verilog-uart/rtl/uart_tx.v",
+          "lines": [
+            79,
+            84
+          ],
+          "type": "RTL"
+        },
+        {
+          "anchor": "s_axis_tready_reg <= 1;",
+          "file": "third_party/verilog-uart/rtl/uart_tx.v",
+          "lines": [
+            89,
+            91
+          ],
+          "type": "RTL"
+        }
+      ],
+      "target_module": "uart_tx",
+      "targets": [
+        "uart_tx.v:82:drop:0",
+        "uart_tx.v:82:stuck1:0"
+      ],
+      "title": "tx_reset_mid_frame_ready_timing",
+      "why_baseline_misses": "The baseline never resets the transmitter mid-bit or measures tready timing after reset."
+    }
+  ],
+  "passes": {
+    "1": {
+      "error": null
+    },
+    "2": {
+      "error": null,
+      "remaining_survivors": [
+        "uart_rx.v:114:drop:0",
+        "uart_rx.v:114:stuck1:0",
+        "uart_rx.v:121:stuck0:0",
+        "uart_rx.v:135:drop:0",
+        "uart_rx.v:135:stuck1:0",
+        "uart_rx.v:88:drop:0",
+        "uart_rx.v:88:stuck1:0",
+        "uart_rx.v:90:drop:0",
+        "uart_rx.v:91:drop:0",
+        "uart_rx.v:91:stuck1:0",
+        "uart_rx.v:93:drop:0",
+        "uart_rx.v:93:stuck1:0",
+        "uart_rx.v:94:drop:0",
+        "uart_rx.v:95:drop:0",
+        "uart_tx.v:107:stuck0:0",
+        "uart_tx.v:80:drop:0",
+        "uart_tx.v:82:drop:0",
+        "uart_tx.v:82:stuck1:0"
+      ]
+    }
+  },
+  "unkillable": [
+    {
+      "mutant": "uart_rx.v:114:drop:0",
+      "reason": "Equivalent: this branch is only reached when prescale_reg is already 0, so omitting the assignment changes nothing."
+    },
+    {
+      "mutant": "uart_rx.v:121:stuck0:0",
+      "reason": "Equivalent: bit_cnt is 1 in this branch, so bit_cnt - 1 equals 0."
+    },
+    {
+      "mutant": "uart_rx.v:135:drop:0",
+      "reason": "Equivalent: data_reg is shifted DATA_WIDTH (8) times before it is used, so every bit of its initial value is overwritten."
+    },
+    {
+      "mutant": "uart_rx.v:135:stuck1:0",
+      "reason": "Equivalent: the 8 shifts overwrite all of data_reg, so an initial value of 1 never reaches m_axis_tdata."
+    },
+    {
+      "mutant": "uart_rx.v:91:stuck1:0",
+      "reason": "Equivalent: the skipped first idle check after reset would see rxd_reg == 1 (its reset value) with busy already 0, so the start timing is unchanged."
+    },
+    {
+      "mutant": "uart_tx.v:107:stuck0:0",
+      "reason": "Equivalent: bit_cnt is 1 in this branch, so bit_cnt - 1 equals 0."
+    }
+  ]
+}

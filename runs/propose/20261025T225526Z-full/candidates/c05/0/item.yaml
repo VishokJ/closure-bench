@@ -1,0 +1,18 @@
+id: P5
+description: While the transmitter is busy (busy is 1) and txd is low, rst is sampled
+  high. On the next clock txd is 1 (mark) and busy is 0.
+tier: T1
+cover: P5_tx_reset_mid_frame_low
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 79
+  - 84
+  anchor: txd_reg <= 1;
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 12
+  anchor: set to the Marking (logic 1) stateupon a Master Reset
+cover_module: cov_P5

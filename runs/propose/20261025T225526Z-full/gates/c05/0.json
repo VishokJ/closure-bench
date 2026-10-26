@@ -1,0 +1,152 @@
+{
+  "item": "P5",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                79,
+                84
+              ],
+              "anchor": "txd_reg <= 1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "pc16550d",
+              "page": 12,
+              "anchor": "set to the Marking (logic 1) stateupon a Master Reset"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "hit by random stimulus (tx: 53)",
+      "data": {
+        "hit_by_random": {
+          "tx": 53
+        }
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P5_reset_while_txd_high.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence both; kills 13 baseline survivors (13 only by this gold: uart_tx.v:104:dec:1, uart_tx.v:104:inc:1, uart_tx.v:80:stuck1:0, uart_tx.v:81:drop:0, uart_tx.v:83:drop:0, uart_tx.v:84:drop:0, uart_tx.v:84:stuck1:0, uart_tx.v:86:inc:0, uart_tx.v:91:drop:0, uart_tx.v:91:stuck1:0, uart_tx.v:95:dec:0, uart_tx.v:99:drop:0, uart_tx.v:99:stuck0:0); requirements: DOC pc16550d page 12",
+      "data": {
+        "evidence": "both",
+        "kills": [
+          "uart_tx.v:104:dec:1",
+          "uart_tx.v:104:inc:1",
+          "uart_tx.v:80:stuck1:0",
+          "uart_tx.v:81:drop:0",
+          "uart_tx.v:83:drop:0",
+          "uart_tx.v:84:drop:0",
+          "uart_tx.v:84:stuck1:0",
+          "uart_tx.v:86:inc:0",
+          "uart_tx.v:91:drop:0",
+          "uart_tx.v:91:stuck1:0",
+          "uart_tx.v:95:dec:0",
+          "uart_tx.v:99:drop:0",
+          "uart_tx.v:99:stuck0:0"
+        ],
+        "only_by_this_gold": [
+          "uart_tx.v:104:dec:1",
+          "uart_tx.v:104:inc:1",
+          "uart_tx.v:80:stuck1:0",
+          "uart_tx.v:81:drop:0",
+          "uart_tx.v:83:drop:0",
+          "uart_tx.v:84:drop:0",
+          "uart_tx.v:84:stuck1:0",
+          "uart_tx.v:86:inc:0",
+          "uart_tx.v:91:drop:0",
+          "uart_tx.v:91:stuck1:0",
+          "uart_tx.v:95:dec:0",
+          "uart_tx.v:99:drop:0",
+          "uart_tx.v:99:stuck0:0"
+        ],
+        "requirements": [
+          "DOC pc16550d page 12"
+        ],
+        "requirement_keys": [
+          "DOC pc16550d page 12 \"set to the Marking (logic 1) stateupon a Master Reset\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

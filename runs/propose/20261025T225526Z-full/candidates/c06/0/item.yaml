@@ -1,0 +1,30 @@
+id: P6
+description: While rxd is held low continuously, frame_error pulses a second time
+  with rxd low at every clock since the previous frame_error pulse. At that second
+  pulse m_axis_tvalid is low.
+tier: T1
+cover: P6_break_repeated_frame_error
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 126
+  - 137
+  anchor: frame_error_reg <= 1;
+- type: DOC
+  doc: pc16550d
+  page: 16
+  anchor: will try to resynchronize after a framing error
+- type: BASE
+  point:
+    kind: v_branch
+    file: uart_rx.v
+    line: 122
+    name: else
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 57
+    name: frame_error
+cover_module: cov_P6

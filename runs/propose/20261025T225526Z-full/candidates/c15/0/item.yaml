@@ -1,0 +1,21 @@
+id: P15
+description: 'rst is sampled high while the transmitter''s prescale_reg is above 19''d16
+  (reset in the middle of a bit). After rst is released, s_axis_tready must rise exactly
+  on the second clock after release: it is low when sampled on the first clock and
+  high when sampled on the second clock.'
+tier: T2
+cover: P15_tx_reset_mid_frame_ready_timing
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 79
+  - 84
+  anchor: prescale_reg <= 0;
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 89
+  - 91
+  anchor: s_axis_tready_reg <= 1;
+cover_module: cov_P15

@@ -1,0 +1,1169 @@
+{
+  "accepted": [
+    "c01",
+    "c02",
+    "c03",
+    "c04",
+    "c05",
+    "c06",
+    "c07",
+    "c08",
+    "c09",
+    "c10",
+    "c11",
+    "c12",
+    "c14",
+    "c15"
+  ],
+  "check_exit": 0,
+  "cited_doc_pages": {
+    "c01": [
+      "pc16550d p1"
+    ],
+    "c02": [
+      "pc16550d p16"
+    ],
+    "c03": [
+      "axis p18"
+    ],
+    "c04": [
+      "axis p28"
+    ],
+    "c05": [
+      "pc16550d p12"
+    ],
+    "c06": [
+      "pc16550d p16"
+    ]
+  },
+  "cites_outside_context_pages": [],
+  "context_pages": [
+    "axis p18",
+    "axis p28",
+    "pc16550d p1",
+    "pc16550d p12",
+    "pc16550d p16"
+  ],
+  "hit_by_random": {
+    "c01": {
+      "rx": 35
+    },
+    "c03": {
+      "rx": 1
+    },
+    "c05": {
+      "tx": 53
+    },
+    "c09": {
+      "rx": 1
+    },
+    "c15": {
+      "tx": 62
+    }
+  },
+  "near_miss_opt_outs": {},
+  "passes": {
+    "1": {
+      "accepted": [
+        "c01",
+        "c02",
+        "c03",
+        "c04",
+        "c05",
+        "c06",
+        "c07",
+        "c08"
+      ],
+      "funnel_final": [
+        {
+          "gate": "proposed",
+          "passed": 8
+        },
+        {
+          "gate": "format",
+          "passed": 8
+        },
+        {
+          "gate": "cover_sync",
+          "passed": 8
+        },
+        {
+          "gate": "cover_policy",
+          "passed": 8
+        },
+        {
+          "gate": "description_sync",
+          "passed": 8
+        },
+        {
+          "gate": "citations",
+          "passed": 8
+        },
+        {
+          "gate": "baseline",
+          "passed": 8
+        },
+        {
+          "gate": "gold",
+          "passed": 8
+        },
+        {
+          "gate": "near_miss",
+          "opted_out": 0,
+          "passed": 8
+        },
+        {
+          "gate": "determinism",
+          "passed": 8
+        },
+        {
+          "gate": "value",
+          "passed": 8
+        },
+        {
+          "gate": "duplicate",
+          "passed": 8
+        },
+        {
+          "gate": "set_duplicate",
+          "passed": 8
+        }
+      ],
+      "funnel_first_attempt": [
+        {
+          "gate": "proposed",
+          "passed": 8
+        },
+        {
+          "gate": "format",
+          "passed": 8
+        },
+        {
+          "gate": "cover_sync",
+          "passed": 8
+        },
+        {
+          "gate": "cover_policy",
+          "passed": 8
+        },
+        {
+          "gate": "description_sync",
+          "passed": 8
+        },
+        {
+          "gate": "citations",
+          "passed": 8
+        },
+        {
+          "gate": "baseline",
+          "passed": 8
+        },
+        {
+          "gate": "gold",
+          "passed": 7
+        },
+        {
+          "gate": "near_miss",
+          "opted_out": 0,
+          "passed": 7
+        },
+        {
+          "gate": "determinism",
+          "passed": 7
+        },
+        {
+          "gate": "value",
+          "passed": 7
+        },
+        {
+          "gate": "duplicate",
+          "passed": 7
+        }
+      ],
+      "progress": {
+        "holes": {
+          "baseline": 62,
+          "closed_by_plan": 3,
+          "closed_by_run": [
+            "v_branch uart_rx.v:109 else",
+            "v_toggle uart_rx.v:56 overrun_error",
+            "v_toggle uart_rx.v:62 prescale[1]",
+            "v_toggle uart_rx.v:62 prescale[3]",
+            "v_toggle uart_rx.v:62 prescale[4]",
+            "v_toggle uart_rx.v:62 prescale[5]",
+            "v_toggle uart_rx.v:72 overrun_error_reg",
+            "v_toggle uart_tx.v:60 prescale[1]",
+            "v_toggle uart_tx.v:60 prescale[3]",
+            "v_toggle uart_tx.v:60 prescale[4]",
+            "v_toggle uart_tx.v:60 prescale[5]"
+          ],
+          "remaining": [],
+          "waived": 48
+        },
+        "mutants": {
+          "baseline_survivors": 76,
+          "killed_by_plan": 2,
+          "killed_by_run": [
+            "uart_rx.v:105:inc:0",
+            "uart_rx.v:108:inc:0",
+            "uart_rx.v:111:dec:1",
+            "uart_rx.v:111:inc:1",
+            "uart_rx.v:113:drop:0",
+            "uart_rx.v:113:stuck1:0",
+            "uart_rx.v:118:dec:1",
+            "uart_rx.v:118:inc:1",
+            "uart_rx.v:121:inc:0",
+            "uart_rx.v:125:drop:0",
+            "uart_rx.v:125:stuck0:0",
+            "uart_rx.v:125:stuck1:0",
+            "uart_rx.v:131:drop:0",
+            "uart_rx.v:131:stuck1:0",
+            "uart_rx.v:132:inv:0",
+            "uart_rx.v:133:dec:0",
+            "uart_rx.v:133:dec:1",
+            "uart_rx.v:133:drop:0",
+            "uart_rx.v:133:inc:0",
+            "uart_rx.v:133:inc:1",
+            "uart_rx.v:133:stuck0:0",
+            "uart_rx.v:133:stuck1:0",
+            "uart_rx.v:136:drop:0",
+            "uart_rx.v:136:stuck0:0",
+            "uart_rx.v:89:drop:0",
+            "uart_rx.v:90:stuck0:0",
+            "uart_rx.v:92:drop:0",
+            "uart_rx.v:94:stuck1:0",
+            "uart_rx.v:95:stuck1:0",
+            "uart_rx.v:98:drop:0",
+            "uart_rx.v:98:stuck1:0",
+            "uart_rx.v:99:drop:0",
+            "uart_rx.v:99:stuck1:0",
+            "uart_tx.v:102:dec:0",
+            "uart_tx.v:102:gt_ge:0",
+            "uart_tx.v:104:dec:1",
+            "uart_tx.v:104:inc:1",
+            "uart_tx.v:108:dec:0",
+            "uart_tx.v:108:inc:0",
+            "uart_tx.v:80:stuck1:0",
+            "uart_tx.v:81:drop:0",
+            "uart_tx.v:83:drop:0",
+            "uart_tx.v:83:stuck1:0",
+            "uart_tx.v:84:drop:0",
+            "uart_tx.v:84:stuck1:0",
+            "uart_tx.v:86:inc:0",
+            "uart_tx.v:90:drop:0",
+            "uart_tx.v:90:stuck0:0",
+            "uart_tx.v:91:drop:0",
+            "uart_tx.v:91:stuck1:0",
+            "uart_tx.v:95:dec:0",
+            "uart_tx.v:95:dec:1",
+            "uart_tx.v:95:inc:1",
+            "uart_tx.v:96:inc:0",
+            "uart_tx.v:99:drop:0",
+            "uart_tx.v:99:stuck0:0"
+          ],
+          "per_candidate": {
+            "c01": {
+              "kills": 16,
+              "only_this_candidate": 2
+            },
+            "c02": {
+              "kills": 10,
+              "only_this_candidate": 3
+            },
+            "c03": {
+              "kills": 5,
+              "only_this_candidate": 0
+            },
+            "c04": {
+              "kills": 8,
+              "only_this_candidate": 2
+            },
+            "c05": {
+              "kills": 13,
+              "only_this_candidate": 5
+            },
+            "c06": {
+              "kills": 24,
+              "only_this_candidate": 7
+            },
+            "c07": {
+              "kills": 8,
+              "only_this_candidate": 0
+            },
+            "c08": {
+              "kills": 18,
+              "only_this_candidate": 10
+            }
+          },
+          "remaining": 18,
+          "shared": {
+            "uart_rx.v:105:inc:0": [
+              "c02",
+              "c06"
+            ],
+            "uart_rx.v:108:inc:0": [
+              "c01",
+              "c06"
+            ],
+            "uart_rx.v:113:stuck1:0": [
+              "c01",
+              "c06"
+            ],
+            "uart_rx.v:118:inc:1": [
+              "c02",
+              "c06"
+            ],
+            "uart_rx.v:125:stuck1:0": [
+              "c02",
+              "c03",
+              "c06",
+              "c07"
+            ],
+            "uart_rx.v:131:stuck1:0": [
+              "c01",
+              "c04"
+            ],
+            "uart_rx.v:132:inv:0": [
+              "c01",
+              "c04",
+              "c06"
+            ],
+            "uart_rx.v:133:dec:0": [
+              "c01",
+              "c06"
+            ],
+            "uart_rx.v:133:drop:0": [
+              "c01",
+              "c06"
+            ],
+            "uart_rx.v:133:inc:0": [
+              "c01",
+              "c04",
+              "c06",
+              "c07"
+            ],
+            "uart_rx.v:133:stuck0:0": [
+              "c01",
+              "c06"
+            ],
+            "uart_rx.v:133:stuck1:0": [
+              "c01",
+              "c06"
+            ],
+            "uart_rx.v:136:drop:0": [
+              "c01",
+              "c04",
+              "c06",
+              "c07"
+            ],
+            "uart_rx.v:136:stuck0:0": [
+              "c01",
+              "c04",
+              "c06",
+              "c07"
+            ],
+            "uart_rx.v:90:stuck0:0": [
+              "c01",
+              "c04"
+            ],
+            "uart_rx.v:94:stuck1:0": [
+              "c02",
+              "c03",
+              "c06",
+              "c07"
+            ],
+            "uart_rx.v:95:stuck1:0": [
+              "c01",
+              "c02",
+              "c03",
+              "c06",
+              "c07"
+            ],
+            "uart_rx.v:98:stuck1:0": [
+              "c02",
+              "c03",
+              "c06",
+              "c07"
+            ],
+            "uart_rx.v:99:stuck1:0": [
+              "c01",
+              "c02",
+              "c03",
+              "c06",
+              "c07"
+            ],
+            "uart_tx.v:104:dec:1": [
+              "c05",
+              "c08"
+            ],
+            "uart_tx.v:104:inc:1": [
+              "c05",
+              "c08"
+            ],
+            "uart_tx.v:86:inc:0": [
+              "c05",
+              "c08"
+            ],
+            "uart_tx.v:91:drop:0": [
+              "c05",
+              "c08"
+            ],
+            "uart_tx.v:91:stuck1:0": [
+              "c05",
+              "c08"
+            ],
+            "uart_tx.v:95:dec:0": [
+              "c05",
+              "c08"
+            ],
+            "uart_tx.v:99:drop:0": [
+              "c05",
+              "c08"
+            ],
+            "uart_tx.v:99:stuck0:0": [
+              "c05",
+              "c08"
+            ]
+          }
+        },
+        "requirements": {
+          "cited_by_plan": 2,
+          "new_in_run": [
+            "DOC axis page 18 \"it must remain asse rted until the handshake occurs.\"",
+            "DOC axis page 28 \"During reset, TV ALID  must be driven LOW.\"",
+            "DOC pc16550d page 1 \"YFalse start bit detection.\"",
+            "DOC pc16550d page 12 \"set to the Marking (logic 1) stateupon a Master Reset\"",
+            "DOC pc16550d page 16 \"This bit is the Overrun Error (OE) indicator.\"",
+            "README third_party/verilog-uart/README.md lines [27, 30] \"it should be set to Fclk / (baud * 8)\"",
+            "README third_party/verilog-uart/README.md lines [31, 36] \"Data is transferred from the source to the\"",
+            "README third_party/verilog-uart/README.md lines [39, 42] \"before another word is received, then a single cycle pulse will be emitted\""
+          ]
+        }
+      },
+      "rejected_at": {},
+      "rejected_at_set": {},
+      "rejected_solely_for_value": [],
+      "repair": {
+        "failed_first_attempt": 1,
+        "rate": 1.0,
+        "repaired": 1
+      },
+      "stage_a": {
+        "attempts": 2,
+        "error": null
+      }
+    },
+    "2": {
+      "accepted": [
+        "c09",
+        "c10",
+        "c11",
+        "c12",
+        "c14",
+        "c15"
+      ],
+      "funnel_final": [
+        {
+          "gate": "proposed",
+          "passed": 7
+        },
+        {
+          "gate": "format",
+          "passed": 7
+        },
+        {
+          "gate": "cover_sync",
+          "passed": 7
+        },
+        {
+          "gate": "cover_policy",
+          "passed": 7
+        },
+        {
+          "gate": "description_sync",
+          "passed": 7
+        },
+        {
+          "gate": "citations",
+          "passed": 7
+        },
+        {
+          "gate": "baseline",
+          "passed": 7
+        },
+        {
+          "gate": "gold",
+          "passed": 7
+        },
+        {
+          "gate": "near_miss",
+          "opted_out": 0,
+          "passed": 7
+        },
+        {
+          "gate": "determinism",
+          "passed": 7
+        },
+        {
+          "gate": "value",
+          "passed": 7
+        },
+        {
+          "gate": "duplicate",
+          "passed": 7
+        },
+        {
+          "gate": "set_duplicate",
+          "passed": 6
+        }
+      ],
+      "funnel_first_attempt": [
+        {
+          "gate": "proposed",
+          "passed": 7
+        },
+        {
+          "gate": "format",
+          "passed": 7
+        },
+        {
+          "gate": "cover_sync",
+          "passed": 7
+        },
+        {
+          "gate": "cover_policy",
+          "passed": 7
+        },
+        {
+          "gate": "description_sync",
+          "passed": 7
+        },
+        {
+          "gate": "citations",
+          "passed": 7
+        },
+        {
+          "gate": "baseline",
+          "passed": 7
+        },
+        {
+          "gate": "gold",
+          "passed": 7
+        },
+        {
+          "gate": "near_miss",
+          "opted_out": 0,
+          "passed": 7
+        },
+        {
+          "gate": "determinism",
+          "passed": 7
+        },
+        {
+          "gate": "value",
+          "passed": 7
+        },
+        {
+          "gate": "duplicate",
+          "passed": 7
+        }
+      ],
+      "progress": {
+        "holes": {
+          "baseline": 62,
+          "closed_by_plan": 14,
+          "closed_by_run": [],
+          "remaining": [],
+          "waived": 48
+        },
+        "mutants": {
+          "baseline_survivors": 76,
+          "killed_by_plan": 58,
+          "killed_by_run": [
+            "uart_rx.v:88:drop:0",
+            "uart_rx.v:88:stuck1:0",
+            "uart_rx.v:90:drop:0",
+            "uart_rx.v:91:drop:0",
+            "uart_rx.v:93:drop:0",
+            "uart_rx.v:93:stuck1:0",
+            "uart_rx.v:94:drop:0",
+            "uart_rx.v:95:drop:0",
+            "uart_tx.v:80:drop:0",
+            "uart_tx.v:82:drop:0",
+            "uart_tx.v:82:stuck1:0"
+          ],
+          "per_candidate": {
+            "c09": {
+              "kills": 5,
+              "only_this_candidate": 2
+            },
+            "c10": {
+              "kills": 4,
+              "only_this_candidate": 1
+            },
+            "c11": {
+              "kills": 3,
+              "only_this_candidate": 1
+            },
+            "c12": {
+              "kills": 3,
+              "only_this_candidate": 1
+            },
+            "c14": {
+              "kills": 2,
+              "only_this_candidate": 1
+            },
+            "c15": {
+              "kills": 2,
+              "only_this_candidate": 1
+            }
+          },
+          "remaining": 7,
+          "shared": {
+            "uart_rx.v:90:drop:0": [
+              "c09",
+              "c10"
+            ],
+            "uart_rx.v:93:drop:0": [
+              "c09",
+              "c10",
+              "c11",
+              "c12"
+            ],
+            "uart_rx.v:93:stuck1:0": [
+              "c09",
+              "c10",
+              "c11",
+              "c12"
+            ],
+            "uart_tx.v:82:stuck1:0": [
+              "c14",
+              "c15"
+            ]
+          }
+        },
+        "requirements": {
+          "cited_by_plan": 10,
+          "new_in_run": [
+            "README third_party/verilog-uart/README.md lines [40, 42] \"single cycle pulse will be emitted\"",
+            "README third_party/verilog-uart/README.md lines [42, 44] \"single pulse will be emitted from the\""
+          ]
+        }
+      },
+      "rejected_at": {},
+      "rejected_at_set": {
+        "c13": "duplicate"
+      },
+      "rejected_solely_for_value": [],
+      "repair": {
+        "failed_first_attempt": 0,
+        "rate": null,
+        "repaired": 0
+      },
+      "stage_a": {
+        "attempts": 2,
+        "error": null
+      }
+    }
+  },
+  "progress_total": {
+    "holes": {
+      "baseline": 62,
+      "closed_by_plan": 3,
+      "closed_by_run": [
+        "v_branch uart_rx.v:109 else",
+        "v_toggle uart_rx.v:56 overrun_error",
+        "v_toggle uart_rx.v:62 prescale[1]",
+        "v_toggle uart_rx.v:62 prescale[3]",
+        "v_toggle uart_rx.v:62 prescale[4]",
+        "v_toggle uart_rx.v:62 prescale[5]",
+        "v_toggle uart_rx.v:72 overrun_error_reg",
+        "v_toggle uart_tx.v:60 prescale[1]",
+        "v_toggle uart_tx.v:60 prescale[3]",
+        "v_toggle uart_tx.v:60 prescale[4]",
+        "v_toggle uart_tx.v:60 prescale[5]"
+      ],
+      "remaining": [],
+      "waived": 48
+    },
+    "mutants": {
+      "baseline_survivors": 76,
+      "killed_by_plan": 2,
+      "killed_by_run": [
+        "uart_rx.v:105:inc:0",
+        "uart_rx.v:108:inc:0",
+        "uart_rx.v:111:dec:1",
+        "uart_rx.v:111:inc:1",
+        "uart_rx.v:113:drop:0",
+        "uart_rx.v:113:stuck1:0",
+        "uart_rx.v:118:dec:1",
+        "uart_rx.v:118:inc:1",
+        "uart_rx.v:121:inc:0",
+        "uart_rx.v:125:drop:0",
+        "uart_rx.v:125:stuck0:0",
+        "uart_rx.v:125:stuck1:0",
+        "uart_rx.v:131:drop:0",
+        "uart_rx.v:131:stuck1:0",
+        "uart_rx.v:132:inv:0",
+        "uart_rx.v:133:dec:0",
+        "uart_rx.v:133:dec:1",
+        "uart_rx.v:133:drop:0",
+        "uart_rx.v:133:inc:0",
+        "uart_rx.v:133:inc:1",
+        "uart_rx.v:133:stuck0:0",
+        "uart_rx.v:133:stuck1:0",
+        "uart_rx.v:136:drop:0",
+        "uart_rx.v:136:stuck0:0",
+        "uart_rx.v:88:drop:0",
+        "uart_rx.v:88:stuck1:0",
+        "uart_rx.v:89:drop:0",
+        "uart_rx.v:90:drop:0",
+        "uart_rx.v:90:stuck0:0",
+        "uart_rx.v:91:drop:0",
+        "uart_rx.v:92:drop:0",
+        "uart_rx.v:93:drop:0",
+        "uart_rx.v:93:stuck1:0",
+        "uart_rx.v:94:drop:0",
+        "uart_rx.v:94:stuck1:0",
+        "uart_rx.v:95:drop:0",
+        "uart_rx.v:95:stuck1:0",
+        "uart_rx.v:98:drop:0",
+        "uart_rx.v:98:stuck1:0",
+        "uart_rx.v:99:drop:0",
+        "uart_rx.v:99:stuck1:0",
+        "uart_tx.v:102:dec:0",
+        "uart_tx.v:102:gt_ge:0",
+        "uart_tx.v:104:dec:1",
+        "uart_tx.v:104:inc:1",
+        "uart_tx.v:108:dec:0",
+        "uart_tx.v:108:inc:0",
+        "uart_tx.v:80:drop:0",
+        "uart_tx.v:80:stuck1:0",
+        "uart_tx.v:81:drop:0",
+        "uart_tx.v:82:drop:0",
+        "uart_tx.v:82:stuck1:0",
+        "uart_tx.v:83:drop:0",
+        "uart_tx.v:83:stuck1:0",
+        "uart_tx.v:84:drop:0",
+        "uart_tx.v:84:stuck1:0",
+        "uart_tx.v:86:inc:0",
+        "uart_tx.v:90:drop:0",
+        "uart_tx.v:90:stuck0:0",
+        "uart_tx.v:91:drop:0",
+        "uart_tx.v:91:stuck1:0",
+        "uart_tx.v:95:dec:0",
+        "uart_tx.v:95:dec:1",
+        "uart_tx.v:95:inc:1",
+        "uart_tx.v:96:inc:0",
+        "uart_tx.v:99:drop:0",
+        "uart_tx.v:99:stuck0:0"
+      ],
+      "per_candidate": {
+        "c01": {
+          "kills": 16,
+          "only_this_candidate": 1
+        },
+        "c02": {
+          "kills": 10,
+          "only_this_candidate": 1
+        },
+        "c03": {
+          "kills": 5,
+          "only_this_candidate": 0
+        },
+        "c04": {
+          "kills": 8,
+          "only_this_candidate": 0
+        },
+        "c05": {
+          "kills": 13,
+          "only_this_candidate": 0
+        },
+        "c06": {
+          "kills": 24,
+          "only_this_candidate": 6
+        },
+        "c07": {
+          "kills": 8,
+          "only_this_candidate": 0
+        },
+        "c08": {
+          "kills": 18,
+          "only_this_candidate": 7
+        },
+        "c09": {
+          "kills": 11,
+          "only_this_candidate": 2
+        },
+        "c10": {
+          "kills": 13,
+          "only_this_candidate": 1
+        },
+        "c11": {
+          "kills": 9,
+          "only_this_candidate": 1
+        },
+        "c12": {
+          "kills": 13,
+          "only_this_candidate": 1
+        },
+        "c14": {
+          "kills": 8,
+          "only_this_candidate": 1
+        },
+        "c15": {
+          "kills": 13,
+          "only_this_candidate": 1
+        }
+      },
+      "remaining": 7,
+      "shared": {
+        "uart_rx.v:105:inc:0": [
+          "c02",
+          "c06",
+          "c11",
+          "c12"
+        ],
+        "uart_rx.v:108:inc:0": [
+          "c01",
+          "c06"
+        ],
+        "uart_rx.v:113:stuck1:0": [
+          "c01",
+          "c06"
+        ],
+        "uart_rx.v:118:dec:1": [
+          "c06",
+          "c12"
+        ],
+        "uart_rx.v:118:inc:1": [
+          "c02",
+          "c06",
+          "c11",
+          "c12"
+        ],
+        "uart_rx.v:125:drop:0": [
+          "c02",
+          "c12"
+        ],
+        "uart_rx.v:125:stuck0:0": [
+          "c02",
+          "c12"
+        ],
+        "uart_rx.v:125:stuck1:0": [
+          "c02",
+          "c03",
+          "c06",
+          "c07"
+        ],
+        "uart_rx.v:131:drop:0": [
+          "c01",
+          "c09"
+        ],
+        "uart_rx.v:131:stuck1:0": [
+          "c01",
+          "c04",
+          "c09",
+          "c10",
+          "c11"
+        ],
+        "uart_rx.v:132:inv:0": [
+          "c01",
+          "c04",
+          "c06",
+          "c09",
+          "c10",
+          "c11"
+        ],
+        "uart_rx.v:133:dec:0": [
+          "c01",
+          "c06"
+        ],
+        "uart_rx.v:133:drop:0": [
+          "c01",
+          "c06"
+        ],
+        "uart_rx.v:133:inc:0": [
+          "c01",
+          "c04",
+          "c06",
+          "c07",
+          "c10",
+          "c12"
+        ],
+        "uart_rx.v:133:stuck0:0": [
+          "c01",
+          "c06"
+        ],
+        "uart_rx.v:133:stuck1:0": [
+          "c01",
+          "c06"
+        ],
+        "uart_rx.v:136:drop:0": [
+          "c01",
+          "c04",
+          "c06",
+          "c07",
+          "c09",
+          "c10"
+        ],
+        "uart_rx.v:136:stuck0:0": [
+          "c01",
+          "c04",
+          "c06",
+          "c07",
+          "c09",
+          "c10"
+        ],
+        "uart_rx.v:89:drop:0": [
+          "c04",
+          "c12"
+        ],
+        "uart_rx.v:90:drop:0": [
+          "c09",
+          "c10"
+        ],
+        "uart_rx.v:90:stuck0:0": [
+          "c01",
+          "c04",
+          "c09",
+          "c10"
+        ],
+        "uart_rx.v:92:drop:0": [
+          "c04",
+          "c10"
+        ],
+        "uart_rx.v:93:drop:0": [
+          "c09",
+          "c10",
+          "c11",
+          "c12"
+        ],
+        "uart_rx.v:93:stuck1:0": [
+          "c09",
+          "c10",
+          "c11",
+          "c12"
+        ],
+        "uart_rx.v:94:stuck1:0": [
+          "c02",
+          "c03",
+          "c06",
+          "c07",
+          "c12"
+        ],
+        "uart_rx.v:95:stuck1:0": [
+          "c01",
+          "c02",
+          "c03",
+          "c06",
+          "c07",
+          "c10",
+          "c11"
+        ],
+        "uart_rx.v:98:stuck1:0": [
+          "c02",
+          "c03",
+          "c06",
+          "c07",
+          "c12"
+        ],
+        "uart_rx.v:99:stuck1:0": [
+          "c01",
+          "c02",
+          "c03",
+          "c06",
+          "c07",
+          "c10",
+          "c11",
+          "c12"
+        ],
+        "uart_tx.v:104:dec:1": [
+          "c05",
+          "c08"
+        ],
+        "uart_tx.v:104:inc:1": [
+          "c05",
+          "c08"
+        ],
+        "uart_tx.v:80:stuck1:0": [
+          "c05",
+          "c14",
+          "c15"
+        ],
+        "uart_tx.v:81:drop:0": [
+          "c05",
+          "c15"
+        ],
+        "uart_tx.v:82:stuck1:0": [
+          "c14",
+          "c15"
+        ],
+        "uart_tx.v:83:drop:0": [
+          "c05",
+          "c15"
+        ],
+        "uart_tx.v:83:stuck1:0": [
+          "c08",
+          "c14",
+          "c15"
+        ],
+        "uart_tx.v:84:drop:0": [
+          "c05",
+          "c15"
+        ],
+        "uart_tx.v:84:stuck1:0": [
+          "c05",
+          "c14",
+          "c15"
+        ],
+        "uart_tx.v:86:inc:0": [
+          "c05",
+          "c08"
+        ],
+        "uart_tx.v:90:drop:0": [
+          "c08",
+          "c14",
+          "c15"
+        ],
+        "uart_tx.v:90:stuck0:0": [
+          "c08",
+          "c14",
+          "c15"
+        ],
+        "uart_tx.v:91:drop:0": [
+          "c05",
+          "c08"
+        ],
+        "uart_tx.v:91:stuck1:0": [
+          "c05",
+          "c08",
+          "c14",
+          "c15"
+        ],
+        "uart_tx.v:95:dec:0": [
+          "c05",
+          "c08"
+        ],
+        "uart_tx.v:99:drop:0": [
+          "c05",
+          "c08",
+          "c15"
+        ],
+        "uart_tx.v:99:stuck0:0": [
+          "c05",
+          "c08",
+          "c15"
+        ]
+      }
+    },
+    "requirements": {
+      "cited_by_plan": 2,
+      "new_in_run": [
+        "DOC axis page 18 \"it must remain asse rted until the handshake occurs.\"",
+        "DOC axis page 28 \"During reset, TV ALID  must be driven LOW.\"",
+        "DOC pc16550d page 1 \"YFalse start bit detection.\"",
+        "DOC pc16550d page 12 \"set to the Marking (logic 1) stateupon a Master Reset\"",
+        "DOC pc16550d page 16 \"This bit is the Overrun Error (OE) indicator.\"",
+        "README third_party/verilog-uart/README.md lines [27, 30] \"it should be set to Fclk / (baud * 8)\"",
+        "README third_party/verilog-uart/README.md lines [31, 36] \"Data is transferred from the source to the\"",
+        "README third_party/verilog-uart/README.md lines [39, 42] \"before another word is received, then a single cycle pulse will be emitted\"",
+        "README third_party/verilog-uart/README.md lines [40, 42] \"single cycle pulse will be emitted\"",
+        "README third_party/verilog-uart/README.md lines [42, 44] \"single pulse will be emitted from the\""
+      ]
+    }
+  },
+  "proposed": {
+    "by_pass": {
+      "1": 8,
+      "2": 7
+    },
+    "tasks": 15,
+    "waivers": 0
+  },
+  "run_id": "20261025T225526Z-full",
+  "survivor_pass": {
+    "remaining_before": 18,
+    "targets": {
+      "c09": [
+        "uart_rx.v:88:drop:0",
+        "uart_rx.v:88:stuck1:0",
+        "uart_rx.v:93:drop:0",
+        "uart_rx.v:93:stuck1:0"
+      ],
+      "c10": [
+        "uart_rx.v:90:drop:0",
+        "uart_rx.v:91:drop:0"
+      ],
+      "c11": [
+        "uart_rx.v:95:drop:0"
+      ],
+      "c12": [
+        "uart_rx.v:94:drop:0"
+      ],
+      "c13": [
+        "uart_rx.v:114:stuck1:0"
+      ],
+      "c14": [
+        "uart_tx.v:80:drop:0"
+      ],
+      "c15": [
+        "uart_tx.v:82:drop:0",
+        "uart_tx.v:82:stuck1:0"
+      ]
+    },
+    "targets_killed": {
+      "c09": [
+        "uart_rx.v:88:drop:0",
+        "uart_rx.v:88:stuck1:0",
+        "uart_rx.v:93:drop:0",
+        "uart_rx.v:93:stuck1:0"
+      ],
+      "c10": [
+        "uart_rx.v:90:drop:0",
+        "uart_rx.v:91:drop:0"
+      ],
+      "c11": [
+        "uart_rx.v:95:drop:0"
+      ],
+      "c12": [
+        "uart_rx.v:94:drop:0"
+      ],
+      "c13": [
+        "uart_rx.v:114:stuck1:0"
+      ],
+      "c14": [
+        "uart_tx.v:80:drop:0"
+      ],
+      "c15": [
+        "uart_tx.v:82:drop:0",
+        "uart_tx.v:82:stuck1:0"
+      ]
+    },
+    "unkillable": {
+      "uart_rx.v:114:drop:0": "Equivalent: this branch is only reached when prescale_reg is already 0, so omitting the assignment changes nothing.",
+      "uart_rx.v:121:stuck0:0": "Equivalent: bit_cnt is 1 in this branch, so bit_cnt - 1 equals 0.",
+      "uart_rx.v:135:drop:0": "Equivalent: data_reg is shifted DATA_WIDTH (8) times before it is used, so every bit of its initial value is overwritten.",
+      "uart_rx.v:135:stuck1:0": "Equivalent: the 8 shifts overwrite all of data_reg, so an initial value of 1 never reaches m_axis_tdata.",
+      "uart_rx.v:91:stuck1:0": "Equivalent: the skipped first idle check after reset would see rxd_reg == 1 (its reset value) with busy already 0, so the start timing is unchanged.",
+      "uart_tx.v:107:stuck0:0": "Equivalent: bit_cnt is 1 in this branch, so bit_cnt - 1 equals 0."
+    }
+  },
+  "waiver_proposals": [],
+  "written": {
+    "c01": "R2",
+    "c02": "R3",
+    "c03": "R4",
+    "c04": "R5",
+    "c05": "T1",
+    "c06": "R6",
+    "c07": "R7",
+    "c08": "T2",
+    "c09": "R8",
+    "c10": "R9",
+    "c11": "R10",
+    "c12": "R11",
+    "c14": "T3",
+    "c15": "T4"
+  }
+}

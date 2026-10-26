@@ -1,0 +1,27 @@
+id: P11
+description: rst is sampled high on a clock where frame_error is high. On the next
+  clock rst is still high and frame_error is low, so reset clears the frame-error
+  strobe.
+tier: T2
+cover: P11_rst_clears_frame_error
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 87
+  - 95
+  anchor: frame_error_reg <= 0;
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 42
+  - 44
+  anchor: single pulse will be emitted from the
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 57
+    name: frame_error
+cover_module: cov_P11

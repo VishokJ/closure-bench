@@ -1,0 +1,27 @@
+id: P12
+description: While overrun_error is high, rst is sampled high on that same clock;
+  on the next clock rst is still high and overrun_error is low, so reset clears the
+  overrun strobe.
+tier: T2
+cover: P12_rst_clears_overrun
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 87
+  - 95
+  anchor: overrun_error_reg <= 0;
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 40
+  - 42
+  anchor: single cycle pulse will be emitted
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 56
+    name: overrun_error
+cover_module: cov_P12

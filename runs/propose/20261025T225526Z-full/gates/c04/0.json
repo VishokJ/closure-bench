@@ -1,0 +1,88 @@
+{
+  "item": "P4",
+  "accepted": false,
+  "failed_gate": "gold",
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                87,
+                95
+              ],
+              "anchor": "m_axis_tvalid_reg <= 0;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 28,
+              "anchor": "During reset, TV ALID  must be driven LOW."
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": false,
+      "detail": "status runtime_error, hits 0\n[25416000] %Fatal: tb.sv:76: Assertion failed in TOP.tb.unnamedblk2: word after reset never seen\n%Error: <work>/submission/tb.sv:76: Verilog $stop\nAborting...\n",
+      "data": {
+        "holes_hit": []
+      }
+    }
+  ],
+  "skipped": [
+    "near_miss",
+    "determinism",
+    "value",
+    "duplicate"
+  ]
+}

@@ -1,0 +1,25 @@
+id: P1
+description: A start bit is rejected as false. At the mid-start-bit sample (prescale_reg
+  == 0 and bit_cnt == 10) the synchronised input rxd_reg is already high again, so
+  the receiver abandons the frame.
+tier: T1
+cover: P1_false_start_rejected
+sources:
+- type: BASE
+  point:
+    kind: v_branch
+    file: uart_rx.v
+    line: 109
+    name: else
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 108
+  - 115
+  anchor: bit_cnt <= 0;
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 1
+  anchor: YFalse start bit detection.
+cover_module: cov_P1

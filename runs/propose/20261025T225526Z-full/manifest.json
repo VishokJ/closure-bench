@@ -1,0 +1,33 @@
+{
+  "context_pack_sha": "98157b4719fdc75853d0996963fbe4e8f365b95feb415e03320a105a41b45cdc",
+  "design": "uart",
+  "full_docs": false,
+  "git": {
+    "commit": "dcb03fb9ab5357faf689fb4e90738931bc206487",
+    "dirty": false
+  },
+  "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:79661c70cb6e254e83aa326515b897219b8980448e39fe97b417bf70bf2f713c",
+  "max_candidates": 20,
+  "model": {
+    "max_tokens": 16000,
+    "model": "anthropic/claude-opus-5.5",
+    "temperature": 1.0
+  },
+  "parallel": 4,
+  "prompt_sha": "8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be",
+  "resumed": [
+    {
+      "git": {
+        "commit": "54de886c0c3e776cb8cad5a67f49a6737b0b365a",
+        "dirty": false
+      },
+      "parallel": 4
+    }
+  ],
+  "retries": 2,
+  "run_id": "20261025T225526Z-full",
+  "stage_a_only": false,
+  "survivor_pass": true,
+  "toolchain": "Verilator 5.020 2024-01-01 rev (Debian 5.020-1)",
+  "write": false
+}

@@ -1,0 +1,140 @@
+{
+  "item": "P4",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                87,
+                95
+              ],
+              "anchor": "m_axis_tvalid_reg <= 0;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 28,
+              "anchor": "During reset, TV ALID  must be driven LOW."
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 25",
+      "data": {
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P4_reset_idle_with_pending.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence both; kills 8 baseline survivors (8 only by this gold: uart_rx.v:131:stuck1:0, uart_rx.v:132:inv:0, uart_rx.v:133:inc:0, uart_rx.v:136:drop:0, uart_rx.v:136:stuck0:0, uart_rx.v:89:drop:0, uart_rx.v:90:stuck0:0, uart_rx.v:92:drop:0); requirements: DOC axis page 28",
+      "data": {
+        "evidence": "both",
+        "kills": [
+          "uart_rx.v:131:stuck1:0",
+          "uart_rx.v:132:inv:0",
+          "uart_rx.v:133:inc:0",
+          "uart_rx.v:136:drop:0",
+          "uart_rx.v:136:stuck0:0",
+          "uart_rx.v:89:drop:0",
+          "uart_rx.v:90:stuck0:0",
+          "uart_rx.v:92:drop:0"
+        ],
+        "only_by_this_gold": [
+          "uart_rx.v:131:stuck1:0",
+          "uart_rx.v:132:inv:0",
+          "uart_rx.v:133:inc:0",
+          "uart_rx.v:136:drop:0",
+          "uart_rx.v:136:stuck0:0",
+          "uart_rx.v:89:drop:0",
+          "uart_rx.v:90:stuck0:0",
+          "uart_rx.v:92:drop:0"
+        ],
+        "requirements": [
+          "DOC axis page 28"
+        ],
+        "requirement_keys": [
+          "DOC axis page 28 \"During reset, TV ALID  must be driven LOW.\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

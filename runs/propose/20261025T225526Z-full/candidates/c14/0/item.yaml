@@ -1,0 +1,20 @@
+id: P14
+description: With the idle transmitter showing s_axis_tready high, rst is sampled
+  high on three consecutive clocks. s_axis_tready is 0 on the second and third of
+  those clocks, so it stays low for the whole held reset.
+tier: T1
+cover: P14_tready_low_through_held_reset
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 79
+  - 84
+  anchor: s_axis_tready_reg <= 0;
+- type: README
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 33
+  - 36
+  anchor: The destination will accept data
+cover_module: cov_P14

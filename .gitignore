@@ -12,3 +12,5 @@ results/
 .cache/
 # Proposer runs: only the run that produced the shipped plan is committed (add a !runs/propose/<id>/ line)
 runs/propose/*
+!runs/propose/20261025T225526Z-full/
+!runs/propose/20261025T225526Z-full/

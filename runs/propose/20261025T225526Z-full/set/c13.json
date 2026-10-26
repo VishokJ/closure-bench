@@ -1,0 +1,171 @@
+{
+  "item": "P13",
+  "accepted": false,
+  "failed_gate": "duplicate",
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                112,
+                115
+              ],
+              "anchor": "bit_cnt <= 0;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                130,
+                131
+              ],
+              "anchor": "busy_reg <= 0;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_branch",
+                "file": "uart_rx.v",
+                "line": 109,
+                "name": "else"
+              }
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "doc": "pc16550d",
+              "page": 1,
+              "anchor": "YFalse start bit detection."
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "hit by random stimulus (rx: 35)",
+      "data": {
+        "hit_by_random": {
+          "rx": 35
+        }
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "holes_hit": [
+          "v_branch uart_rx.v:109 else"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P13_start_held_one_clock_longer.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence mutant; kills 23 baseline survivors (1 only by this gold: uart_rx.v:114:stuck1:0); requirements: -",
+      "data": {
+        "evidence": "mutant",
+        "kills": [
+          "uart_rx.v:105:inc:0",
+          "uart_rx.v:108:inc:0",
+          "uart_rx.v:113:drop:0",
+          "uart_rx.v:113:stuck1:0",
+          "uart_rx.v:114:stuck1:0",
+          "uart_rx.v:125:stuck1:0",
+          "uart_rx.v:131:drop:0",
+          "uart_rx.v:131:stuck1:0",
+          "uart_rx.v:132:inv:0",
+          "uart_rx.v:133:dec:0",
+          "uart_rx.v:133:dec:1",
+          "uart_rx.v:133:drop:0",
+          "uart_rx.v:133:inc:0",
+          "uart_rx.v:133:inc:1",
+          "uart_rx.v:133:stuck0:0",
+          "uart_rx.v:133:stuck1:0",
+          "uart_rx.v:136:drop:0",
+          "uart_rx.v:136:stuck0:0",
+          "uart_rx.v:90:stuck0:0",
+          "uart_rx.v:94:stuck1:0",
+          "uart_rx.v:95:stuck1:0",
+          "uart_rx.v:98:stuck1:0",
+          "uart_rx.v:99:stuck1:0"
+        ],
+        "only_by_this_gold": [
+          "uart_rx.v:114:stuck1:0"
+        ],
+        "requirements": [],
+        "requirement_keys": []
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": false,
+      "detail": "no testbench separates it from P1; implies P1",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

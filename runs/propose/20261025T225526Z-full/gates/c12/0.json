@@ -1,0 +1,169 @@
+{
+  "item": "P12",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                87,
+                95
+              ],
+              "anchor": "overrun_error_reg <= 0;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                40,
+                42
+              ],
+              "anchor": "single cycle pulse will be emitted"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 56,
+                "name": "overrun_error"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "holes_hit": [
+          "v_toggle uart_rx.v:56 overrun_error",
+          "v_toggle uart_rx.v:62 prescale[1]",
+          "v_toggle uart_rx.v:72 overrun_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P12_reset_one_cycle_late.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence both; kills 13 baseline survivors (13 only by this gold: uart_rx.v:105:inc:0, uart_rx.v:118:dec:1, uart_rx.v:118:inc:1, uart_rx.v:125:drop:0, uart_rx.v:125:stuck0:0, uart_rx.v:133:inc:0, uart_rx.v:89:drop:0, uart_rx.v:93:drop:0, uart_rx.v:93:stuck1:0, uart_rx.v:94:drop:0, uart_rx.v:94:stuck1:0, uart_rx.v:98:stuck1:0, uart_rx.v:99:stuck1:0); requirements: README third_party/verilog-uart/README.md lines [40, 42]",
+      "data": {
+        "evidence": "both",
+        "kills": [
+          "uart_rx.v:105:inc:0",
+          "uart_rx.v:118:dec:1",
+          "uart_rx.v:118:inc:1",
+          "uart_rx.v:125:drop:0",
+          "uart_rx.v:125:stuck0:0",
+          "uart_rx.v:133:inc:0",
+          "uart_rx.v:89:drop:0",
+          "uart_rx.v:93:drop:0",
+          "uart_rx.v:93:stuck1:0",
+          "uart_rx.v:94:drop:0",
+          "uart_rx.v:94:stuck1:0",
+          "uart_rx.v:98:stuck1:0",
+          "uart_rx.v:99:stuck1:0"
+        ],
+        "only_by_this_gold": [
+          "uart_rx.v:105:inc:0",
+          "uart_rx.v:118:dec:1",
+          "uart_rx.v:118:inc:1",
+          "uart_rx.v:125:drop:0",
+          "uart_rx.v:125:stuck0:0",
+          "uart_rx.v:133:inc:0",
+          "uart_rx.v:89:drop:0",
+          "uart_rx.v:93:drop:0",
+          "uart_rx.v:93:stuck1:0",
+          "uart_rx.v:94:drop:0",
+          "uart_rx.v:94:stuck1:0",
+          "uart_rx.v:98:stuck1:0",
+          "uart_rx.v:99:stuck1:0"
+        ],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [40, 42]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [40, 42] \"single cycle pulse will be emitted\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}
