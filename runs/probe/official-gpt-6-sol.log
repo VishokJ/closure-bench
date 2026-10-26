@@ -1,0 +1,32 @@
+env       closure-bench  ·  null harness  ·  prime runtime                      
+model     openai/gpt-6-sol  (temperature=1.0, reasoning_effort=high,            
+          max_tokens=65536)  via https://api.pinference.ai/api/v1               
+taskset   agent_timeout=2400.0  ·                                               
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+limits    ≤128 episodes     ·  no turn cap         ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/official/gpt-6-sol/closure-bench--openai--gpt-6-sol--null--2fc
+          9e854                                                                 
+━━━━━━━━━━━━━━━━━━━━ 208/208 · 15m 46s · reward 0.84 · err 0.00  (page 8/26 ◄ ►)
+rewards   target_reached 0.84                                                   
+metrics   turns 1.00  ·  turn_cap_hit 0.00  ·  prompt_tokens 21632.81  ·        
+          cached_input_tokens 0.00  ·  output_tokens 1815.72  ·  compiled 0.88  
+          ·  policy_violation 0.00  ·  illegal_stimulus 0.00  ·  finished 0.88  
+          ·  target_hit 0.84  ·  off_target_items_hit 0.43  ·  sim_seconds 6.86 
+usage     4.5M/377.7K tokens (0 cached, 275.1K reasoning)                       
+time      boot 7s  ·  setup 1m 51s  ·  agent 26s (model 21s + harness 5s)  ·    
+          finalize 11s  ·  scoring 2m 27s                                       
+────────────────────────────────────────────────────────────────────────────────
+╭ [success ] task name=R18 agent=agent · 69ab787f · prime(… reward=1.00 ·  6m 8s
+│ [success ] task name=R18 agent=agent · b6893531 · prime(… reward=1.00 · 4m 31s
+│ [success ] task name=R18 agent=agent · dd5f4fe0 · prime(… reward=1.00 · 7m 28s
+│ [success ] task name=R18 agent=agent · a33d1b26 · prime(… reward=1.00 · 6m 53s
+│ [success ] task name=R18 agent=agent · 970417a6 · prime(… reward=1.00 · 4m 54s
+│ [success ] task name=R18 agent=agent · 9368bf96 · prime(… reward=1.00 · 6m 19s
+│ [success ] task name=R18 agent=agent · 8d32bccc · prime(… reward=1.00 ·  2m 6s
+╰ [success ] task name=R18 agent=agent · 1b706656 · prime(… reward=1.00 · 1m 58s
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rl

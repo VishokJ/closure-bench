@@ -1,0 +1,33 @@
+env       closure-bench  ·  null harness  ·  prime runtime                      
+model     nvidia/nemotron-3-nano-30b-a3b  (temperature=1.0, max_tokens=65536)   
+          via https://api.pinference.ai/api/v1                                  
+taskset   agent_timeout=2400.0  ·                                               
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+limits    ≤128 episodes     ·  no turn cap         ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/official/nemotron/closure-bench--nvidia--nemotron-3-nano-30b-a
+          3b--null--aded5d0b                                                    
+━━━━━━━━━━━━━━━━━━━ 208/208 · 20m 32s · reward 0.08 · err 0.00  (page 13/26 ◄ ►)
+rewards   target_reached 0.08                                                   
+metrics   turns 1.00  ·  turn_cap_hit 0.00  ·  prompt_tokens 7042.35  ·         
+          cached_input_tokens 16246.15  ·  output_tokens 23611.78  ·  compiled  
+          0.46  ·  policy_violation 0.00  ·  illegal_stimulus 0.08  ·  finished 
+          0.26  ·  target_hit 0.08  ·  off_target_items_hit 0.22  ·  sim_seconds
+          9.22                                                                  
+usage     4.8M/4.9M tokens (3.4M cached, 4.7M reasoning)                        
+time      boot 5s  ·  setup 48s  ·  agent 6m 30s (model 6m 25s + harness 5s)  · 
+          finalize 3s  ·  scoring 34s                                           
+────────────────────────────────────────────────────────────────────────────────
+╭ [success ] task name=R23 agent=agent · 071a0f4a · prime(… reward=0.00 ·  7m 3s
+│ [success ] task name=R23 agent=agent · d08fac41 · prime(… reward=0.00 ·  6m 9s
+│ [success ] task name=R23 agent=agent · 178f1abb · prime(… reward=0.00 · 8m 35s
+│ [success ] task name=R23 agent=agent · d30337b9 · prime(… reward=0.00 · 5m 56s
+│ [success ] task name=R23 agent=agent · b9871959 · prime(… reward=0.00 · 6m 45s
+│ [success ] task name=R23 agent=agent · 81e98a47 · prime(… reward=0.00 · 3m 27s
+│ [success ] task name=R23 agent=agent · eb0d9cb4 · prime(… reward=0.00 · 4m 33s
+╰ [success ] task name=R23 agent=agent · 9380ab13 · prime(… reward=0.00 · 4m 27s
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rl

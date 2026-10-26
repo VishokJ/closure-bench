@@ -1,0 +1,33 @@
+env       closure-bench  ·  null harness  ·  prime runtime                      
+model     qwen/qwen3.8-27b  (temperature=1.0, max_tokens=65536)  via            
+          https://api.pinference.ai/api/v1                                      
+taskset   agent_timeout=2400.0  ·                                               
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+limits    ≤128 episodes     ·  no turn cap         ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/official/qwen/closure-bench--qwen--qwen3.8-27b--null--ec46d01c
+━━━━━━━━━━━━ 208/208 · 59m 25s · reward 0.67 (0.66) · err 0.00  (page 12/26 ◄ ►)
+rewards   target_reached 0.67 (0.66)                                            
+metrics   turns 1.00 (1.00)  ·  turn_cap_hit 0.00 (0.00)  ·  prompt_tokens      
+          17840.84 (17755.06)  ·  cached_input_tokens 5617.86 (5590.85)  ·      
+          output_tokens 40632.71 (40437.36)  ·  compiled 0.84 (0.83)  ·         
+          policy_violation 0.00 (0.00)  ·  illegal_stimulus 0.07 (0.07)  ·      
+          finished 0.73 (0.73)  ·  target_hit 0.67 (0.66)  ·                    
+          off_target_items_hit 0.39 (0.39)  ·  sim_seconds 6.38 (6.35)          
+usage     4.9M/8.4M tokens (1.2M cached, 5.8M reasoning)                        
+time      boot 6s  ·  setup 1m 13s  ·  agent 11m 22s (model 11m 16s + harness   
+          6s)  ·  finalize 3s  ·  scoring 31s                                   
+────────────────────────────────────────────────────────────────────────────────
+╭ [success ] task name=R22 agent=agent · 8696a382 · prime… reward=1.00 ·  13m 0s
+│ [success ] task name=R22 agent=agent · 7d8ac355 · prime… reward=1.00 ·  23m 6s
+│ [success ] task name=R22 agent=agent · a9577efe · prime… reward=1.00 · 12m 41s
+│ [success ] task name=R22 agent=agent · d10b44c3 · prime… reward=1.00 ·  14m 1s
+│ [success ] task name=R22 agent=agent · 5d9b8e0b · prime… reward=0.00 · 16m 23s
+│ [success ] task name=R22 agent=agent · ef73fdfb · prime… reward=1.00 · 12m 22s
+│ [success ] task name=R22 agent=agent · ab31bb98 · prime… reward=1.00 ·  11m 3s
+╰ [success ] task name=R22 agent=agent · 6ed92e17 · prime… reward=1.00 · 31m 16s
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rl

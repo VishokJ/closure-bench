@@ -1,0 +1,26 @@
+env       closure-bench  ·  null harness  ·  prime runtime                      
+model     nvidia/nemotron-3-nano-30b-a3b  (temperature=1.0, max_tokens=32768)   
+          via https://api.pinference.ai/api/v1                                  
+taskset   agent_timeout=900.0  ·                                                
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+limits    ≤128 episodes     ·  no turn cap         ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/probe-hard2/closure-bench--nvidia--nemotron-3-nano-30b-a3b--nu
+          ll--e535835e                                                          
+━━━━━━━━━━━━━━━━━━━━━━ 52/52 · 10m 55s · reward 0.10 · err 0.00  (page 2/26 ◄ ►)
+rewards   target_reached 0.10                                                   
+metrics   turns 1.00  ·  turn_cap_hit 0.00  ·  prompt_tokens 15344.73  ·        
+          cached_input_tokens 7310.77  ·  output_tokens 22696.52  ·  compiled   
+          0.48  ·  policy_violation 0.00  ·  finished 0.35  ·  target_hit 0.10  
+          ·  off_target_items_hit 0.33  ·  sim_seconds 9.82                     
+usage     1.2M/1.2M tokens (380.2K cached, 1.1M reasoning)                      
+time      boot 5s  ·  setup 22s  ·  agent 6m 4s (model 5m 53s + harness 11s)  · 
+          finalize 3s  ·  scoring 32s                                           
+────────────────────────────────────────────────────────────────────────────────
+╭ [success ] task name=R13 agent=agent · cbd7414d · prime… reward=0.00 · 10m 35s
+╰ [success ] task name=R13 agent=agent · bddcec2c · prime… reward=0.00 ·  5m 46s
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rl

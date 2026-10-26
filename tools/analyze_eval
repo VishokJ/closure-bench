@@ -19,6 +19,17 @@ Wilson 95%. Per group it is a 95% percentile bootstrap that resamples tasks
 (2,000 resamples, fixed seed): rollouts cluster by task, so a pooled Wilson
 interval would be too narrow.
 
+pass@8 per task is the unbiased estimate 1 - C(n-c, 8) / C(n, 8) from c hits in
+n graded rollouts (Chen et al. 2021); a task with n < 8 (rollouts lost to
+infra errors) has none and is left out, and the tasks counted are reported. Per
+group: the mean over tasks, with the same task bootstrap. Mixed tasks have
+0 < hits < graded rollouts (1-7 of 8 at k=8): the ones that give RL signal.
+pass@1 compiled leaves out compile_error and no_submission rollouts: the hit
+rate among attempts that built, same task bootstrap.
+
+--role MODEL=TEXT (repeatable) labels a model's groups in the tables and in
+summary.json, e.g. --role nvidia/nemotron-3-nano-30b-a3b="calibration model".
+
 Calibration (calibration.json, calibration.md), per group, on graded rollouts:
   set level     mean of per-task pass@1, task-bootstrap 95% interval, against
                 --band LO,HI: in_band (interval inside), below, above, overlaps
@@ -72,6 +83,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTCOMES = ["no_submission", "policy_violation", "illegal_stimulus", "compile_error", "timeout",
             "runtime_error", "no_finish", "missed", "hit"]
 Z95 = 1.959963984540054
+NOT_COMPILED = ("compile_error", "no_submission")   # left out of pass@1 compiled
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_SEED = 0
 
@@ -99,6 +111,22 @@ def bootstrap_tasks(counts: list[tuple[int, int]], resamples: int = BOOTSTRAP_RE
         draw = [counts[rng.randrange(len(counts))] for _ in counts]
         vals.append(sum(k for k, _ in draw) / sum(n for _, n in draw))
     vals.sort()
+    return (vals[int(0.025 * resamples)], vals[int(0.975 * resamples) - 1])
+
+
+def pass_at_k(n: int, c: int, k: int = 8) -> float | None:
+    """Unbiased P(at least one of k rollouts hits) from c hits in n; None if n < k."""
+    return None if n < k else 1.0 - math.comb(n - c, k) / math.comb(n, k)
+
+
+def bootstrap_mean(values: list[float], resamples: int = BOOTSTRAP_RESAMPLES,
+                   seed: int = BOOTSTRAP_SEED) -> tuple[float, float] | None:
+    """95% percentile interval of the mean of per-task values, tasks resampled."""
+    if not values:
+        return None
+    rng = random.Random(seed)
+    vals = sorted(sum(values[rng.randrange(len(values))] for _ in values) / len(values)
+                  for _ in range(resamples))
     return (vals[int(0.025 * resamples)], vals[int(0.975 * resamples) - 1])
 
 
@@ -205,6 +233,8 @@ def stats(rs: list[dict]) -> dict:
     kept = [r for r in graded if not r["truncated"]]
     n, k = len(graded), sum(r["reward"] == 1.0 for r in graded)
     nk, kk = len(kept), sum(r["reward"] == 1.0 for r in kept)
+    built = [r for r in graded if r["outcome"] not in NOT_COMPILED]
+    nc, kc = len(built), sum(r["reward"] == 1.0 for r in built)
     oc = Counter(r["outcome"] for r in graded)
     mean = lambda f: sum(r[f] for r in graded) / n if n else None  # noqa: E731
     # no-reply rollouts (agent timeout before the first response) report 0 output
@@ -223,6 +253,9 @@ def stats(rs: list[dict]) -> dict:
         "no_reply": sum(r["no_reply"] for r in graded),
         "pass_at_1_untruncated": kk / nk if nk else None,
         "wilson95_untruncated": wilson(kk, nk),
+        "compiled": nc,
+        "pass_at_1_compiled": kc / nc if nc else None,
+        "wilson95_compiled": wilson(kc, nc),
         "outcomes": {o: oc.get(o, 0) for o in OUTCOMES + sorted(set(oc) - set(OUTCOMES))},
         "mean_tokens": mean("tokens"),
         "mean_input_tokens": mean("input_tokens"),
@@ -245,13 +278,23 @@ def stats(rs: list[dict]) -> dict:
 def aggregate(tasks: dict, rollouts: dict) -> dict:
     """Pooled stats over these tasks ({task: stats}), with task-bootstrap intervals."""
     agg = stats([r for t in tasks for r in rollouts[t]])
-    del agg["wilson95"], agg["wilson95_untruncated"]   # per-task intervals only
+    del agg["wilson95"], agg["wilson95_untruncated"], agg["wilson95_compiled"]   # per-task intervals only
     agg["bootstrap95"] = bootstrap_tasks([(s["hits"], s["graded"]) for s in tasks.values()])
     agg["bootstrap95_untruncated"] = bootstrap_tasks(
         [(s["hits"], s["graded"] - s["truncated"]) for s in tasks.values()])
+    agg["bootstrap95_compiled"] = bootstrap_tasks([(s["hits"], s["compiled"]) for s in tasks.values()])
     agg["all_truncated_tasks"] = [t for t, s in tasks.items() if s["all_truncated"]]
     rates = [s["pass_at_1"] for s in tasks.values() if s["pass_at_1"] is not None]
     agg["task_mean_pass_at_1"] = sum(rates) / len(rates) if rates else None
+    p8 = [v for s in tasks.values() if (v := pass_at_k(s["graded"], s["hits"])) is not None]
+    agg["pass_at_8"] = sum(p8) / len(p8) if p8 else None
+    agg["bootstrap95_pass_at_8"] = bootstrap_mean(p8)
+    agg["pass_at_8_tasks"] = len(p8)
+    graded = [s for s in tasks.values() if s["graded"]]
+    agg["tasks_graded"] = len(graded)
+    agg["tasks_mixed"] = sum(0 < s["hits"] < s["graded"] for s in graded)
+    agg["tasks_no_hit"] = sum(s["hits"] == 0 for s in graded)
+    agg["tasks_all_hit"] = sum(s["hits"] == s["graded"] for s in graded)
     return agg
 
 
@@ -267,12 +310,13 @@ def load_tags(path: Path) -> dict[str, str]:
     return out
 
 
-def summarise(groups: dict, rollouts: dict, tags: dict[str, str] | None = None) -> dict:
+def summarise(groups: dict, rollouts: dict, tags: dict[str, str] | None = None,
+              roles: dict[str, str] | None = None) -> dict:
     out = {"groups": []}
     for lab in sorted(groups):
         tasks = {t: stats(rollouts[lab][t]) for t in sorted(rollouts[lab], key=task_key)}
         g = groups[lab]
-        grp = {"label": lab, "model": g["model"], "harness": g["harness"],
+        grp = {"label": lab, "model": g["model"], "role": (roles or {}).get(g["model"]), "harness": g["harness"],
                "max_tokens": g["max_tokens"], "max_turns": g["max_turns"],
                "runs": sorted(g["runs"]), "aggregate": aggregate(tasks, rollouts[lab]), "tasks": tasks}
         if tags is not None:
@@ -489,6 +533,16 @@ def tok(d: dict) -> str:
     return "–" if d["mean"] is None else f"{d['mean']:.0f} / {d['median']:.0f}"
 
 
+def p8(a: dict) -> str:
+    """pass@8 with its interval; the tasks it covers when some have fewer than 8 rollouts."""
+    short = a["pass_at_8_tasks"] < a["tasks_graded"]
+    return ci(a["pass_at_8"], a["bootstrap95_pass_at_8"]) + (f" ({a['pass_at_8_tasks']} tasks)" if short else "")
+
+
+def mixed(a: dict) -> str:
+    return f"{a['tasks_mixed']} / {a['tasks_no_hit']} / {a['tasks_all_hit']}"
+
+
 def table(head: list[str], rows: list[list[str]]) -> str:
     lines = ["| " + " | ".join(head) + " |", "|" + "|".join("---" for _ in head) + "|"]
     return "\n".join(lines + ["| " + " | ".join(r) + " |" for r in rows])
@@ -505,31 +559,42 @@ def markdown(summary: dict) -> str:
              "from every rate. A task bootstrap has zero width when every task has the same "
              "rate (e.g. all 4/4): it ignores sampling noise within a task. Output-token "
              "statistics leave out no-reply rollouts (timed out before the first response; "
-             "their token count is not recorded).", "",
-             table(["", "group", "runs"],
-                   [[short[g["label"]], g["label"], ", ".join(g["runs"])] for g in gs]), "",
+             "their token count is not recorded). pass@8 = mean over tasks of the unbiased "
+             "1 - C(n-c, 8)/C(n, 8), same task bootstrap; tasks with fewer than 8 graded "
+             "rollouts have none and are left out (the tasks counted are shown). Mixed = "
+             "0 < hits < graded rollouts (1-7 of 8 at k=8). pass@1 compiled = hits over "
+             "graded rollouts that are not compile_error or no_submission.", "",
+             table(["", "group", "role", "runs"],
+                   [[short[g["label"]], g["label"], g.get("role") or "", ", ".join(g["runs"])]
+                    for g in gs]), "",
              "## Per group", ""]
     rows = []
     for g in gs:
         a = g["aggregate"]
         rows.append([short[g["label"]], f"{a['graded']} (+{a['infra_errors']} infra)",
                      ci(a["pass_at_1"], a["bootstrap95"]), pct(a["task_mean_pass_at_1"]),
+                     p8(a), mixed(a),
                      ci(a["pass_at_1_untruncated"], a["bootstrap95_untruncated"]),
+                     ci(a["pass_at_1_compiled"], a["bootstrap95_compiled"]) + f" (n={a['compiled']})",
                      pct(a["truncation_rate"]), num(a["mean_input_tokens"]),
                      num(a["mean_output_tokens"]), num(a["mean_turns"], "{:.1f}"),
                      f"{num(a['mean_run_sh_calls'], '{:.1f}')} ({a['rollouts_calling_run_sh']})",
                      num(a["mean_sim_seconds"], "{:.1f}"),
                      ", ".join(f"{k} {v}" for k, v in a["submission_source"].items())])
-    parts += [table(["", "rollouts", "pass@1 [bootstrap 95%]", "task mean",
-                     "pass@1 untruncated [bootstrap 95%]", "truncated", "in tokens", "out tokens",
+    parts += [table(["", "rollouts", "pass@1 [bootstrap 95%]", "task mean", "pass@8 [bootstrap 95%]",
+                     "tasks mixed / no hit / all hit",
+                     "pass@1 untruncated [bootstrap 95%]", "pass@1 compiled [bootstrap 95%]",
+                     "truncated", "in tokens", "out tokens",
                      "turns", "run.sh calls (rollouts)", "sim s", "submission"], rows), ""]
     if any("by_tag" in g for g in gs):
         parts += ["## pass@1 by tag", "",
                   table(["", "tag", "tasks", "rollouts", "pass@1 [bootstrap 95%]", "task mean",
+                         "pass@8 [bootstrap 95%]", "tasks mixed / no hit / all hit",
                          "pass@1 untruncated [bootstrap 95%]", "truncated"],
                         [[short[g["label"]], tag, str(len(a["tasks"])),
                           f"{a['graded']} (+{a['infra_errors']} infra)",
                           ci(a["pass_at_1"], a["bootstrap95"]), pct(a["task_mean_pass_at_1"]),
+                          p8(a), mixed(a),
                           ci(a["pass_at_1_untruncated"], a["bootstrap95_untruncated"]),
                           pct(a["truncation_rate"])]
                          for g in gs for tag, a in g.get("by_tag", {}).items()]), ""]
@@ -659,13 +724,18 @@ def main() -> int:
     ap.add_argument("--band", default="0.3,0.6", help="target band for mean pass@1: LO,HI")
     ap.add_argument("--group-by-tag", type=Path, metavar="TAGS.yaml",
                     help="sidecar {tag: [task id, ...]}: also report each group per tag")
+    ap.add_argument("--role", action="append", default=[], metavar="MODEL=TEXT",
+                    help="label a model's groups (repeatable), e.g. MODEL='calibration model'")
     args = ap.parse_args()
+    roles = dict(r.split("=", 1) for r in args.role if "=" in r)
+    if len(roles) != len(args.role):
+        ap.error("--role takes MODEL=TEXT")
     band = tuple(float(x) for x in args.band.split(","))
     if len(band) != 2 or not 0 <= band[0] < band[1] <= 1:
         ap.error("--band takes LO,HI with 0 <= LO < HI <= 1")
 
     groups, rollouts = load(args.dirs)
-    summary = summarise(groups, rollouts, load_tags(args.group_by_tag) if args.group_by_tag else None)
+    summary = summarise(groups, rollouts, load_tags(args.group_by_tag) if args.group_by_tag else None, roles)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     md = markdown(summary)

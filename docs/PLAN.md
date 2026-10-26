@@ -368,26 +368,46 @@ Backlog:
 
 ## 11. Difficulty and calibration
 
-Target for the final set: a few T0 anchors any frontier model solves, most
-tasks with frontier pass@1 in 20-80%, a few rarely solved. Tasks with
-0 < pass rate < 1 are the ones that give RL signal.
+Tasks are generated at maximum difficulty (target-only, formal witnesses at
+least 1.5 frames deep) and stepped down only if the evidence says so. A task
+with 0 < pass rate < 1 is one that gives RL signal; a binary reward carries the
+most signal per task near pass@1 = 0.5.
 
-Pilot: all accepted items × 2 models × k=4, null harness, via Prime
-Inference. Per-task pass@1 with Wilson intervals; k=4 is noisy, so tier moves
-need consistent evidence.
+Calibration, three levels:
+1. Set: mean pass@1 of the trainable model with a task bootstrap, target
+   0.3-0.6; the failure mix (truncation, compile, timeout, illegal stimulus,
+   miss) and the share of tasks with mixed outcomes. Adjust the generator, not
+   individual tasks.
+2. Task: empirical-Bayes beta-binomial per task (too_easy, too_hard, in_band,
+   unclear); +2 rollouts for unclear up to k=8; bounded harden/relax repair.
+   Not run on hard2: the set level was enough to pick the models.
+3. Report: fresh rollouts on models whose per-task results selected no task.
 
-Hardening rules:
-- A non-anchor solved 4/4: tighten via a boundary, cross or sequence variant;
-  keep the easy version only as an anchor.
-- 0/8 across both models: fairness check (gold scores 1, the prompt contains
-  everything needed, the failure is an engineering failure and not a missing
-  fact); keep at most a few as frontier-hard.
-- Harness knob: null (single reply) vs bash (simulator in a tool loop).
+What happened on hard2 (26 items, R12-R29, T5-T12):
+- Calibrated first on Nemotron 3 Nano 30B (null harness, k=2, 32k tokens):
+  pass@1 0.10, failures mostly compile errors and truncation.
+- Sanity runs (k=1, 65k tokens): gpt-6-sol 0.76, Qwen 3.8-27b 0.70.
+- Re-graded with the legality checker (section 10): Nemotron about 0.05,
+  gpt-6-sol about 0.5, Qwen about 0.48. Most lost frontier hits pulsed
+  s_axis_tvalid without a handshake.
+- Nemotron at about 5% gives almost no tasks with mixed outcomes, so the
+  trainable model moved to Qwen, which sits in the band. This is model
+  selection on aggregate results, not task selection: no task was kept or
+  dropped on any model's results.
 
-Decision gate: if, after one hardening pass, fewer than half the tasks sit in
-the 20-80% band, add a larger design and run the same pipeline on it.
-Candidates: `axis_fifo` from alexforencich/verilog-axis (same author and
-interfaces, more state) or picorv32 for a large step up.
+Final eval: Qwen 3.8-27b (open weights, the trainable model) and gpt-6-sol at
+high reasoning effort (frontier reference, a different vendor from the
+proposer, claude-opus-5.5). Both: null harness, the prompt that lists the
+legality rules, k=8, max_tokens 65536, agent timeout 2400 s, provider errors
+retried and any left excluded as infrastructure. Report pass@1 and pass@8 with
+task-bootstrap intervals, the failure mix, the number of tasks with 1-7/8
+successes, and padded vs the rest. Nemotron is reported as the calibration run.
+
+Decision gate: if Qwen's pass@1 under the final settings falls outside
+0.2-0.7, or fewer than a third of the tasks have mixed outcomes, revisit the
+generator (depth floor, an easier tier) before training. A larger design
+(`axis_fifo` from alexforencich/verilog-axis, or picorv32) stays the next step
+for breadth.
 
 ## 12. Open questions
 

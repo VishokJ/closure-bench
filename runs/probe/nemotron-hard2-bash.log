@@ -1,0 +1,27 @@
+env       closure-bench  ·  bash harness  ·  prime runtime                      
+model     nvidia/nemotron-3-nano-30b-a3b  (temperature=1.0, max_tokens=32768)   
+          via https://api.pinference.ai/api/v1                                  
+taskset   agent_timeout=1200.0  ·  harness=bash  ·                              
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+          ·  max_turns=40                                                       
+limits    ≤128 episodes     ·  40 turns            ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/probe-hard2-bash/closure-bench--nvidia--nemotron-3-nano-30b-a3
+          b--bash--dde0ed37                                                     
+━━━━━━━━━━━━━━━━━━━━━ 52/52 · 18m 30s · reward 0.00 · err 0.00  (page 15/26 ◄ ►)
+rewards   target_reached 0.00                                                   
+metrics   turns 9.40  ·  turn_cap_hit 0.00  ·  prompt_tokens 105795.98  ·       
+          cached_input_tokens 111204.92  ·  output_tokens 48533.08  ·  compiled 
+          0.21  ·  policy_violation 0.00  ·  finished 0.13  ·  target_hit 0.00  
+          ·  off_target_items_hit 0.10  ·  sim_seconds 6.04                     
+usage     291.1K/2.5M tokens (5.8M cached, 2.5M reasoning)                      
+time      boot 6s  ·  setup 32s  ·  agent 10m 46s (model 10m 35s + harness 12s) 
+          ·  finalize 3s  ·  scoring 36s                                        
+────────────────────────────────────────────────────────────────────────────────
+╭ [success ] task name=R25 agent=agent · e959f19e · prime… reward=0.00 ·  8m 31s
+╰ [success ] task name=R25 agent=agent · a8d59440 · prime… reward=0.00 · 15m 14s
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rl

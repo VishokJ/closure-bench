@@ -1,0 +1,26 @@
+env       closure-bench  ·  null harness  ·  prime runtime                      
+model     qwen/qwen3.8-27b  (temperature=1.0, max_tokens=65536)  via            
+          https://api.pinference.ai/api/v1                                      
+taskset   agent_timeout=900.0  ·                                                
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+limits    ≤128 episodes     ·  no turn cap         ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/sanity/qwen/closure-bench--qwen--qwen3.8-27b--null--de931891  
+━━━━━━━━━━━━━━━ 26/26 · 15m 53s · reward 0.70 (0.62) · err 0.12  (page 9/26 ◄ ►)
+rewards   target_reached 0.70 (0.62)                                            
+metrics   turns 0.78 (0.69)  ·  turn_cap_hit 0.00 (0.00)  ·  prompt_tokens      
+          17868.04 (15806.35)  ·  cached_input_tokens 11.13 (9.85)  ·           
+          output_tokens 34146.22 (30206.27)  ·  compiled 0.74 (0.65)  ·         
+          policy_violation 0.00 (0.00)  ·  finished 0.74 (0.65)  ·  target_hit  
+          0.70 (0.62)  ·  off_target_items_hit 0.52 (0.46)  ·  sim_seconds 4.49 
+          (3.97)                                                                
+usage     411.2K/785.4K tokens (256 cached, 770.0K reasoning)                   
+time      boot 4s  ·  setup 18s  ·  agent 9m 34s (model 6m 21s + harness 3m 13s)
+          ·  finalize 3s  ·  scoring 26s                                        
+────────────────────────────────────────────────────────────────────────────────
+  [success ] task name=R19 agent=agent · 3f9dd44d · prime(… reward=1.00 · 6m 48s
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rl
