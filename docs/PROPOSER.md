@@ -134,16 +134,22 @@ against every checking gold) → `duplicate`. See
 ## Gold-less candidates and `--target-only`
 
 A candidate without `gold.sv` gets its gold from formal:
-`closure_core.formal.cover_witness(pack, cover, bound=, timeout=)` searches
-for stimulus that reaches the cover under the pack's formal environment
-(`designs/<d>/formal/`: `formal.yaml` with `bound` and `timeout`, and one env
-file per bound module). Formal measures; Verilator judges: the witness
+`closure_core.formal.cover_witness(pack, cover, bound=, timeout=, engine=,
+minimize_timeout=)` searches for stimulus that reaches the cover under the
+pack's formal environment (`designs/<d>/formal/`: `formal.yaml` with `engine`,
+`bound`, `timeout` and `minimize_timeout`, and one env file per bound module).
+`timeout` bounds the first solve, which finds the shortest witness;
+`minimize_timeout` separately bounds the search for its fewest input changes,
+and running out of it keeps the witness (`input_changes_exact: false`), never
+a timeout. The engine (`abc bmc3` for uart, chosen on a benchmark recorded in
+`formal.yaml`) is one of `formal.ENGINES`; every allowed engine must find the
+same minimal depth (`tests/test_formal.py`). Formal measures; Verilator judges: the witness
 testbench becomes the overlay's gold (a **reach gold**, first line
 `// gold_source: formal`, then its depth), and the `gold` gate must still
 score it 1. Unreachable, timeout, an untranslatable cover (`UnsupportedCover`)
 and an invalid one (`ValueError`) are distinct rejections; a `RuntimeError`
 or missing tools is an infrastructure error, handled as above. A formal
-`timeout` (the budget in `formal.yaml`) may be load, so it is retried once
+`timeout` (the solve budget in `formal.yaml`) may be load, so it is retried once
 while no other formal job of the run is running: every solve holds a shared
 POSIX lock on `<witness cache>/.formal.lock`, the retry an exclusive one
 (`lockf`; `flock` does not exclude across containers on Docker Desktop). A
@@ -160,10 +166,19 @@ of `prescale << 3` clocks), so a slower prescale never makes a target deeper.
 A floor in cycles did: in a smoke run with a 160-cycle floor, all three
 targets were reachable at 156 cycles (two frames at prescale 1), and the model
 padded them with stall cycles, an extra word, or a forced prescale >= 2.
-`witness_depth` (cycles) is still recorded. Calibration on the formal
-witnesses of the 13 reachable plan items and those 3 targets: two-frame
-witnesses measure 1.950-1.966 frames, one-frame ones 1.000-1.050, single
-events below 0.09; `--target-only` defaults to F = 1.9 (two frames). Frames
+`witness_depth` (cycles) is still recorded. Calibration on formal witnesses
+(frames):
+
+| Witnesses | Frames |
+|---|---|
+| single events (plan items) | below 0.09 |
+| one frame (plan items) | 1.000-1.050 |
+| two frames (plan items, the 3 smoke targets) | 1.950-1.966 |
+| two frames, transmitter: prescale 1, then a frame at prescale 3 covered before its stop bit | 1.85 |
+
+The 1.85 target was real two-frame activity and was rejected by the earlier
+default of 1.9. `--target-only` now defaults to F = 1.5, between one frame
+(<= 1.05) and two (>= 1.85): it accepts two frames and rejects one. Frames
 measure elapsed time, so waiting the cover itself demands still counts: the
 message discourages it, the floor does not prevent it.
 

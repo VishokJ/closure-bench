@@ -316,7 +316,7 @@ def gold(item: PlanItem, a: GradeResult | None, violations: list[str] = ()) -> G
 
 # --- formal ---------------------------------------------------------------------------------
 
-FORMAL_DIR = "formal"  # the pack's formal environment: formal.yaml (tops, bound, timeout) + env files
+FORMAL_DIR = "formal"  # the pack's formal environment: formal.yaml (tops, engine, bound, timeouts) + env files
 
 
 class FormalError(InfraError):
@@ -329,15 +329,16 @@ def formal_dir(design: Design) -> Path:
 
 
 def formal_settings(design: Design) -> dict:
-    """bound (cycles) and timeout (seconds) for cover_witness, from formal.yaml; and
-    frame_cycles, the design's frame length expression, and active_signal, the
-    output that marks protocol activity (None if not set)."""
+    """engine, bound (cycles), timeout and minimize_timeout (seconds) for cover_witness,
+    from formal.yaml; and frame_cycles, the design's frame length expression, and
+    active_signal, the output that marks protocol activity (None if not set)."""
     f = formal_dir(design) / "formal.yaml"
     spec = yaml.safe_load(f.read_text()) if f.is_file() else None
-    if not isinstance(spec, dict) or not {"bound", "timeout"} <= set(spec):
-        raise FormalError(f"{f} must exist and set bound and timeout")
+    if not isinstance(spec, dict) or not {"engine", "bound", "timeout", "minimize_timeout"} <= set(spec):
+        raise FormalError(f"{f} must exist and set engine, bound, timeout and minimize_timeout")
     fc = spec.get("frame_cycles")
-    return {"bound": int(spec["bound"]), "timeout": float(spec["timeout"]),
+    return {"engine": str(spec["engine"]), "bound": int(spec["bound"]), "timeout": float(spec["timeout"]),
+            "minimize_timeout": float(spec["minimize_timeout"]),
             "frame_cycles": None if fc is None else str(fc), "active_signal": spec.get("active_signal")}
 
 
@@ -444,7 +445,7 @@ def tools_release(version: str | None) -> str | None:
 
 def witness_key(design: Design, cover_text: str) -> str:
     """What a witness depends on: the cover, the RTL, the whole formal environment
-    (assumptions, bound, timeout) and the formal tools' release (tools_release), so a
+    (assumptions, engine, bound, timeouts) and the formal tools' release (tools_release), so a
     witness solved on arm64 is reused on x86_64 and the other way round.
 
     Not the rest of the pack, so the set stage (a different pack, same design)
@@ -457,7 +458,8 @@ def witness_key(design: Design, cover_text: str) -> str:
 
 
 def solve_witness(design: Design, cover: Path) -> dict:
-    """The only call into closure_core.formal: cover_witness(pack_dir, cover_file, *, bound, timeout).
+    """The only call into closure_core.formal: cover_witness(pack_dir, cover_file, *, bound, timeout,
+    engine, minimize_timeout), all from formal.yaml.
 
     UnsupportedCover and ValueError are decisions about the cover (statuses
     'unsupported' and 'invalid'); RuntimeError and missing tools raise FormalError.
@@ -468,7 +470,8 @@ def solve_witness(design: Design, cover: Path) -> dict:
         raise FormalError(f"closure_core.formal unavailable: {e}") from e
     st = formal_settings(design)
     try:
-        w = formal_mod.cover_witness(design.pack, cover, bound=st["bound"], timeout=st["timeout"])
+        w = formal_mod.cover_witness(design.pack, cover, bound=st["bound"], timeout=st["timeout"],
+                                     engine=st["engine"], minimize_timeout=st["minimize_timeout"])
     except formal_mod.UnsupportedCover as e:  # a ValueError: caught first
         return {"status": "unsupported", "detail": str(e)}
     except ValueError as e:

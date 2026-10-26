@@ -353,7 +353,7 @@ def test_scripted_target_only_run_and_replay(scratch):
     run_dir = scratch / "run"
     base = empty_pack(scratch / "base")
     (base / "formal").mkdir(exist_ok=True)
-    (base / "formal" / "formal.yaml").write_text("bound: 300\ntimeout: 900\ntops: {}\n")
+    (base / "formal" / "formal.yaml").write_text("engine: abc bmc3\nbound: 300\ntimeout: 900\nminimize_timeout: 120\ntops: {}\n")
     (base / "formal" / "env_rx.sv").write_text("module formal_rx; endmodule\n")
     s = propose.run(run_dir, model, SeedingExecutor(witnesses), base=base, survivor_pass=True, target_only=True)
     manifest = json.loads((run_dir / "manifest.json").read_text())

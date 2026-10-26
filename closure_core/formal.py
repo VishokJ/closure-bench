@@ -37,7 +37,12 @@ import yaml
 from closure_core.design import load_design
 
 FORMAL_HOME = Path(os.environ.get("CLOSURE_BENCH_FORMAL", "/opt/oss-cad-suite"))
-ENGINE = "smtbmc yices"
+# Engines cover_witness accepts (formal.yaml engine:), by the SymbiYosys mode that runs
+# them. abc has no cover mode: its job asserts !(cover condition), and the
+# counterexample is the witness. Each searches step by step, so the first witness is
+# as short as possible; tests/test_formal.py checks they agree on the depth.
+ENGINES = {"smtbmc yices": "cover", "smtbmc bitwuzla": "cover", "abc bmc3": "bmc"}
+PROVE_ENGINE = "smtbmc yices"  # k-induction (prove_unreachable)
 
 
 class UnsupportedCover(ValueError):
@@ -144,9 +149,10 @@ endmodule
 
 
 def _sby(work: Path, files: list[str], depth: int, timeout: float, max_changes: int | None,
-         *, mode: str = "cover", top: str = "formal_measure") -> tuple[str, Path]:
+         *, engine: str, mode: str = "cover", top: str = "formal_measure") -> tuple[str, Path]:
     """Run one SymbiYosys job; (status, job dir).
-    status: PASS | FAIL | UNKNOWN (prove: induction inconclusive) | TIMEOUT | ERROR."""
+    status: PASS | FAIL | UNKNOWN (prove: induction inconclusive) | TIMEOUT | ERROR.
+    In bmc mode PASS and FAIL are swapped, so PASS always means a witness was found."""
     name = f"job_{mode}_d{depth}_k{'inf' if max_changes is None else max_changes}"
     reads = "\n".join(f"read_verilog -formal -sv {f}" for f in files)
     chparam = f"chparam -set MAX_CHANGES {max_changes} formal_measure\n" if max_changes is not None else ""
@@ -156,7 +162,7 @@ depth {depth}
 timeout {max(1, int(timeout))}
 
 [engines]
-{ENGINE}
+{engine}
 
 [script]
 {reads}
@@ -172,12 +178,15 @@ setundef -zero -init
     except subprocess.TimeoutExpired:
         return "TIMEOUT", work / name
     status = (work / name / "status").read_text().split()[0] if (work / name / "status").exists() else "ERROR"
+    if mode == "bmc":
+        status = {"PASS": "FAIL", "FAIL": "PASS"}.get(status, status)
     return status, work / name
 
 
 def _read_witness(job: Path, top: dict) -> list[dict[str, int]]:
     """Per-step input values from the job's Yosys witness (trace0.yw)."""
-    w = json.loads((job / "engine_0" / "trace0.yw").read_text())
+    trace = job / "engine_0" / "trace0.yw"  # cover mode; bmc mode writes trace.yw
+    w = json.loads((trace if trace.exists() else job / "engine_0" / "trace.yw").read_text())
     layout, off = [], 0
     for s in w["signals"]:
         name = s["path"][-1].lstrip("\\")
@@ -235,38 +244,52 @@ def witness_testbench(steps: list[dict[str, int]], top: dict, dut: str, label: s
 
 
 def cover_witness(pack_dir: Path | str, cover_file: Path | str, *, bound: int = 300,
-                  timeout: float = 600.0) -> dict:
+                  timeout: float = 600.0, engine: str = "abc bmc3",
+                  minimize_timeout: float = 120.0) -> dict:
     """Shortest legal witness for the single cover in cover_file, within `bound` cycles.
 
     Returns {status: reachable | unreachable | timeout, depth, input_changes, tb_text}
-    plus: label, bound_module, solve_s (first solve), input_changes_exact, total_s.
+    plus: label, bound_module, solve_s (first solve), minimize_s, input_changes_exact,
+    total_s. engine: a key of ENGINES. timeout bounds the first solve only; the
+    input-change minimisation has its own minimize_timeout, so it never turns a found
+    witness into a timeout.
     depth: witness length in clock cycles, from the reset cycle through the edge at
     which Yosys samples the cover true (one step after the cycle its condition holds:
     a constant offset, the same for every item); minimal, since the search goes step
     by step. input_changes: the fewest
     input changes (a bus counts once, rst included) among witnesses of that
-    depth; exact unless the time budget ran out during the minimisation.
+    depth; exact unless minimize_timeout ran out (input_changes_exact false).
     `unreachable` means not reachable within `bound` cycles under the pack's
-    formal environment, not unreachable at any depth. `timeout` is the whole
-    call's budget. depth/input_changes/tb_text are None unless reachable.
-    Raises UnsupportedCover, or RuntimeError when the tools themselves fail.
+    formal environment, not unreachable at any depth. `timeout`: the first solve
+    ran out of `timeout`. depth/input_changes/tb_text are None unless reachable.
+    Raises UnsupportedCover, or RuntimeError when the tools themselves fail or the
+    engine is unknown (a pack setting, not a decision about the cover).
     """
     t0 = time.monotonic()
+    if engine not in ENGINES:
+        raise RuntimeError(f"engine {engine!r}: expected one of {sorted(ENGINES)}")
+    mode = ENGINES[engine]
     pack = Path(pack_dir).resolve()
     label, target, top, staged = _prepare(pack, cover_file)
     out = {"label": label, "bound_module": target, "status": None, "depth": None,
-           "input_changes": None, "input_changes_exact": None, "tb_text": None, "solve_s": None}
+           "input_changes": None, "input_changes_exact": None, "tb_text": None, "solve_s": None,
+           "minimize_s": None}
 
     with tempfile.TemporaryDirectory(prefix="cb-formal-") as d:
         work = Path(d)
-        files = staged(work, prove=False)
+        files = staged(work, mode=mode)
 
-        left = lambda: timeout - (time.monotonic() - t0)  # noqa: E731
-        status, job = _sby(work, files, bound, left(), None)
+        status, job = _sby(work, files, bound, timeout, None, engine=engine, mode=mode)
+        if status == "ERROR" and mode == "bmc" and _abc_stateless(job):
+            # abc cannot run a property with no state in its cone (a cover Yosys folds to
+            # a constant); smtbmc decides it at once, so it takes over for this cover.
+            engine, mode = PROVE_ENGINE, "cover"
+            files = staged(work, mode=mode)
+            status, job = _sby(work, files, bound, timeout, None, engine=engine, mode=mode)
         out["solve_s"] = round(time.monotonic() - t0, 1)
         if status == "ERROR":
             raise RuntimeError(f"sby failed:\n{_log_tail(job)}")
-        if status in ("TIMEOUT",) or left() <= 0:
+        if status == "TIMEOUT":
             return {**out, "status": "timeout", "total_s": round(time.monotonic() - t0, 1)}
         if status == "FAIL":
             return {**out, "status": "unreachable", "total_s": round(time.monotonic() - t0, 1)}
@@ -274,13 +297,15 @@ def cover_witness(pack_dir: Path | str, cover_file: Path | str, *, bound: int = 
         depth = len(best)
 
         # Fewest input changes at that depth: binary search on a change budget.
+        t1 = time.monotonic()
+        left = lambda: minimize_timeout - (time.monotonic() - t1)  # noqa: E731
         lo, hi, exact = 0, _changes(best), True
         while lo < hi:
             if left() <= 1:
                 exact = False
                 break
             mid = (lo + hi) // 2
-            st, jb = _sby(work, files, depth, left(), mid)
+            st, jb = _sby(work, files, depth, left(), mid, engine=engine, mode=mode)
             if st == "PASS":
                 best, hi = _read_witness(jb, top), _changes(_read_witness(jb, top))
             elif st == "FAIL":
@@ -291,17 +316,17 @@ def cover_witness(pack_dir: Path | str, cover_file: Path | str, *, bound: int = 
             else:
                 raise RuntimeError(f"sby failed:\n{_log_tail(jb)}")
         return {**out, "status": "reachable", "depth": depth, "input_changes": _changes(best),
-                "input_changes_exact": exact,
+                "input_changes_exact": exact, "minimize_s": round(time.monotonic() - t1, 1),
                 "tb_text": witness_testbench(best, top, target, label),
                 "total_s": round(time.monotonic() - t0, 1)}
 
 
 def _prepare(pack: Path, cover_file: Path | str):
-    """(label, bound module, formal.yaml top, staged(work, prove) -> files to read).
+    """(label, bound module, formal.yaml top, staged(work, mode) -> files to read).
 
     staged writes the RTL (with the bind emulated), the translated cover and the env
-    into work. prove=True turns the cover into `assert (!(e))` and reads no
-    measurement wrapper: its change counter restricts long traces, so a proof
+    into work. Modes bmc and prove turn the cover into `assert (!(e))`; prove reads
+    no measurement wrapper: its change counter restricts long traces, so a proof
     through it would not cover every legal trace.
     """
     design = load_design(pack)
@@ -316,7 +341,7 @@ def _prepare(pack: Path, cover_file: Path | str):
         raise ValueError(f"no formal environment for module {target} in {pack}/formal/formal.yaml")
     top = spec[target]
 
-    def staged(work: Path, *, prove: bool) -> list[str]:
+    def staged(work: Path, *, mode: str) -> list[str]:
         files = []
         for p in design.rtl:
             text = p.read_text()
@@ -325,7 +350,7 @@ def _prepare(pack: Path, cover_file: Path | str):
             (work / p.name).write_text(text)
             files.append(p.name)
         text = formal_text
-        if prove:
+        if mode in ("bmc", "prove"):
             m = re.search(rf"\b{labels[0]}\s*:\s*cover\s*\(", text)
             end = _balanced(text, m.end() - 1)
             text = (text[:m.start()] + f"{labels[0]}: assert (!({text[m.end():end - 1]}))"
@@ -333,7 +358,7 @@ def _prepare(pack: Path, cover_file: Path | str):
         (work / "cover.sv").write_text(text)
         shutil.copy(pack / "formal" / top["file"], work / "env.sv")
         files += ["cover.sv", "env.sv"]
-        if not prove:
+        if mode != "prove":
             (work / "measure.sv").write_text(_measure_wrapper(top))
             files.append("measure.sv")
         return files
@@ -365,12 +390,13 @@ def prove_unreachable(pack_dir: Path | str, cover_file: Path | str, *,
     out = {"label": label, "bound_module": target, "k": None}
     with tempfile.TemporaryDirectory(prefix="cb-prove-") as d:
         work = Path(d)
-        files = staged(work, prove=True)
+        files = staged(work, mode="prove")
         for k in ks:
             left = timeout - (time.monotonic() - t0)
             if left <= 1:
                 break
-            status, job = _sby(work, files, k, left, None, mode="prove", top=top["module"])
+            status, job = _sby(work, files, k, left, None, engine=PROVE_ENGINE, mode="prove",
+                               top=top["module"])
             if status == "PASS":
                 return {**out, "status": "proven_unreachable", "k": k,
                         "solve_s": round(time.monotonic() - t0, 1)}
@@ -385,6 +411,11 @@ def prove_unreachable(pack_dir: Path | str, cover_file: Path | str, *,
             return {**out, "status": "unreachable_within_bound",
                     "solve_s": round(time.monotonic() - t0, 1)}
     return {**out, "status": "timeout", "solve_s": round(time.monotonic() - t0, 1)}
+
+
+def _abc_stateless(job: Path) -> bool:
+    log = job / "logfile.txt"
+    return log.exists() and "Does not work for combinational networks" in log.read_text()
 
 
 def _log_tail(job: Path) -> str:

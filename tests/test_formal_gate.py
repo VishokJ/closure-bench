@@ -41,7 +41,8 @@ def add_formal_env(pack: Path, bound: int = 300, timeout: int = 900, frame_cycle
     """A minimal formal environment (the real one is designs/uart/formal/). frame_cycles
     only where a test needs frames: the canned witnesses elsewhere are not formal.py's."""
     (pack / "formal").mkdir(exist_ok=True)
-    spec = {"bound": bound, "timeout": timeout, "tops": {"uart_rx": {"file": "env_rx.sv", "module": "formal_rx"}}}
+    spec = {"engine": "abc bmc3", "bound": bound, "timeout": timeout, "minimize_timeout": 120,
+            "tops": {"uart_rx": {"file": "env_rx.sv", "module": "formal_rx"}}}
     (pack / "formal" / "formal.yaml").write_text(yaml.safe_dump(
         spec | ({"frame_cycles": frame_cycles} if frame_cycles else {})
         | ({"active_signal": active_signal} if active_signal else {})))
@@ -147,6 +148,18 @@ def test_formal_min_frames():
         gates.formal(ITEM, one, **KW, min_frames=1.9)
 
 
+def test_default_floor_accepts_two_frames_and_rejects_one():
+    """--target-only's default: one-frame witnesses measure <= 1.05, two-frame ones >= 1.85
+    (a transmitter target at prescale 1 then 3, rejected at the old 1.9)."""
+    def gate(steps):
+        tb = formal.witness_testbench(steps, TOP, "uart_rx", "P1_x")
+        return gates.formal(ITEM, reach(depth=len(steps), tb=tb), **KW,
+                            min_frames=propose.TARGET_MIN_FRAMES, frame_cycles=FRAME)
+    assert propose.TARGET_MIN_FRAMES == 1.5
+    assert gate(trace(84, 1)).ok is False                       # 1.05 frames
+    assert gate(trace(80, 1) + trace(204, 3)).ok is True        # 1 + 204/240 = 1.85 frames
+
+
 def test_unreadable_witness_is_an_infrastructure_error():
     with pytest.raises(gates.FormalError, match="cannot measure the witness in frames"):
         gates.formal(ITEM, reach(), **KW, frame_cycles=FRAME)  # not formal.py's testbench
@@ -230,8 +243,8 @@ def fake_formal(monkeypatch, behaviour, during=None):
     calls = []
     script = list(behaviour) if isinstance(behaviour, list) else None
 
-    def cover_witness(pack_dir, cover_file, *, bound, timeout):
-        calls.append((Path(pack_dir), Path(cover_file), bound, timeout))
+    def cover_witness(pack_dir, cover_file, *, bound, timeout, engine, minimize_timeout):
+        calls.append((Path(pack_dir), Path(cover_file), bound, timeout, engine, minimize_timeout))
         if during:
             calls.append(during())
         b = script.pop(0) if script is not None else behaviour
@@ -254,7 +267,7 @@ def test_solve_passes_pack_cover_bound_and_timeout(pack, tmp_path, monkeypatch):
     cover = tmp_path / "c.sv"
     cover.write_text("x")
     w = gates.witness(pack, cover, tmp_path / "w")
-    assert calls == [(pack.pack, cover, 300, 900.0)]
+    assert calls == [(pack.pack, cover, 300, 900.0, "abc bmc3", 120.0)]  # all from formal.yaml
     assert w["status"] == "reachable" and w["label"] == "P1_x"  # extra keys are kept
     gates.witness(pack, cover, tmp_path / "w")
     assert len(calls) == 1  # cached
@@ -319,10 +332,11 @@ def test_infrastructure_errors_abort_and_are_not_cached(pack, tmp_path, monkeypa
 def test_formal_settings_come_from_formal_yaml(tmp_path):
     none = empty_pack(tmp_path / "none")
     shutil.rmtree(none / "formal")  # designs/uart has one
-    with pytest.raises(gates.FormalError, match="bound and timeout"):
+    with pytest.raises(gates.FormalError, match="engine, bound, timeout and minimize_timeout"):
         gates.formal_settings(load_design(none))
     d = load_design(add_formal_env(empty_pack(tmp_path / "p"), bound=123, timeout=45))
-    assert gates.formal_settings(d) == {"bound": 123, "timeout": 45.0, "frame_cycles": None, "active_signal": None}
+    assert gates.formal_settings(d) == {"engine": "abc bmc3", "bound": 123, "timeout": 45.0,
+                                        "minimize_timeout": 120.0, "frame_cycles": None, "active_signal": None}
 
 
 def test_witness_key_covers_the_whole_formal_folder(pack):

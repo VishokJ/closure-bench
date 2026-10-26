@@ -85,6 +85,37 @@ def test_r1_witness_scores_one():
     assert (g.status, g.reward) == ("ok", 1.0), g.diagnostics
 
 
+@needs_formal
+@needs_sim
+@pytest.mark.parametrize("item, depth", [("R1", 80), ("R3", 156)])  # one frame, two frames
+def test_every_engine_finds_the_same_depth(item, depth):
+    """formal.yaml may name any of formal.ENGINES: each must find the minimal depth, and
+    its witness must score 1 (a faster engine with a longer witness would be wrong)."""
+    design = load_design("uart")
+    for engine in formal.ENGINES:
+        r = formal.cover_witness(design.pack, design.pack / "covers" / f"{item}.sv", bound=200,
+                                 timeout=300, engine=engine, minimize_timeout=0)
+        assert (r["status"], r["depth"]) == ("reachable", depth), engine
+        g = grader.grade(design, [item], r["tb_text"])
+        assert (g.status, g.reward) == ("ok", 1.0), (engine, g.diagnostics)
+
+
+@needs_formal
+def test_minimisation_never_turns_a_witness_into_a_timeout():
+    """The minimisation has its own budget: when it runs out, the witness found by the
+    solve is kept, with input_changes_exact false."""
+    design = load_design("uart")
+    r = formal.cover_witness(design.pack, design.pack / "covers" / "R1.sv", bound=120, timeout=300,
+                             engine="abc bmc3", minimize_timeout=0)
+    assert (r["status"], r["depth"], r["input_changes_exact"]) == ("reachable", 80, False)
+    assert r["tb_text"] and r["minimize_s"] < 1
+
+
+def test_unknown_engine_is_not_a_decision():
+    with pytest.raises(RuntimeError, match="engine 'smtbmc z3'"):
+        formal.cover_witness(ROOT / "designs" / "uart", ROOT / "designs/uart/covers/R1.sv", engine="smtbmc z3")
+
+
 @needs_sim
 def test_witness_testbench_replays_steps():
     """Conversion alone, from a hand-written R1 witness (no formal tools needed):
@@ -121,6 +152,17 @@ def test_unreset_register_starts_at_zero(tmp_path):
     --x-initial 0: holding its value, it can never be 1."""
     r = _probe(tmp_path, "  logic hit;\n  always @(posedge clk) hit <= hit;")
     assert r["status"] == "unreachable"
+
+
+@needs_formal
+def test_constant_cover_is_decided_not_an_error(tmp_path):
+    """abc has nothing to run on a cover Yosys folds to a constant (above: always false);
+    smtbmc takes over, so a constant cover is a decision either way, never a tool error."""
+    p = tmp_path / "const.sv"
+    p.write_text("module cov_P (input logic clk);\n  P_const: cover property (@(posedge clk) 1'b1);\n"
+                 "endmodule\nbind uart_rx cov_P u_cov_P (.*);\n")
+    r = formal.cover_witness(ROOT / "designs" / "uart", p, bound=10, timeout=60, engine="abc bmc3")
+    assert r["status"] == "reachable" and r["depth"] >= 1
 
 
 @needs_formal

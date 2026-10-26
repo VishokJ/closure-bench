@@ -54,8 +54,10 @@ RETRIES = 2
 # --target-only default for --min-frames. Calibrated on the formal witnesses of the 13
 # reachable plan items and the 3 targets of a min-depth-160 smoke run (2026-10-26):
 # two-frame targets measure 1.950-1.966 frames, one-frame ones 1.000-1.050, single
-# events below 0.09. 1.9 accepts two frames and rejects one.
-TARGET_MIN_FRAMES = 1.9
+# events below 0.09; a transmitter target with two real frames (prescale 1, then 3,
+# covered before the second stop bit) measured 1.85 and was rejected at 1.9. 1.5 lies
+# between one frame (<= 1.05) and two (>= 1.85): it accepts two frames and rejects one.
+TARGET_MIN_FRAMES = 1.5
 
 GATES = ["format", "cover_sync", "cover_policy", "description_sync", "mechanism", "citations", "formal", "baseline",
          "gold", "near_miss", "determinism", "value", "duplicate"]

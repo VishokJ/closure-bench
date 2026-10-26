@@ -18,7 +18,8 @@ never fires (closure_core.formal.prove_unreachable): proven_unreachable, or it
 stays unreachable_within_bound when induction is inconclusive. A proof holds
 under the formal environment's assumptions only.
 
---bound and --timeout default to bound/timeout in designs/<name>/formal/formal.yaml.
+--bound and --timeout default to bound/timeout in designs/<name>/formal/formal.yaml;
+the engine and the minimisation budget (minimize_timeout) always come from there.
 
 Usage:  tools/formal [--items R1 T3] [--bound N] [--timeout S] [--prove] [-j 4] [--out results/formal]
 """
@@ -44,8 +45,10 @@ from closure_core.grader import grade  # noqa: E402
 def measure(design_name: str, item_id: str, bound: int, timeout: float, out: Path, prove: bool) -> dict:
     design = load_design(design_name)
     cover = design.pack / "covers" / f"{item_id}.sv"
+    spec = yaml.safe_load((design.pack / "formal" / "formal.yaml").read_text())
     try:
-        r = cover_witness(design.pack, cover, bound=bound, timeout=timeout)
+        r = cover_witness(design.pack, cover, bound=bound, timeout=timeout, engine=spec["engine"],
+                          minimize_timeout=float(spec["minimize_timeout"]))
     except UnsupportedCover as e:
         return {"id": item_id, "status": "unsupported", "error": str(e)}
     row = {"id": item_id, **{k: v for k, v in r.items() if k != "tb_text"}, "witness": None, "proof": None}
