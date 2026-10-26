@@ -1,6 +1,6 @@
 # closure-bench
 
-Hard, verified coverage-closure tasks for RL, built as a `verifiers` (v1) environment.
+Hard, verified coverage-closure tasks for RL, built as a `verifiers` environment.
 The agent gets an open-source UART (alexforencich/verilog-uart), its existing
 regression and one coverage target that regression misses, and writes a
 SystemVerilog testbench. The grader re-runs it in a fresh, offline sandbox and
