@@ -256,3 +256,49 @@ def test_group_by_tag(tmp_path):
     assert pad["graded"] + rest["graded"] == g["aggregate"]["graded"]
     assert "by_tag" not in ae.summarise(*ae.load([tmp_path / "run"]))["groups"][0]
     assert "## pass@1 by tag" in ae.markdown(ae.summarise(*ae.load([tmp_path / "run"]), tags))
+
+
+def test_pass_at_k_estimator():
+    assert ae.pass_at_k(8, 0) == 0.0 and ae.pass_at_k(8, 1) == 1.0 and ae.pass_at_k(8, 8) == 1.0
+    assert ae.pass_at_k(9, 1) == pytest.approx(8 / 9)    # 1 - C(8,8)/C(9,8)
+    assert ae.pass_at_k(7, 3) is None                    # fewer rollouts than k
+
+
+def test_pass_at_8_and_mixed_tasks(tmp_path):
+    recs = ([trace("uart/R1", reward=1.0)] * 8                                   # 8/8
+            + [trace("uart/R2")] * 8                                             # 0/8
+            + [trace("uart/R3", reward=1.0)] + [trace("uart/R3")] * 7            # 1/8
+            + [trace("uart/R4", reward=1.0)] + [trace("uart/R4")] * 8            # 1/9
+            + [trace("uart/R5", reward=1.0)] * 3 + [trace("uart/R5")] * 4)       # 3/7: no pass@8
+    write_run(tmp_path / "run", recs)
+    a = ae.summarise(*ae.load([tmp_path / "run"]))["groups"][0]["aggregate"]
+    assert a["pass_at_8_tasks"] == 4 and a["tasks_graded"] == 5
+    assert a["pass_at_8"] == pytest.approx((1 + 0 + 1 + 8 / 9) / 4, abs=1e-4)
+    lo, hi = a["bootstrap95_pass_at_8"]
+    assert lo <= a["pass_at_8"] <= hi
+    assert (a["tasks_mixed"], a["tasks_no_hit"], a["tasks_all_hit"]) == (3, 1, 1)
+    md = ae.markdown(ae.summarise(*ae.load([tmp_path / "run"])))
+    assert "pass@8 [bootstrap 95%]" in md and "(4 tasks)" in md and "3 / 1 / 1" in md
+
+
+def test_pass_at_1_compiled(summary):
+    # RECORDS run: 9 graded, 1 hit; left out: compile_error (R1) and no_submission
+    # (R2, R10, both truncated); policy_violation, timeout and the rest stay in.
+    g = summary["groups"][0]
+    a = g["aggregate"]
+    assert a["compiled"] == 6 and a["pass_at_1_compiled"] == pytest.approx(1 / 6, abs=1e-4)
+    assert a["bootstrap95_compiled"] is not None and "wilson95_compiled" not in a
+    assert g["tasks"]["uart/R1"]["compiled"] == 3      # hit, missed, policy_violation
+    assert "pass@1 compiled [bootstrap 95%]" in ae.markdown(summary)
+
+
+def test_role_labels_a_model(tmp_path):
+    write_run(tmp_path / "a", [trace("uart/R1", reward=1.0)], model="m/a")
+    write_run(tmp_path / "b", [trace("uart/R1")], model="m/b")
+    s = ae.summarise(*ae.load([tmp_path]), None, {"m/b": "calibration model"})
+    assert [g["role"] for g in s["groups"]] == [None, "calibration model"]
+    assert "| G2 | m/b · null · max_tokens=16000 | calibration model |" in ae.markdown(s)
+    out = subprocess.run([sys.executable, str(ROOT / "tools" / "analyze_eval"), str(tmp_path),
+                          "--out", str(tmp_path / "o"), "--no-charts", "--role", "m/b=calibration model"],
+                         check=True, capture_output=True, text=True).stdout
+    assert "calibration model" in out

@@ -1,0 +1,31 @@
+env       closure-bench  ·  null harness  ·  prime runtime                      
+model     nvidia/nemotron-3-nano-30b-a3b  (temperature=1.0, max_tokens=32768)   
+          via https://api.pinference.ai/api/v1                                  
+taskset   agent_timeout=900.0  ·                                                
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+limits    ≤128 episodes     ·  no turn cap         ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/probe-hard2/closure-bench--nvidia--nemotron-3-nano-30b-a3b--nu
+          ll--15e39760                                                          
+━━━━━━━━╸       29/50 · 5m 29s · reward 0.11 (0.10) · err 0.07  (page 16/25 ◄ ►)
+rewards   target_reached 0.11 (0.10)                                            
+metrics   turns 1.00 (0.93)  ·  turn_cap_hit 0.00 (0.00)  ·  prompt_tokens      
+          20305.70 (18905.31)  ·  cached_input_tokens 2346.67 (2184.83)  ·      
+          output_tokens 17121.15 (15940.38)  ·  compiled 0.48 (0.45)  ·         
+          policy_violation 0.00 (0.00)  ·  finished 0.26 (0.24)  ·  target_hit  
+          0.11 (0.10)  ·  off_target_items_hit 0.19 (0.17)  ·  sim_seconds 12.46
+          (11.60)                                                               
+usage     611.6K/462.3K tokens (63.4K cached, 431.1K reasoning)                 
+time      boot 6s  ·  setup 25s  ·  agent 3m 10s (model 2m 57s + harness 13s)  ·
+          finalize 3s  ·  scoring 37s                                           
+────────────────────────────────────────────────────────────────────────────────
+╭ [success ] task name=R26 agent=agent · 32bb881a · prime(… reward=0.00 · 4m 47s
+╰ [success ] task name=R26 agent=agent · 62eff312 · prime(… reward=0.00 · 5m 22s
+────────────────────────────────────────────────────────────────────────────────
+interrupted — cleaning up, tearing down containers/sandboxes. please wait; a 
+further ctrl-c is ignored.
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rlNo handlers could be found for logger "asyncio"

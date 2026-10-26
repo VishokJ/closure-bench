@@ -1,0 +1,25 @@
+env       closure-bench  ·  null harness  ·  prime runtime                      
+model     openai/gpt-6-sol  (temperature=1.0, reasoning_effort=high,            
+          max_tokens=65536)  via https://api.pinference.ai/api/v1               
+taskset   agent_timeout=2400.0  ·                                               
+          items=[R12,R13,R14,R15,R16,R17,R18,R19,R20,R21,R22,R23,R24,R25,R26,R2…
+limits    ≤128 episodes     ·  no turn cap         ·  no token cap              
+timeouts  no setup timeout  ·  no rollout timeout  ·  no finalize timeout  ·  no
+          scoring timeout  ·  no env finalize timeout                           
+output    outputs/smoke/official-gpt-6-sol/closure-bench--openai--gpt-6-sol--nul
+          l--ef8504cb                                                           
+━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/2 · 1m 10s · reward 1.00 · err 0.00  (page 2/2 ◄ ►)
+rewards   target_reached 1.00                                                   
+metrics   turns 1.00  ·  turn_cap_hit 0.00  ·  prompt_tokens 21642.50  ·        
+          cached_input_tokens 0.00  ·  output_tokens 1677.50  ·  compiled 1.00  
+          ·  policy_violation 0.00  ·  illegal_stimulus 0.00  ·  finished 1.00  
+          ·  target_hit 1.00  ·  off_target_items_hit 0.50  ·  sim_seconds 5.77 
+usage     43.3K/3.4K tokens (0 cached, 2.3K reasoning)                          
+time      boot 4s  ·  setup 16s  ·  agent 18s (model 16s + harness 2s)  ·       
+          finalize 3s  ·  scoring 26s                                           
+────────────────────────────────────────────────────────────────────────────────
+  [success ] task name=T9 agent=agent · d1d3df25 · prime(k… reward=1.00 · 1m 10s
+
+vf-eval will be deprecated - move to prime-rl's `uv run eval`: it streams traces
+live into a dashboard, evaluates several envs in one run and scales through env 
+servers. https://github.com/PrimeIntellect-ai/prime-rl
