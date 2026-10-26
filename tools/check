@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from closure_core import citations, gates, load_design  # noqa: E402
-from closure_core.grader import score, simulate  # noqa: E402
+from closure_core.grader import grade, score, simulate  # noqa: E402
 
 ORDER = ["citations", "cover_sync", "cover_policy", "description_sync", "baseline", "gold", "near_miss", "determinism", "value", "duplicate"]
 
@@ -160,13 +160,32 @@ def main() -> int:
         all_ok = False
         print(f"FAIL  waivers on mutants that are killed or do not exist: {m['bad_waivers']}")
 
+    # Multi-target tasks: no new covers, so the per-item gates above already cover
+    # their targets; the gold must hit all of them, deterministically.
+    multi = {}
+    for mid, ts in ({} if args.item else design.multi).items():
+        g = design.pack / "gold" / f"{mid}.sv"
+        errs = []
+        if not g.is_file():
+            errs.append("no gold")
+        else:
+            errs += list(gates.testbench_policy(design, g, gold=True))
+            a, b = (grade(design, list(ts), g.read_text()) for _ in range(2))
+            if a.reward != 1.0:
+                errs.append(f"gold scores {a.reward} ({a.status}, hits {a.target_hits})")
+            if (a.status, a.plan_hits) != (b.status, b.plan_hits):
+                errs.append("gold not deterministic")
+        multi[mid] = {"targets": list(ts), "errors": errs}
+        all_ok &= not errs
+        print(f"multi {mid} ({' + '.join(ts)}): {'FAIL ' + '; '.join(errs) if errs else 'pass'}")
+
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps(
         {"design": design.name, "orphan_covers": orphans, "mutation": mutation,
          "duplicate": duplicate,
          "value": {"items": value, "by_evidence": by_path, "spec_only_audit": by_path["spec"]},
          "audit": {"always": audit, "spec_only": by_path["spec"], "near_miss_opt_outs": opted_out},
-         "hit_by_random": by_random, "holes": holes,
+         "hit_by_random": by_random, "holes": holes, "multi": multi,
          "items": {i: {g: {"ok": r.ok, "detail": r.detail} for g, r in gs.items()}
                    for i, gs in res.items()}},
         indent=2, default=str) + "\n")

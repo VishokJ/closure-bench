@@ -1,4 +1,4 @@
-"""closure-bench taskset: one task per coverage-plan item.
+"""closure-bench taskset: one task per coverage-plan item, or per multi-target task.
 
 Rollout:
   agent sandbox    setup writes the agent-visible repo to /workspace; the agent
@@ -148,7 +148,7 @@ class ClosureTask(vf.Task[ClosureData]):
     async def validate(self, trace: vf.Trace, runtime: vf.Runtime) -> bool:
         """Gold check through the full isolated grading path."""
         design = self._design()
-        gold = (design.pack / "gold" / f"{self.data.targets[0]}.sv").read_text()
+        gold = (design.pack / "gold" / f"{self.data.name}.sv").read_text()
         await runtime.write(SUBMISSION, gold.encode())
         trace.info["submission"] = gold
         # grade_submission restores trace.state.artifacts; a rollout collects them
@@ -169,6 +169,8 @@ class ClosureConfig(vf.TasksetConfig):
     """Agent wall clock in seconds; None takes DEFAULT_AGENT_TIMEOUT[harness]."""
     max_turns: int | None = None
     """bash: the turn cap stated in the prompt; set it to agent.max_turns (checked at setup)."""
+    tasks: Literal["single", "multi"] = "single"
+    """single: one task per plan item; multi: the multi-target tasks in the design's multi.yaml."""
 
 
 class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
@@ -177,18 +179,20 @@ class ClosureBenchTaskset(vf.Taskset[ClosureTask, ClosureConfig]):
         harness = self.config.harness
         agent_timeout = self.config.agent_timeout or DEFAULT_AGENT_TIMEOUT[harness]
         tasks = []
-        for item in design.plan:
-            if not (design.pack / "gold" / f"{item.id}.sv").exists():
+        specs = ({it.id: (it.id,) for it in design.plan} if self.config.tasks == "single"
+                 else design.multi)
+        for name, targets in specs.items():
+            if not (design.pack / "gold" / f"{name}.sv").exists():
                 continue  # no proof of reachability, not a task
             tasks.append(ClosureTask(ClosureData(
-                id=f"{design.name}/{item.id}",
-                name=item.id,
+                id=f"{design.name}/{name}",
+                name=name,
                 system_prompt=prompt.system_prompt(harness),
-                prompt=prompt.render(design, item, self.config.run_timeout, harness,
-                                     agent_timeout if harness == "bash" else None,
-                                     self.config.max_turns if harness == "bash" else None),
+                prompt=prompt.render(design, [design.item(t) for t in targets], self.config.run_timeout,
+                                     harness, agent_timeout if harness == "bash" else None,
+                                     self.config.max_turns if harness == "bash" else None, task_id=name),
                 design=design.name,
-                targets=[item.id],
+                targets=list(targets),
                 run_timeout=self.config.run_timeout,
                 harness=harness,
                 max_turns=self.config.max_turns,

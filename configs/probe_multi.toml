@@ -1,0 +1,29 @@
+# Difficulty probe: the multi-target tasks (designs/uart/multi.yaml, M1-M3), one
+# testbench per task must hit every target. Same settings as pilot_null.toml
+# otherwise. From the repo root with the venv from the README activated:
+#   vf-eval @ configs/probe_multi.toml -m google/gemini-4-argon -o outputs/probe
+model = "google/gemini-4-argon"
+num_rollouts = 4                 # rollouts per task (-r)
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+push = false
+
+[sampling]
+temperature = 1.0
+max_tokens = 16000
+
+[env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+harness = "null"
+tasks = "multi"
+
+[env.agent.harness]
+id = "null"
+
+[env.agent.runtime]
+type = "prime"
+
+[env.agent.scoring]
+mode = "isolated"

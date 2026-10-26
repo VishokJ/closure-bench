@@ -27,3 +27,4 @@ mutate:
   third_party/verilog-uart/rtl/uart_rx.v: [86, 140]
   third_party/verilog-uart/rtl/uart_tx.v: [78, 113]
 waivers: waivers.yaml
+multi: multi.yaml

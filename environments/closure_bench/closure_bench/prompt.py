@@ -69,21 +69,34 @@ def visible_files(design: Design) -> dict[str, str]:
     return files
 
 
-def render(design: Design, item: PlanItem, run_timeout: float,
+def _entry(design: Design, item: PlanItem) -> str:
+    return (f"```\npoint:  {item.cover}  (cover property in module {item.cover_module})\n"
+            f"source: {_cover_location(design, item)}\nhits:   0\n```\n")
+
+
+def render(design: Design, items: PlanItem | list[PlanItem], run_timeout: float,
            harness: str = "null", agent_timeout: float | None = None,
-           max_turns: int | None = None) -> str:
+           max_turns: int | None = None, task_id: str | None = None) -> str:
+    """items: one target, or several (a multi-target task, task_id) that one testbench must all hit."""
     flags = " ".join(VERILATOR_FLAGS)
-    sections = [
-        f"## Target: {item.id}\n\n{item.description}\n",
-        "## Coverage report entry (baseline regression)\n\n"
-        f"```\npoint:  {item.cover}  (cover property in module {item.cover_module})\n"
-        f"source: {_cover_location(design, item)}\nhits:   0\n```\n",
+    items = [items] if isinstance(items, PlanItem) else items
+    if len(items) == 1:
+        item = items[0]
+        sections = [f"## Target: {item.id}\n\n{item.description}\n",
+                    "## Coverage report entry (baseline regression)\n\n" + _entry(design, item)]
+        reward = "the target point is hit"
+    else:
+        sections = [f"## Targets: {task_id} ({len(items)} points; one testbench must hit all of them)\n"]
+        for item in items:
+            sections += [f"### {item.id}\n\n{item.description}\n",
+                         "Coverage report entry (baseline regression):\n\n" + _entry(design, item)]
+        reward = "every target point is hit"
+    sections.append(
         "## How your testbench is run\n\n"
         "Compiled together with every file under rtl/ and covers/ using Verilator 5.020:\n"
         f"`verilator {flags} --top-module tb ...`\n"
         f"Simulation wall-clock limit: {int(run_timeout)} s. "
-        "Reward is 1 only if the run reaches $finish cleanly and the target point is hit.\n",
-    ]
+        f"Reward is 1 only if the run reaches $finish cleanly and {reward}.\n")
     if harness == "bash":
         sections.append(_workspace(design, agent_timeout, max_turns))
         return "\n".join(sections)
@@ -130,11 +143,14 @@ def grader_bundle(design: Design) -> dict[str, bytes]:
     Every pack-level YAML is shipped (design, plan, waivers, sources), so a new
     file referenced from design.yaml cannot silently break grading;
     tests/test_bundle.py checks that the bundle loads on its own. Golds and
-    near-misses stay out.
+    near-misses stay out, and so does formal.py: grading never uses it, and in
+    the bash harness this bundle is the agent's workspace, where it would
+    generate golds.
     """
     root = design.repo_root
     core = root / "closure_core"
-    paths: list[Path] = [*core.glob("*.py"), core / "sim_main.cpp",
+    paths: list[Path] = [*(p for p in core.glob("*.py") if p.name != "formal.py"),
+                         core / "sim_main.cpp",
                          *sorted(design.pack.glob("*.yaml")),
                          *design.rtl, *design.covers,
                          *(b["file"] for b in design.baselines.values()),

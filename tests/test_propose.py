@@ -137,6 +137,7 @@ def empty_pack(d):
     shutil.copytree(PACK, d)
     plan = yaml.safe_load((d / "plan.yaml").read_text())
     (d / "plan.yaml").write_text(yaml.safe_dump({**plan, "items": []}, sort_keys=False))
+    (d / "multi.yaml").write_text("multi: []\n")  # an empty plan has no multi-target tasks
     for f in [*(d / "covers").glob("*.sv"), *(d / "gold").glob("*.sv"), *(d / "near_miss").glob("*.sv")]:
         f.unlink()
     return d

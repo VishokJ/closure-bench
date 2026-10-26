@@ -34,6 +34,7 @@ class Design:
     golds: dict[str, Path] = field(default_factory=dict)  # plan ID -> gold/<ID>.sv, if present
     near_misses: dict[str, tuple[Path, ...]] = field(default_factory=dict)  # near_miss/<ID>_*.sv
     randoms: dict[str, dict] = field(default_factory=dict)  # fixed-seed random TBs, like baselines
+    multi: dict[str, tuple[str, ...]] = field(default_factory=dict)  # multi-target task ID -> plan IDs
 
     def item(self, plan_id: str) -> PlanItem:
         for it in self.plan:
@@ -89,6 +90,12 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
     ids = [it.id for it in plan]
     if len(ids) != len(set(ids)):
         raise ValueError(f"duplicate plan IDs in {pack}")
+    multi = {m["id"]: tuple(m["targets"])
+             for m in (yaml.safe_load((pack / spec["multi"]).read_text()) or {}).get("multi", [])} \
+        if "multi" in spec else {}
+    for mid, ts in multi.items():
+        if mid in ids or len(ts) < 2 or set(ts) - set(ids):
+            raise ValueError(f"multi-target {mid}: needs a new ID and >= 2 existing plan IDs, got {list(ts)}")
 
     return Design(
         name=spec["name"],
@@ -102,6 +109,7 @@ def load_design(name_or_path: str | Path, repo_root: Path | None = None) -> Desi
             for k, v in spec.get("baselines", {}).items()
         },
         randoms={k: {"top": v["top"], "file": resolve(v["file"])} for k, v in spec.get("random", {}).items()},
+        multi=multi,
         mutate={resolve(f): (lo, hi) for f, (lo, hi) in spec.get("mutate", {}).items()},
         waivers=(yaml.safe_load((pack / spec["waivers"]).read_text()) or {}) if "waivers" in spec else {},
         golds={it.id: g.resolve() for it in plan if (g := pack / "gold" / f"{it.id}.sv").is_file()},

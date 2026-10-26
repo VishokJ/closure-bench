@@ -32,3 +32,6 @@ def test_bundle_is_self_sufficient(tmp_path):
 def test_bundle_excludes_answers():
     bundle = _prompt().grader_bundle(load_design("uart"))
     assert not [r for r in bundle if "/gold/" in r or "/near_miss/" in r]
+    # Formal witnesses are golds too (tools/formal writes them under results/).
+    # The formal tool would generate them inside a bash-harness workspace.
+    assert not [r for r in bundle if r.startswith("results/") or "formal" in r]
