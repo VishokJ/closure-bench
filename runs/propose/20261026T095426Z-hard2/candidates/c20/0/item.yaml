@@ -1,0 +1,31 @@
+id: P20
+description: On uart_tx, s_axis_tvalid rises on exactly the clock where the transmitter
+  finishes its stop period (prescale_reg 0, bit_cnt 0, s_axis_tready low), right after
+  a frame whose data bits on txd formed 8'hC3. On the next clock txd is low (new start
+  bit) and s_axis_tready is high.
+tier: T2
+mechanism:
+- boundary
+- data
+cover: P20_tvalid_rise_on_frame_end
+sources:
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: Either TVALID or TREADY can be asserted first, or both can be asserted in
+    the same ACLK cycle.
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 34
+  - 36
+  anchor: destination only when both tvalid and tready are high
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 89
+  - 100
+  anchor: s_axis_tready_reg <= !s_axis_tready_reg;
+cover_module: cov_P20

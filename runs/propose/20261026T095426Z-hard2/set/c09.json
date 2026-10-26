@@ -1,0 +1,215 @@
+{
+  "item": "P9",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "interaction, data",
+      "data": {
+        "mechanisms": [
+          "interaction",
+          "data"
+        ],
+        "reads": [
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tready",
+          "m_axis_tvalid",
+          "overrun_error"
+        ],
+        "locals": [],
+        "constants": [
+          "8'h3C",
+          "8'h3C"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                43,
+                44
+              ],
+              "anchor": "stop bit of the right level, then a single pulse will be emitted from the"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "pc16550d",
+              "page": 16,
+              "anchor": "Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit is detected as a logic 0 bit"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 18,
+              "anchor": "The valid data bytes and control information from the Transmitter must remain unchanged once TVALID has been asserted by the Transmitter."
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                120,
+                128
+              ],
+              "anchor": "frame_error_reg <= 1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_branch",
+                "file": "uart_rx.v",
+                "line": 122,
+                "name": "else"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 156 cycles (1.95 frames), 5 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 156",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 156,
+        "input_changes": 5,
+        "input_changes_exact": true,
+        "key": "bce8c505a7cbe1c9b5bd4bce67e60e877e6f1fccb1bd79dfb29184fd3526d161",
+        "witness_frames": 1.95,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 156,
+          "input_changes": 6,
+          "input_changes_exact": true,
+          "key": "0a8dd7c6f8c83b955ac1157c3490c71454acbc16fbc9a097c08acfd727c087b6",
+          "witness_frames": 1.95
+        },
+        "active_frames": 1.913
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_branch uart_rx.v:122 else",
+          "v_toggle uart_rx.v:57 frame_error",
+          "v_toggle uart_rx.v:73 frame_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P9_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [43, 44]; DOC pc16550d page 16; DOC axis page 18",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [43, 44]",
+          "DOC pc16550d page 16",
+          "DOC axis page 18"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [43, 44] \"stop bit of the right level, then a single pulse will be emitted from the\"",
+          "DOC pc16550d page 16 \"Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit is detected as a logic 0 bit\"",
+          "DOC axis page 18 \"The valid data bytes and control information from the Transmitter must remain unchanged once TVALID has been asserted by the Transmitter.\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies R1",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

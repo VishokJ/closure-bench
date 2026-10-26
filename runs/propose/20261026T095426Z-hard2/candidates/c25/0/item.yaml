@@ -1,0 +1,31 @@
+id: P25
+description: On uart_tx, s_axis_tvalid rises (it was low on the previous clock) while
+  busy is high and bit_cnt is between 1 and 8, with s_axis_tdata at 8'h3C. s_axis_tvalid
+  and s_axis_tdata then stay unchanged until the byte is loaded, and the next frame
+  shifts 8'h3C out on txd, sampled at its eight data-bit boundaries.
+tier: T2
+mechanism:
+- boundary
+- interaction
+- data
+- sequence
+cover: P25_tvalid_rise_mid_frame
+sources:
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: Either TVALID or TREADY can be asserted first, or both can be asserted in
+    the same ACLK cycle.
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 86
+  - 100
+  anchor: if (s_axis_tvalid) begin
+cover_module: cov_P25

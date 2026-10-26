@@ -1,0 +1,41 @@
+// Formal environment for uart_rx (tools/formal, closure_core/formal.py).
+// Hand-reviewed: these assumptions define the legal stimulus the formal
+// search may use. Formal only measures (witness depth, reachability);
+// Verilator alone decides reward and every gate.
+//
+// Input names equal uart_rx's port names, so a witness converts directly into
+// a testbench that drives the DUT through its ports.
+module formal_rx (
+  input wire        clk,
+  input wire        rst,
+  input wire        rxd,            // free: any line activity, glitches included
+  input wire        m_axis_tready,  // free: the AXIS sink may stall or accept on any cycle
+  input wire [15:0] prescale
+);
+  wire [7:0] m_axis_tdata;
+  wire       m_axis_tvalid, busy, overrun_error, frame_error;
+
+  uart_rx dut (
+    .clk(clk), .rst(rst),
+    .m_axis_tdata(m_axis_tdata), .m_axis_tvalid(m_axis_tvalid), .m_axis_tready(m_axis_tready),
+    .rxd(rxd), .busy(busy), .overrun_error(overrun_error), .frame_error(frame_error),
+    .prescale(prescale)
+  );
+
+  reg init = 1'b1;
+  always @(posedge clk) init <= 1'b0;
+
+  // Reset at the start: every testbench, baseline and gold resets first, and
+  // the RTL's register initialisers equal its reset values.
+  always @(*) if (init) assume(rst);
+
+  // prescale in 1..4: keeps a bit period at 8..32 clocks so frames fit the
+  // bound. A bound on the search, not a spec rule (README: prescale =
+  // Fclk / (baud * 8), any 16-bit value); items that need a large prescale
+  // (R7: 16'hFFFF) are out of bound by construction.
+  always @(*) assume(prescale >= 16'd1 && prescale <= 16'd4);
+
+  // prescale constant while busy: the README describes it as a configuration
+  // input set for a baud rate; changing it mid-frame is not legal stimulus.
+  always @(posedge clk) if (!init && $past(busy)) assume(prescale == $past(prescale));
+endmodule

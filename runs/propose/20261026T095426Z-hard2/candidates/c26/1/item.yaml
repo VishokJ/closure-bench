@@ -1,0 +1,28 @@
+id: P26
+description: 'With prescale at 16''d1, two words go out back-to-back: s_axis_tready
+  pulses high while busy stays high, after s_axis_tvalid was high on the previous
+  clock. At the end of the second word, with s_axis_tvalid low on the previous clock,
+  busy falls and s_axis_tready rises on the same clock, exactly 9 clocks after bit_cnt
+  was first seen 0 after being 1 (start of the stop bit).'
+tier: T3
+mechanism:
+- boundary
+- interaction
+- sequence
+cover: P26_tx_b2b_busy_fall_ready_rise_9
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 39
+  anchor: Both interfaces also present a 'busy' signal that is high when an operation
+    is
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 86
+  - 110
+  anchor: prescale_reg <= (prescale << 3);
+cover_module: cov_P26

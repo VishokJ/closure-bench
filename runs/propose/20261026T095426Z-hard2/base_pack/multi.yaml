@@ -1,0 +1,12 @@
+# Multi-target tasks (docs/PLAN.md §9.3): one testbench must hit every target
+# cover. Built from accepted plan items; no new covers, and the agent sees each
+# target's own description and coverage report entry. Each needs gold/<id>.sv,
+# which tools/check grades against all targets (reachable together).
+# A difficulty probe: does composing items a model solves alone make it harder?
+multi:
+  - id: M1
+    targets: [R1, R2, R3]     # frame error, false start, overrun: one receiver, three error paths
+  - id: M2
+    targets: [R8, R9, R10, R11]  # four resets, each against a different receiver state
+  - id: M3
+    targets: [R7, T2]         # both modules at prescale 16'hFFFF in one testbench

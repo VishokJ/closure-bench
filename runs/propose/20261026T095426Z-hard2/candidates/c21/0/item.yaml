@@ -1,0 +1,32 @@
+id: P21
+description: On the first clock after rst falls, s_axis_tvalid is high while s_axis_tready
+  is still low, with prescale_reg and bit_cnt both 0. On the next clock txd is low,
+  s_axis_tready is high and bit_cnt is 9. The data bits then read on txd at the bit
+  boundaries form 8'hA5.
+tier: T2
+mechanism:
+- reset_timing
+- data
+- boundary
+cover: P21_tvalid_first_clock_after_reset
+sources:
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 28
+  anchor: A Transmitter interface must only begin driving TVALID at a rising ACLK
+    edge following a rising edge at which ARESETn is asserted HIGH.
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 35
+  - 35
+  anchor: destination only when both tvalid and tready are high
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 89
+  - 100
+  anchor: s_axis_tready_reg <= !s_axis_tready_reg;
+cover_module: cov_P21

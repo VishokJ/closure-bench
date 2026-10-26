@@ -1,0 +1,216 @@
+{
+  "item": "P18",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, interaction, data, boundary",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "interaction",
+          "data",
+          "boundary"
+        ],
+        "reads": [
+          "bit_cnt",
+          "m_axis_tdata",
+          "m_axis_tready",
+          "m_axis_tvalid",
+          "overrun_error",
+          "prescale_reg",
+          "rxd_reg"
+        ],
+        "locals": [
+          "st"
+        ],
+        "constants": [
+          "2'd0",
+          "2'd0",
+          "19'd0",
+          "4'd10",
+          "8'h3C",
+          "2'd1",
+          "2'd1",
+          "2'd0",
+          "8'h3C",
+          "2'd2",
+          "2'd0",
+          "2'd0",
+          "2'd2",
+          "8'hA5"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "pc16550d",
+              "page": 1,
+              "anchor": "False start bit detection."
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 18,
+              "anchor": "Once TVALID is asserted, it must remain asserted until the handshake occurs."
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                108,
+                115
+              ],
+              "anchor": "if (!rxd_reg) begin"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_branch",
+                "file": "uart_rx.v",
+                "line": 109,
+                "name": "else"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 160 cycles (2.00 frames), 15 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 156",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 160,
+        "input_changes": 15,
+        "input_changes_exact": true,
+        "key": "0e45509f2bad8ba0a351c9b4b34b6a671d72a3cb2dc115b1ec12a959fccb4c80",
+        "witness_frames": 2.0,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 156,
+          "input_changes": 13,
+          "input_changes_exact": true,
+          "key": "d4655f3d1aed594ea267c8dc385d22ddfb0e6af241fa25b0dc1d470118add6de",
+          "witness_frames": 1.95
+        },
+        "active_frames": 1.95
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_branch uart_rx.v:109 else"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P18_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: DOC pc16550d page 1; DOC axis page 18",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "DOC pc16550d page 1",
+          "DOC axis page 18"
+        ],
+        "requirement_keys": [
+          "DOC pc16550d page 1 \"False start bit detection.\"",
+          "DOC axis page 18 \"Once TVALID is asserted, it must remain asserted until the handshake occurs.\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies R2",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

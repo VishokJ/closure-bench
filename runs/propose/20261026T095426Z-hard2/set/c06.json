@@ -1,0 +1,217 @@
+{
+  "item": "P6",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, data, boundary",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "data",
+          "boundary"
+        ],
+        "reads": [
+          "bit_cnt",
+          "busy",
+          "prescale",
+          "prescale_reg",
+          "s_axis_tvalid",
+          "txd"
+        ],
+        "locals": [
+          "st",
+          "shift"
+        ],
+        "constants": [
+          "2'd0",
+          "8'h00",
+          "19'd0",
+          "4'd0",
+          "8'h00",
+          "16'd1",
+          "2'd1",
+          "2'd1",
+          "16'd3",
+          "2'd2",
+          "2'd0",
+          "2'd1",
+          "16'd1",
+          "2'd0",
+          "2'd2",
+          "16'd3",
+          "2'd0",
+          "19'd23",
+          "4'd1",
+          "4'd8",
+          "2'd2",
+          "16'd3",
+          "19'd23",
+          "4'd1",
+          "8'h5A"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "so it can be changed at run time"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                93,
+                110
+              ],
+              "anchor": "prescale_reg <= (prescale << 3)-1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_tx.v",
+                "line": 60,
+                "name": "prescale[1]"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 279 cycles (1.86 frames), 5 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 279",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 279,
+        "input_changes": 5,
+        "input_changes_exact": false,
+        "key": "156e938687afecf70fe55afcb2dcee06004ab3a638e138ec64c19c57998f6ac5",
+        "witness_frames": 1.863,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 279,
+          "input_changes": 7,
+          "input_changes_exact": false,
+          "key": "0a5ae89d57a98d4187fe1d13abdc6f9b4eab0463fbd57b314a65a21b3383685d",
+          "witness_frames": 1.863
+        },
+        "active_frames": 1.821
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_toggle uart_tx.v:60 prescale[1]"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P6_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [27, 30]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [27, 30]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [27, 30] \"so it can be changed at run time\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

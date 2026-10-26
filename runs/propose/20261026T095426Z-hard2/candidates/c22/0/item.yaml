@@ -1,0 +1,26 @@
+id: P22
+description: With prescale held at 16'd1, uart_tx accepts a byte (s_axis_tvalid high
+  while idle) and shifts it out. Each of the eight data bits lasts exactly 8 clocks,
+  measured from one bit boundary (prescale_reg 0) to the next. Sampled at the eight
+  data-bit boundaries, txd forms 8'h96, and on the cycle after the last data bit txd
+  is high and bit_cnt is 0.
+tier: T1
+mechanism:
+- boundary
+- data
+cover: P22_tx_min_prescale_96
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: it should be set to Fclk / (baud * 8)
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 101
+  - 105
+  anchor: '{data_reg, txd_reg} <= {1''b0, data_reg};'
+cover_module: cov_P22

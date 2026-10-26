@@ -1,0 +1,36 @@
+id: P13
+description: After a frame_error pulse, the receiver goes idle with busy low and rxd
+  high for at least 16 consecutive clocks. The next frame then delivers m_axis_tdata
+  8'hA5 as m_axis_tvalid rises, with no further frame_error pulse in between.
+tier: T3
+mechanism:
+- sequence
+- data
+- boundary
+cover: P13_recover_after_frame_error_idle
+sources:
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 16
+  anchor: The UART will try to resynchronize after a framing error.
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 42
+  - 44
+  anchor: frame_error output and the received word will be discarded
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 126
+  - 137
+  anchor: frame_error_reg <= 1;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 57
+    name: frame_error
+cover_module: cov_P13

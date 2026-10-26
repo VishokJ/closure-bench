@@ -1,0 +1,27 @@
+id: P4
+description: During a data bit (bit_cnt from 2 to 9), the synchronised input rxd_reg
+  toggles and toggles back while prescale_reg is non-zero. Both edges fall between
+  two sample points, and rxd_reg does not change on the sample cycle itself. The same
+  frame then completes with m_axis_tvalid rising, m_axis_tdata equal to 8'hA5 and
+  frame_error low.
+tier: T2
+mechanism:
+- sequence
+- interaction
+- data
+- boundary
+cover: P4_rx_glitch_off_sample_point_ignored
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 105
+  - 119
+  anchor: data_reg <= {rxd_reg, data_reg[DATA_WIDTH-1:1]};
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 1
+  anchor: The UART performs serial-to-parallel conversion on data characters received
+    from a peripheral device or a MODEM
+cover_module: cov_P4

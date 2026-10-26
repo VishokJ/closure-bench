@@ -1,0 +1,189 @@
+{
+  "env": {
+    "taskset": {
+      "task": {
+        "judges": [],
+        "stops": {},
+        "metrics": {},
+        "rewards": {}
+      },
+      "system_prompt": null,
+      "id": "closure-bench",
+      "design": "uart",
+      "image": "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155",
+      "run_timeout": 60.0,
+      "harness": "null",
+      "agent_timeout": 2400.0,
+      "max_turns": null,
+      "tasks": "single",
+      "max_files": null,
+      "items": [
+        "R12",
+        "R13",
+        "R14",
+        "R15",
+        "R16",
+        "R17",
+        "R18",
+        "R19",
+        "R20",
+        "R21",
+        "R22",
+        "R23",
+        "R24",
+        "R25",
+        "R26",
+        "R27",
+        "R28",
+        "R29",
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T9",
+        "T10",
+        "T11",
+        "T12"
+      ]
+    },
+    "timeout": {
+      "episode": null,
+      "finalize": null
+    },
+    "retries": {
+      "max_retries": 0,
+      "rules": [
+        {
+          "type": "ProviderError",
+          "status_code": [
+            "5xx",
+            429
+          ],
+          "message": null,
+          "max_retries": 3
+        },
+        {
+          "type": "ProviderError",
+          "status_code": null,
+          "message": "finish_reason",
+          "max_retries": 3
+        }
+      ]
+    },
+    "max_concurrent_agents": 1,
+    "interception": {
+      "type": "elastic",
+      "multiplex": 32
+    },
+    "id": "",
+    "agent": {
+      "harness": {
+        "id": "null",
+        "env": {},
+        "forward_env": [],
+        "mcp_header_env": {},
+        "tool_timeout": 600.0,
+        "disabled_tools": null,
+        "dialect": "chat_completions",
+        "skills": [],
+        "compaction": null
+      },
+      "runtime": {
+        "allow": [
+          "*"
+        ],
+        "block": [],
+        "type": "prime",
+        "image": "python:3.11-slim",
+        "workdir": null,
+        "region": null,
+        "labels": [],
+        "cpu": 1.0,
+        "memory": 2.0,
+        "gpu": null,
+        "disk": 5.0,
+        "checkpoint": null,
+        "idle_timeout": 3600.0,
+        "creates_per_min": null,
+        "mounts": {}
+      },
+      "scoring": {
+        "mode": "isolated"
+      },
+      "deployment": {
+        "mode": "colocated",
+        "trust_compose": false
+      },
+      "model": null,
+      "client": null,
+      "sampling": null,
+      "max_turns": null,
+      "max_input_tokens": null,
+      "max_output_tokens": null,
+      "max_total_tokens": null,
+      "max_turn_tokens": null,
+      "timeout": {
+        "setup": null,
+        "rollout": null,
+        "finalize": null,
+        "scoring": null
+      },
+      "retries": {
+        "max_retries": 0,
+        "rules": []
+      },
+      "network_notice": true
+    }
+  },
+  "run": {
+    "name": "closure-bench--qwen--qwen3.8-27b--null--ec46d01c",
+    "dir": "closure-bench--qwen--qwen3.8-27b--null--ec46d01c",
+    "attach": null
+  },
+  "model": "qwen/qwen3.8-27b",
+  "client": {
+    "base_url": "https://api.pinference.ai/api/v1",
+    "api_key_var": "PRIME_API_KEY",
+    "headers": {},
+    "headers_from_env": {},
+    "timeout": {
+      "connect": 30.0,
+      "read": null,
+      "write": null,
+      "pool": null
+    },
+    "type": "eval"
+  },
+  "sampling": {
+    "temperature": 1.0,
+    "top_p": null,
+    "reasoning_effort": null,
+    "max_tokens": 65536
+  },
+  "select": {
+    "include": {
+      "idx": [],
+      "ids": [],
+      "keys": [],
+      "names": []
+    },
+    "exclude": {
+      "idx": [],
+      "ids": [],
+      "keys": [],
+      "names": []
+    },
+    "shuffle": false,
+    "seed": 0,
+    "skip": 0,
+    "limit": null
+  },
+  "num_rollouts": 8,
+  "max_concurrent": 128,
+  "verbose": false,
+  "rich": {
+    "show_logs": false
+  },
+  "push": false,
+  "output_dir": "outputs/official/qwen"
+}

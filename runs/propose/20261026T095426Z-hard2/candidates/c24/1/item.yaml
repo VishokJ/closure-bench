@@ -1,0 +1,26 @@
+id: P24
+description: With prescale held at 16'd1 and three frames sent back-to-back, each
+  of the first two frames ends with a 0 last data bit. txd rises at the stop bit,
+  on the clock where bit_cnt goes from 1 to 0, and then stays high for exactly 9 clocks
+  before falling as the next start bit, with bit_cnt reloaded to 9. The cover is reached
+  when the second such 9-clock stop gap in a row ends.
+tier: T3
+mechanism:
+- boundary
+- sequence
+cover: P24_two_stop_gaps_9_clocks_prescale1
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: The prescale input determines the
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 106
+  - 110
+  anchor: prescale_reg <= (prescale << 3);
+cover_module: cov_P24

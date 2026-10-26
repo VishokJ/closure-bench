@@ -1,0 +1,24 @@
+id: P11
+description: A frame is received with prescale at 16'd1 from its start bit to its
+  end. At the end, m_axis_tvalid rises with m_axis_tdata equal to 8'h96, and frame_error
+  stays low for the whole frame.
+tier: T1
+mechanism:
+- boundary
+- data
+cover: P11_rx_min_prescale_word
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: it should be set to Fclk / (baud * 8)
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 130
+  - 137
+  anchor: prescale_reg <= (prescale << 2)-2;
+cover_module: cov_P11

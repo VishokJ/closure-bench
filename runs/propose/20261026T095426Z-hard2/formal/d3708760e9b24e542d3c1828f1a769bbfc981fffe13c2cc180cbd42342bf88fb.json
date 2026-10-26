@@ -1,0 +1,13 @@
+{
+ "bound_module": "uart_tx",
+ "depth": 292,
+ "detail": "",
+ "input_changes": 4,
+ "input_changes_exact": false,
+ "label": "P23_tx_prescale2_back_to_back_12_34",
+ "minimize_s": 181.0,
+ "solve_s": 26.8,
+ "status": "reachable",
+ "tb_text": "// Formal witness for P23_tx_prescale2_back_to_back_12_34 (closure_core/formal.py): the shortest legal input\n// trace Yosys/SymbiYosys found (292 cycles), replayed on the uart_tx ports.\n// A gold candidate, never shown to an agent; Verilator decides whether it hits.\n`timescale 1ns / 1ps\n\nmodule tb;\n  logic clk = 1'b0;\n  always #5 clk = ~clk;\n  logic rst = 1'd1;\n  logic [7:0] s_axis_tdata = 8'd19;\n  logic s_axis_tvalid = 1'd0;\n  logic [15:0] prescale = 16'd2;\n  wire  s_axis_tready;\n  wire  txd;\n  wire  busy;\n\n  uart_tx dut (.clk(clk), .rst(rst), .s_axis_tdata(s_axis_tdata), .s_axis_tvalid(s_axis_tvalid), .prescale(prescale), .s_axis_tready(s_axis_tready), .txd(txd), .busy(busy));\n\n  initial begin\n    @(negedge clk);\n    rst = 1'd0; s_axis_tdata = 8'd18; s_axis_tvalid = 1'd1;\n    repeat (2) @(negedge clk);\n    s_axis_tdata = 8'd52;\n    repeat (290) @(negedge clk);\n    $finish;\n  end\nendmodule\n",
+ "total_s": 207.8
+}

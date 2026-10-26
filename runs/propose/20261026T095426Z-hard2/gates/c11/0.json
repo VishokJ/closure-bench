@@ -1,0 +1,127 @@
+{
+  "item": "P11",
+  "accepted": false,
+  "failed_gate": "formal",
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, data",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "data"
+        ],
+        "reads": [
+          "bit_cnt",
+          "busy",
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tvalid",
+          "prescale",
+          "prescale_reg",
+          "rxd_reg"
+        ],
+        "locals": [
+          "ok"
+        ],
+        "constants": [
+          "19'd0",
+          "4'd0",
+          "16'd1",
+          "16'd1",
+          "16'd1",
+          "8'h96"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "it should be set to Fclk / (baud * 8)"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                130,
+                137
+              ],
+              "anchor": "prescale_reg <= (prescale << 2)-2;"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": false,
+      "detail": "witness is 1.00 frames, below 1.5: make the target need more protocol activity (a further phase or an interaction), not more waiting or a slower prescale",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 80,
+        "input_changes": 6,
+        "input_changes_exact": true,
+        "key": "a5475765f60fc4b33c0d408f1ebfe0ed72432cf2b2d7b6da2a1be6d4cd815391",
+        "witness_frames": 1.0,
+        "active_frames": 0.95
+      }
+    }
+  ],
+  "skipped": [
+    "baseline",
+    "gold",
+    "near_miss",
+    "determinism",
+    "value",
+    "duplicate"
+  ]
+}

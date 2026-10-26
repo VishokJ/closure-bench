@@ -1,0 +1,31 @@
+id: P10
+description: On uart_rx, after a first word with m_axis_tdata equal to 8'h3C has been
+  accepted (m_axis_tvalid and m_axis_tready both high), a later word raises m_axis_tvalid
+  on a clock where m_axis_tready is low. On the very next clock m_axis_tvalid is still
+  high and m_axis_tready is high, so this second word, m_axis_tdata equal to 8'hA5,
+  is accepted after exactly one stall cycle.
+tier: T2
+mechanism:
+- boundary
+- interaction
+cover: P10_rx_single_cycle_stall_accept
+sources:
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: Once TVALID is asserted, it must remain asserted until the handshake occurs.
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 34
+  - 36
+  anchor: Data is transferred from the source to the
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 101
+  - 103
+  anchor: if (m_axis_tvalid && m_axis_tready) begin
+cover_module: cov_P10

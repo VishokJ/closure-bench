@@ -1,0 +1,41 @@
+id: P23
+description: With prescale at 16'd2 throughout, uart_tx sends a frame whose txd samples
+  at the eight data-bit boundaries (prescale_reg 19'd0, bit_cnt 8 down to 1) form
+  8'h12. busy then stays high with no idle cycle into the next frame, which is loaded
+  with s_axis_tvalid high. At that frame's bit_cnt 2 boundary, the txd samples of
+  data bits 0 to 6 together with data_reg[0] (bit 7, not yet sent) form 8'h34.
+tier: T3
+mechanism:
+- sequence
+- data
+- boundary
+cover: P23_tx_prescale2_back_to_back_12_34
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: it should be set to Fclk / (baud * 8)
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 39
+  anchor: Both interfaces also present a 'busy' signal that is high when an operation
+    is
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 89
+  - 100
+  anchor: s_axis_tready_reg <= !s_axis_tready_reg;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_tx.v
+    line: 60
+    name: prescale[1]
+cover_module: cov_P23

@@ -1,0 +1,43 @@
+id: P9
+description: While uart_rx holds an unread word (m_axis_tvalid high, m_axis_tdata
+  8'h3C, m_axis_tready low on the previous clock), a frame ends with a low stop bit.
+  frame_error pulses while m_axis_tvalid is still high, m_axis_tdata is still 8'h3C
+  and overrun_error is low.
+tier: T2
+mechanism:
+- interaction
+- data
+cover: P9_frame_error_with_pending_word
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 43
+  - 44
+  anchor: stop bit of the right level, then a single pulse will be emitted from the
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 16
+  anchor: Bit 3 is set to a logic 1 whenever the Stop bit following the last data
+    bit or parity bit is detected as a logic 0 bit
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: The valid data bytes and control information from the Transmitter must remain
+    unchanged once TVALID has been asserted by the Transmitter.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 120
+  - 128
+  anchor: frame_error_reg <= 1;
+- type: BASE
+  point:
+    kind: v_branch
+    file: uart_rx.v
+    line: 122
+    name: else
+cover_module: cov_P9

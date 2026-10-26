@@ -1,0 +1,32 @@
+id: P15
+description: 'While m_axis_tvalid is high with m_axis_tdata 8''h3C and m_axis_tready
+  low, the word is later accepted (m_axis_tready high) in a cycle where busy is high
+  and bit_cnt is between 2 and 9 of the next frame. Without busy falling, that frame
+  then completes: m_axis_tvalid rises with m_axis_tdata 8''hA5 and overrun_error low.'
+tier: T3
+mechanism:
+- sequence
+- interaction
+- data
+- boundary
+cover: P15_rx_accept_during_next_frame
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 42
+  anchor: If the data word currently in the tdata output register is not read
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 101
+  - 125
+  anchor: overrun_error_reg <= m_axis_tvalid_reg;
+cover_module: cov_P15

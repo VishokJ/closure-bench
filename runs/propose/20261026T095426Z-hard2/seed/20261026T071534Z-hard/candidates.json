@@ -1,0 +1,303 @@
+{
+  "candidates": [
+    {
+      "behaviour": "The sink accepts a pending word 8'h3C (m_axis_tvalid and m_axis_tready both high) on the same clock that a second good frame completes. On the next clock m_axis_tvalid is high with m_axis_tdata 8'hA5, so both words are delivered and the second is not lost. The RTL also pulses overrun_error on that clock, because overrun_error_reg samples the old m_axis_tvalid_reg, even though the old word was read; the README says overrun should pulse only when a word was not read. The gold should report this.",
+      "cid": "c01",
+      "kind": "task",
+      "mechanism": [
+        "boundary",
+        "interaction",
+        "data"
+      ],
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            38,
+            44
+          ],
+          "role": "requirement",
+          "type": "README"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            101,
+            125
+          ],
+          "type": "RTL"
+        },
+        {
+          "doc": "axis",
+          "page": 18,
+          "type": "DOC"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 56,
+            "name": "overrun_error"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_accept_old_word_same_cycle_new_word_lands",
+      "why_baseline_misses": "The baseline sink is always ready, so a pending word is never still unread at the exact clock the next frame completes."
+    },
+    {
+      "behaviour": "A frame ends with a low stop bit, so frame_error pulses. rxd stays low from that pulse until busy rises again, so the receiver treats the low level as the next start bit. That frame completes and m_axis_tvalid rises with m_axis_tdata 8'hA5.",
+      "cid": "c02",
+      "kind": "task",
+      "mechanism": [
+        "sequence",
+        "data"
+      ],
+      "pass": 1,
+      "sources": [
+        {
+          "doc": "pc16550d",
+          "page": 16,
+          "role": "requirement",
+          "type": "DOC"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            120,
+            137
+          ],
+          "type": "RTL"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_branch",
+            "line": 122,
+            "name": "else"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_resync_after_frame_error",
+      "why_baseline_misses": "The baseline never sends a frame with a low stop bit, so the receiver never has to resynchronise after a framing error."
+    },
+    {
+      "behaviour": "After the receiver delivers a word (m_axis_tvalid rises), the next start bit is picked up within two clocks. That is, busy goes high again no more than two clocks after the stop-bit sample. The second frame then completes with m_axis_tvalid high and m_axis_tdata 8'h5A, and frame_error stays low. A twin cover checks the three-clock case.",
+      "cid": "c03",
+      "kind": "task",
+      "mechanism": [
+        "boundary",
+        "sequence",
+        "data"
+      ],
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            120,
+            137
+          ],
+          "type": "RTL"
+        },
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            38,
+            44
+          ],
+          "type": "README"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_short_stop_bit_back_to_back",
+      "why_baseline_misses": "The baseline always drives a full-length stop bit, so the next start edge comes about half a bit after the stop sample, never immediately."
+    },
+    {
+      "behaviour": "During a data bit (bit_cnt between 2 and 9), the synchronised input rxd_reg changes level and changes back while prescale_reg is non-zero, so the glitch lies away from the mid-bit sample point. The frame still completes with m_axis_tvalid rising, m_axis_tdata 8'hA5 and no frame_error.",
+      "cid": "c04",
+      "kind": "task",
+      "mechanism": [
+        "interaction",
+        "sequence",
+        "data"
+      ],
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            105,
+            119
+          ],
+          "type": "RTL"
+        },
+        {
+          "doc": "pc16550d",
+          "page": 1,
+          "type": "DOC"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_glitch_off_sample_point_ignored",
+      "why_baseline_misses": "The baseline drives clean bits with no mid-bit transitions on rxd."
+    },
+    {
+      "behaviour": "The receiver delivers m_axis_tdata 8'hA5 from a frame received with prescale 1. prescale is then changed to 3 while busy is low. The next frame is delivered with m_axis_tdata 8'h5A and frame_error stays low.",
+      "cid": "c05",
+      "kind": "task",
+      "mechanism": [
+        "sequence",
+        "data"
+      ],
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            27,
+            30
+          ],
+          "role": "requirement",
+          "type": "README"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_rx.v",
+          "lines": [
+            111,
+            133
+          ],
+          "type": "RTL"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[1]"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "rx_prescale_change_between_frames",
+      "why_baseline_misses": "The baseline uses a fixed prescale of 5, so the run-time prescale input never changes and prescale[1] never toggles."
+    },
+    {
+      "behaviour": "The transmitter sends one byte with prescale 1, and prescale is then changed to 3 while busy is low. The next byte, 8'h5A, is shifted out on txd with every data bit lasting 24 clocks: at each data-bit boundary, prescale_reg reaches 0 with txd holding the matching bit of 8'h5A.",
+      "cid": "c06",
+      "kind": "task",
+      "mechanism": [
+        "sequence",
+        "data"
+      ],
+      "pass": 1,
+      "sources": [
+        {
+          "file": "third_party/verilog-uart/README.md",
+          "lines": [
+            27,
+            30
+          ],
+          "role": "requirement",
+          "type": "README"
+        },
+        {
+          "file": "third_party/verilog-uart/rtl/uart_tx.v",
+          "lines": [
+            93,
+            110
+          ],
+          "type": "RTL"
+        },
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[1]"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_tx",
+      "title": "tx_prescale_change_between_frames",
+      "why_baseline_misses": "The baseline transmits only at a fixed prescale of 5, so prescale[1] never toggles and no frame follows a rate change."
+    },
+    {
+      "behaviour": "Toggles of prescale[3], prescale[4] and prescale[5] on uart_rx and uart_tx are closed trivially by any prescale of 8 or more. They are outside the formal bound (prescale 1..4) and add no behaviour beyond W3, so W3 should be extended to bits 3 to 5 rather than closed by dedicated tasks.",
+      "cid": "c07",
+      "kind": "waiver",
+      "pass": 1,
+      "sources": [
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[3]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[4]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_rx.v",
+            "kind": "v_toggle",
+            "line": 62,
+            "name": "prescale[5]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[3]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[4]"
+          },
+          "type": "BASE"
+        },
+        {
+          "point": {
+            "file": "uart_tx.v",
+            "kind": "v_toggle",
+            "line": 60,
+            "name": "prescale[5]"
+          },
+          "type": "BASE"
+        }
+      ],
+      "target_module": "uart_rx",
+      "title": "waive_prescale_bits_3_to_5",
+      "why_baseline_misses": "The baseline prescale of 5 sets only bits 0 and 2."
+    }
+  ],
+  "passes": {
+    "1": {
+      "error": null
+    }
+  },
+  "unkillable": []
+}

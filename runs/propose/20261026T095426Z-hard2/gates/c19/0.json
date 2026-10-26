@@ -1,0 +1,215 @@
+{
+  "item": "P19",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, interaction, data",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "interaction",
+          "data"
+        ],
+        "reads": [
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tready",
+          "m_axis_tvalid"
+        ],
+        "locals": [],
+        "constants": [
+          "8'h3C",
+          "8'h3C"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                42,
+                44
+              ],
+              "anchor": "If the receiver does not get a"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 18,
+              "anchor": "For a transfer to occur, both TVALID and TREADY must be asserted."
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                101,
+                103
+              ],
+              "anchor": "if (m_axis_tvalid && m_axis_tready) begin"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                126,
+                128
+              ],
+              "anchor": "frame_error_reg <= 1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 73,
+                "name": "frame_error_reg"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 157 cycles (1.96 frames), 6 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 157",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 157,
+        "input_changes": 6,
+        "input_changes_exact": true,
+        "key": "a11acad5d6fbec678f9176ea52a8b2d39f4bd445f9bd055d15d11af119692f65",
+        "witness_frames": 1.963,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 157,
+          "input_changes": 5,
+          "input_changes_exact": true,
+          "key": "f6cf8c9c85db338fa5ab4c0f841fccf81458b8779a6352e2cc541e5ebde67b50",
+          "witness_frames": 1.962
+        },
+        "active_frames": 1.925
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_branch uart_rx.v:122 else",
+          "v_toggle uart_rx.v:57 frame_error",
+          "v_toggle uart_rx.v:73 frame_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P19_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [42, 44]; DOC axis page 18",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [42, 44]",
+          "DOC axis page 18"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [42, 44] \"If the receiver does not get a\"",
+          "DOC axis page 18 \"For a transfer to occur, both TVALID and TREADY must be asserted.\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies R1",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

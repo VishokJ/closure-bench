@@ -1,0 +1,157 @@
+{
+  "item": "P6",
+  "accepted": false,
+  "failed_gate": "formal",
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, data",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "data"
+        ],
+        "reads": [
+          "bit_cnt",
+          "busy",
+          "prescale",
+          "prescale_reg",
+          "s_axis_tvalid",
+          "txd"
+        ],
+        "locals": [
+          "st",
+          "shift"
+        ],
+        "constants": [
+          "2'd0",
+          "8'h00",
+          "19'd0",
+          "4'd0",
+          "8'h00",
+          "16'd1",
+          "2'd1",
+          "2'd1",
+          "16'd3",
+          "2'd2",
+          "2'd0",
+          "2'd1",
+          "16'd1",
+          "2'd0",
+          "2'd2",
+          "16'd3",
+          "2'd0",
+          "19'd23",
+          "4'd2",
+          "4'd8",
+          "2'd2",
+          "16'd3",
+          "4'd1",
+          "19'd23",
+          "8'h5A"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "so it can be changed at run time"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                93,
+                110
+              ],
+              "anchor": "prescale_reg <= (prescale << 3)-1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_tx.v",
+                "line": 60,
+                "name": "prescale[1]"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": false,
+      "detail": "witness is 1.85 frames, below 1.9: make the target need more protocol activity (a further phase or an interaction), not more waiting or a slower prescale",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.9,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 279,
+        "input_changes": 19,
+        "input_changes_exact": false,
+        "key": "3007f3b808d1698cf52e051390213d042192dd0591ce881e33019e3812739468",
+        "witness_frames": 1.853,
+        "active_frames": 1.821
+      }
+    }
+  ],
+  "skipped": [
+    "baseline",
+    "gold",
+    "near_miss",
+    "determinism",
+    "value",
+    "duplicate"
+  ]
+}

@@ -1,0 +1,941 @@
+{
+  "accepted": [
+    "c01",
+    "c02",
+    "c03",
+    "c04",
+    "c05",
+    "c06",
+    "c07",
+    "c08",
+    "c09",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c15",
+    "c16",
+    "c17",
+    "c18",
+    "c19",
+    "c20",
+    "c21",
+    "c22",
+    "c23",
+    "c24",
+    "c25",
+    "c26"
+  ],
+  "check_exit": 0,
+  "cited_doc_pages": {
+    "c01": [
+      "axis p18"
+    ],
+    "c02": [
+      "pc16550d p16"
+    ],
+    "c04": [
+      "pc16550d p1"
+    ],
+    "c07": [
+      "pc16550d p16"
+    ],
+    "c10": [
+      "axis p18"
+    ],
+    "c13": [
+      "pc16550d p16"
+    ],
+    "c17": [
+      "axis p28"
+    ],
+    "c18": [
+      "pc16550d p1"
+    ],
+    "c20": [
+      "axis p18"
+    ],
+    "c21": [
+      "axis p28"
+    ],
+    "c25": [
+      "axis p18"
+    ]
+  },
+  "cites_outside_context_pages": [],
+  "context_pages": [
+    "axis p18",
+    "axis p28",
+    "pc16550d p1",
+    "pc16550d p12",
+    "pc16550d p16"
+  ],
+  "hit_by_random": {
+    "c02": {
+      "rx": 1
+    },
+    "c13": {
+      "rx": 1
+    }
+  },
+  "infra_aborted": {},
+  "mechanisms": {
+    "boundary": [
+      "c01",
+      "c02",
+      "c03",
+      "c04",
+      "c05",
+      "c06",
+      "c07",
+      "c08",
+      "c10",
+      "c11",
+      "c12",
+      "c13",
+      "c14",
+      "c15",
+      "c16",
+      "c17",
+      "c18",
+      "c19",
+      "c20",
+      "c21",
+      "c22",
+      "c23",
+      "c24",
+      "c25",
+      "c26"
+    ],
+    "data": [
+      "c01",
+      "c02",
+      "c03",
+      "c04",
+      "c05",
+      "c06",
+      "c07",
+      "c09",
+      "c11",
+      "c12",
+      "c13",
+      "c14",
+      "c15",
+      "c16",
+      "c17",
+      "c18",
+      "c19",
+      "c20",
+      "c21",
+      "c22",
+      "c23",
+      "c25"
+    ],
+    "interaction": [
+      "c01",
+      "c04",
+      "c08",
+      "c09",
+      "c10",
+      "c14",
+      "c15",
+      "c16",
+      "c18",
+      "c19",
+      "c25",
+      "c26"
+    ],
+    "reset_timing": [
+      "c17",
+      "c21"
+    ],
+    "sequence": [
+      "c02",
+      "c03",
+      "c04",
+      "c05",
+      "c06",
+      "c07",
+      "c08",
+      "c11",
+      "c12",
+      "c13",
+      "c15",
+      "c16",
+      "c18",
+      "c20",
+      "c21",
+      "c23",
+      "c24",
+      "c25",
+      "c26"
+    ]
+  },
+  "near_miss_opt_outs": {},
+  "passes": {
+    "1": {
+      "accepted": [
+        "c01",
+        "c02",
+        "c03",
+        "c04",
+        "c05",
+        "c06",
+        "c07",
+        "c08",
+        "c09",
+        "c10",
+        "c11",
+        "c12",
+        "c13",
+        "c14",
+        "c15",
+        "c16",
+        "c17",
+        "c18",
+        "c19",
+        "c20",
+        "c21",
+        "c22",
+        "c23",
+        "c24",
+        "c25",
+        "c26"
+      ],
+      "funnel_final": [
+        {
+          "gate": "proposed",
+          "passed": 26
+        },
+        {
+          "gate": "format",
+          "passed": 26
+        },
+        {
+          "gate": "cover_sync",
+          "passed": 26
+        },
+        {
+          "gate": "cover_policy",
+          "passed": 26
+        },
+        {
+          "gate": "description_sync",
+          "passed": 26
+        },
+        {
+          "gate": "mechanism",
+          "passed": 26
+        },
+        {
+          "gate": "citations",
+          "passed": 26
+        },
+        {
+          "gate": "formal",
+          "passed": 26
+        },
+        {
+          "gate": "baseline",
+          "passed": 26
+        },
+        {
+          "gate": "gold",
+          "passed": 26
+        },
+        {
+          "gate": "near_miss",
+          "opted_out": 0,
+          "passed": 26
+        },
+        {
+          "gate": "determinism",
+          "passed": 26
+        },
+        {
+          "gate": "value",
+          "passed": 26
+        },
+        {
+          "gate": "duplicate",
+          "passed": 26
+        },
+        {
+          "gate": "set_duplicate",
+          "passed": 26
+        }
+      ],
+      "funnel_first_attempt": [
+        {
+          "gate": "proposed",
+          "passed": 26
+        },
+        {
+          "gate": "format",
+          "passed": 26
+        },
+        {
+          "gate": "cover_sync",
+          "passed": 26
+        },
+        {
+          "gate": "cover_policy",
+          "passed": 26
+        },
+        {
+          "gate": "description_sync",
+          "passed": 26
+        },
+        {
+          "gate": "mechanism",
+          "passed": 26
+        },
+        {
+          "gate": "citations",
+          "passed": 25
+        },
+        {
+          "gate": "formal",
+          "passed": 16
+        },
+        {
+          "gate": "baseline",
+          "passed": 16
+        },
+        {
+          "gate": "gold",
+          "passed": 16
+        },
+        {
+          "gate": "near_miss",
+          "opted_out": 0,
+          "passed": 16
+        },
+        {
+          "gate": "determinism",
+          "passed": 16
+        },
+        {
+          "gate": "value",
+          "passed": 16
+        },
+        {
+          "gate": "duplicate",
+          "passed": 16
+        }
+      ],
+      "progress": {
+        "holes": {
+          "baseline": 62,
+          "closed_by_plan": 14,
+          "closed_by_run": [],
+          "remaining": [],
+          "waived": 48
+        },
+        "mutants": {
+          "baseline_survivors": 76,
+          "killed_by_plan": 69,
+          "killed_by_run": [],
+          "per_candidate": {
+            "c01": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c02": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c03": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c04": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c05": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c06": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c07": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c08": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c09": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c10": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c11": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c12": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c13": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c14": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c15": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c16": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c17": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c18": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c19": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c20": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c21": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c22": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c23": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c24": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c25": {
+              "kills": 0,
+              "only_this_candidate": 0
+            },
+            "c26": {
+              "kills": 0,
+              "only_this_candidate": 0
+            }
+          },
+          "remaining": 7,
+          "shared": {}
+        },
+        "requirements": {
+          "cited_by_plan": 12,
+          "new_in_run": [
+            "DOC axis page 18 \"Either TVALID or TREADY can be asserted first, or both can be asserted in the same ACLK cycle.\"",
+            "DOC axis page 18 \"For a transfer to occur, both TVALID and TREADY must be asserted.\"",
+            "DOC axis page 18 \"Once TVALID is asserted, it must remain asserted until the handshake occurs.\"",
+            "DOC axis page 18 \"The valid data bytes and control information from the Transmitter must remain unchanged once TVALID has been asserted by the Transmitter.\"",
+            "DOC axis page 28 \"A Transmitter interface must only begin driving TVALID at a rising ACLK edge following a rising edge at which ARESETn is asserted HIGH.\"",
+            "DOC axis page 28 \"During reset, TVALID must be driven LOW.\"",
+            "DOC pc16550d page 1 \"False start bit detection.\"",
+            "DOC pc16550d page 1 \"The UART performs serial-to-parallel conversion on data characters received from a peripheral device or a MODEM\"",
+            "DOC pc16550d page 16 \"Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit is detected as a logic 0 bit\"",
+            "DOC pc16550d page 16 \"The UART will try to resynchronize after a framing error.\"",
+            "DOC pc16550d page 16 \"was not read by the CPU before the next character was transferred into the Receiver Buffer Register\"",
+            "README third_party/verilog-uart/README.md lines [27, 30] \"The prescale input determines the\"",
+            "README third_party/verilog-uart/README.md lines [27, 30] \"of a parameter so it can be changed at run time\"",
+            "README third_party/verilog-uart/README.md lines [27, 30] \"so it can be changed at run time\"",
+            "README third_party/verilog-uart/README.md lines [33, 36] \"Data is transferred from the source to the\"",
+            "README third_party/verilog-uart/README.md lines [34, 36] \"Data is transferred from the source to the\"",
+            "README third_party/verilog-uart/README.md lines [34, 36] \"destination only when both tvalid and tready are high\"",
+            "README third_party/verilog-uart/README.md lines [35, 35] \"destination only when both tvalid and tready are high\"",
+            "README third_party/verilog-uart/README.md lines [38, 39] \"Both interfaces also present a 'busy' signal that is high when an operation is\"",
+            "README third_party/verilog-uart/README.md lines [38, 42] \"If the data word currently in the tdata output register is not read\"",
+            "README third_party/verilog-uart/README.md lines [38, 44] \"If the data word currently in the tdata output register is not read\"",
+            "README third_party/verilog-uart/README.md lines [38, 44] \"If the receiver does not get a\"",
+            "README third_party/verilog-uart/README.md lines [38, 44] \"frame_error output and the received word will be discarded.\"",
+            "README third_party/verilog-uart/README.md lines [38, 44] \"from overrun_error and the word is discarded\"",
+            "README third_party/verilog-uart/README.md lines [38, 44] \"from overrun_error and the word is discarded.\"",
+            "README third_party/verilog-uart/README.md lines [42, 44] \"If the receiver does not get a\"",
+            "README third_party/verilog-uart/README.md lines [42, 44] \"frame_error output and the received word will be discarded.\"",
+            "README third_party/verilog-uart/README.md lines [42, 44] \"stop bit of the right level, then a single pulse will be emitted from the\"",
+            "README third_party/verilog-uart/README.md lines [43, 44] \"stop bit of the right level, then a single pulse will be emitted from the\""
+          ]
+        }
+      },
+      "rejected_at": {},
+      "rejected_at_set": {},
+      "rejected_solely_for_value": [],
+      "repair": {
+        "failed_first_attempt": 10,
+        "rate": 1.0,
+        "repaired": 10
+      },
+      "stage_a": {
+        "attempts": 1,
+        "error": null
+      }
+    }
+  },
+  "progress_total": {
+    "holes": {
+      "baseline": 62,
+      "closed_by_plan": 14,
+      "closed_by_run": [],
+      "remaining": [],
+      "waived": 48
+    },
+    "mutants": {
+      "baseline_survivors": 76,
+      "killed_by_plan": 69,
+      "killed_by_run": [],
+      "per_candidate": {
+        "c01": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c02": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c03": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c04": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c05": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c06": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c07": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c08": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c09": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c10": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c11": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c12": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c13": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c14": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c15": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c16": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c17": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c18": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c19": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c20": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c21": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c22": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c23": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c24": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c25": {
+          "kills": 0,
+          "only_this_candidate": 0
+        },
+        "c26": {
+          "kills": 0,
+          "only_this_candidate": 0
+        }
+      },
+      "remaining": 7,
+      "shared": {}
+    },
+    "requirements": {
+      "cited_by_plan": 12,
+      "new_in_run": [
+        "DOC axis page 18 \"Either TVALID or TREADY can be asserted first, or both can be asserted in the same ACLK cycle.\"",
+        "DOC axis page 18 \"For a transfer to occur, both TVALID and TREADY must be asserted.\"",
+        "DOC axis page 18 \"Once TVALID is asserted, it must remain asserted until the handshake occurs.\"",
+        "DOC axis page 18 \"The valid data bytes and control information from the Transmitter must remain unchanged once TVALID has been asserted by the Transmitter.\"",
+        "DOC axis page 28 \"A Transmitter interface must only begin driving TVALID at a rising ACLK edge following a rising edge at which ARESETn is asserted HIGH.\"",
+        "DOC axis page 28 \"During reset, TVALID must be driven LOW.\"",
+        "DOC pc16550d page 1 \"False start bit detection.\"",
+        "DOC pc16550d page 1 \"The UART performs serial-to-parallel conversion on data characters received from a peripheral device or a MODEM\"",
+        "DOC pc16550d page 16 \"Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit is detected as a logic 0 bit\"",
+        "DOC pc16550d page 16 \"The UART will try to resynchronize after a framing error.\"",
+        "DOC pc16550d page 16 \"was not read by the CPU before the next character was transferred into the Receiver Buffer Register\"",
+        "README third_party/verilog-uart/README.md lines [27, 30] \"The prescale input determines the\"",
+        "README third_party/verilog-uart/README.md lines [27, 30] \"of a parameter so it can be changed at run time\"",
+        "README third_party/verilog-uart/README.md lines [27, 30] \"so it can be changed at run time\"",
+        "README third_party/verilog-uart/README.md lines [33, 36] \"Data is transferred from the source to the\"",
+        "README third_party/verilog-uart/README.md lines [34, 36] \"Data is transferred from the source to the\"",
+        "README third_party/verilog-uart/README.md lines [34, 36] \"destination only when both tvalid and tready are high\"",
+        "README third_party/verilog-uart/README.md lines [35, 35] \"destination only when both tvalid and tready are high\"",
+        "README third_party/verilog-uart/README.md lines [38, 39] \"Both interfaces also present a 'busy' signal that is high when an operation is\"",
+        "README third_party/verilog-uart/README.md lines [38, 42] \"If the data word currently in the tdata output register is not read\"",
+        "README third_party/verilog-uart/README.md lines [38, 44] \"If the data word currently in the tdata output register is not read\"",
+        "README third_party/verilog-uart/README.md lines [38, 44] \"If the receiver does not get a\"",
+        "README third_party/verilog-uart/README.md lines [38, 44] \"frame_error output and the received word will be discarded.\"",
+        "README third_party/verilog-uart/README.md lines [38, 44] \"from overrun_error and the word is discarded\"",
+        "README third_party/verilog-uart/README.md lines [38, 44] \"from overrun_error and the word is discarded.\"",
+        "README third_party/verilog-uart/README.md lines [42, 44] \"If the receiver does not get a\"",
+        "README third_party/verilog-uart/README.md lines [42, 44] \"frame_error output and the received word will be discarded.\"",
+        "README third_party/verilog-uart/README.md lines [42, 44] \"stop bit of the right level, then a single pulse will be emitted from the\"",
+        "README third_party/verilog-uart/README.md lines [43, 44] \"stop bit of the right level, then a single pulse will be emitted from the\""
+      ]
+    }
+  },
+  "proposed": {
+    "by_pass": {
+      "1": 26
+    },
+    "tasks": 26,
+    "waivers": 1
+  },
+  "run_id": "20261026T095426Z-hard2",
+  "seed_skipped": [],
+  "seeded": {
+    "c01": {
+      "attempt": 0,
+      "cid": "c01",
+      "run": "20261026T071534Z-hard"
+    },
+    "c02": {
+      "attempt": 0,
+      "cid": "c02",
+      "run": "20261026T071534Z-hard"
+    },
+    "c03": {
+      "attempt": 0,
+      "cid": "c03",
+      "run": "20261026T071534Z-hard"
+    },
+    "c04": {
+      "attempt": 2,
+      "cid": "c04",
+      "run": "20261026T071534Z-hard"
+    },
+    "c05": {
+      "attempt": 0,
+      "cid": "c05",
+      "run": "20261026T071534Z-hard"
+    },
+    "c06": {
+      "attempt": 1,
+      "cid": "c06",
+      "run": "20261026T071534Z-hard"
+    }
+  },
+  "waiver_proposals": [
+    {
+      "behaviour": "Toggle holes prescale[3], prescale[4] and prescale[5] on uart_rx and uart_tx. Like W3, they are closed trivially by any prescale of 8 or more. That is outside the formal bound (prescale 1..4), and they carry no behaviour beyond the large-prescale items R7 and T2.",
+      "cid": "c27",
+      "title": "prescale_bits_3_to_5_toggle",
+      "why_baseline_misses": "The baseline uses prescale 5 only."
+    }
+  ],
+  "witnesses": {
+    "c01": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 13,
+      "twin_depth": 156,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c02": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 8,
+      "twin_depth": 157,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c03": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 10,
+      "twin_depth": 158,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c04": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 20,
+      "twin_depth": 156,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c05": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 29,
+      "twin_depth": 156,
+      "witness_depth": 234,
+      "witness_frames": 1.962
+    },
+    "c06": {
+      "active_frames": 1.821,
+      "gold_source": "formal",
+      "input_changes": 5,
+      "twin_depth": 279,
+      "witness_depth": 279,
+      "witness_frames": 1.863
+    },
+    "c07": {
+      "active_frames": 2.85,
+      "gold_source": "formal",
+      "input_changes": 12,
+      "twin_depth": 156,
+      "witness_depth": 232,
+      "witness_frames": 2.9
+    },
+    "c08": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 7,
+      "twin_depth": 156,
+      "witness_depth": 157,
+      "witness_frames": 1.963
+    },
+    "c09": {
+      "active_frames": 1.913,
+      "gold_source": "formal",
+      "input_changes": 5,
+      "twin_depth": 156,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c10": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 14,
+      "twin_depth": 158,
+      "witness_depth": 157,
+      "witness_frames": 1.962
+    },
+    "c11": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 14,
+      "twin_depth": 234,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c12": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 13,
+      "twin_depth": 156,
+      "witness_depth": 234,
+      "witness_frames": 1.963
+    },
+    "c13": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 10,
+      "twin_depth": 173,
+      "witness_depth": 174,
+      "witness_frames": 2.175
+    },
+    "c14": {
+      "active_frames": 1.913,
+      "gold_source": "formal",
+      "input_changes": 15,
+      "twin_depth": 156,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c15": {
+      "active_frames": 1.9,
+      "gold_source": "formal",
+      "input_changes": 13,
+      "twin_depth": 156,
+      "witness_depth": 156,
+      "witness_frames": 1.95
+    },
+    "c16": {
+      "active_frames": 2.85,
+      "gold_source": "formal",
+      "input_changes": 13,
+      "twin_depth": 156,
+      "witness_depth": 232,
+      "witness_frames": 2.9
+    },
+    "c17": {
+      "active_frames": 1.887,
+      "gold_source": "formal",
+      "input_changes": 12,
+      "twin_depth": 158,
+      "witness_depth": 157,
+      "witness_frames": 1.962
+    },
+    "c18": {
+      "active_frames": 1.95,
+      "gold_source": "formal",
+      "input_changes": 15,
+      "twin_depth": 156,
+      "witness_depth": 160,
+      "witness_frames": 2.0
+    },
+    "c19": {
+      "active_frames": 1.925,
+      "gold_source": "formal",
+      "input_changes": 6,
+      "twin_depth": 157,
+      "witness_depth": 157,
+      "witness_frames": 1.963
+    },
+    "c20": {
+      "active_frames": 1.938,
+      "gold_source": "formal",
+      "input_changes": 5,
+      "twin_depth": 158,
+      "witness_depth": 157,
+      "witness_frames": 1.962
+    },
+    "c21": {
+      "active_frames": 1.938,
+      "gold_source": "formal",
+      "input_changes": 3,
+      "twin_depth": 158,
+      "witness_depth": 157,
+      "witness_frames": 1.963
+    },
+    "c22": {
+      "active_frames": 1.938,
+      "gold_source": "formal",
+      "input_changes": 3,
+      "twin_depth": 158,
+      "witness_depth": 157,
+      "witness_frames": 1.963
+    },
+    "c23": {
+      "active_frames": 1.812,
+      "gold_source": "formal",
+      "input_changes": 4,
+      "twin_depth": 293,
+      "witness_depth": 292,
+      "witness_frames": 1.825
+    },
+    "c24": {
+      "active_frames": 2.05,
+      "gold_source": "formal",
+      "input_changes": 2,
+      "twin_depth": 167,
+      "witness_depth": 166,
+      "witness_frames": 2.075
+    },
+    "c25": {
+      "active_frames": 1.938,
+      "gold_source": "formal",
+      "input_changes": 4,
+      "twin_depth": 157,
+      "witness_depth": 157,
+      "witness_frames": 1.962
+    },
+    "c26": {
+      "active_frames": 2.025,
+      "gold_source": "formal",
+      "input_changes": 3,
+      "twin_depth": 166,
+      "witness_depth": 166,
+      "witness_frames": 2.075
+    }
+  },
+  "written": {
+    "c01": "R12",
+    "c02": "R13",
+    "c03": "R14",
+    "c04": "R15",
+    "c05": "R16",
+    "c06": "T5",
+    "c07": "R17",
+    "c08": "R18",
+    "c09": "R19",
+    "c10": "R20",
+    "c11": "R21",
+    "c12": "R22",
+    "c13": "R23",
+    "c14": "R24",
+    "c15": "R25",
+    "c16": "R26",
+    "c17": "R27",
+    "c18": "R28",
+    "c19": "R29",
+    "c20": "T6",
+    "c21": "T7",
+    "c22": "T8",
+    "c23": "T9",
+    "c24": "T10",
+    "c25": "T11",
+    "c26": "T12"
+  }
+}

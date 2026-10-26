@@ -1,0 +1,197 @@
+{
+  "item": "P24",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, sequence",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "sequence"
+        ],
+        "reads": [
+          "bit_cnt",
+          "prescale",
+          "txd"
+        ],
+        "locals": [
+          "active",
+          "cnt",
+          "txd_q",
+          "bc_q",
+          "good"
+        ],
+        "constants": [
+          "5'd0",
+          "4'd0",
+          "2'd0",
+          "16'd1",
+          "2'd0",
+          "4'd0",
+          "4'd1",
+          "5'd1",
+          "2'd0",
+          "5'd31",
+          "5'd1",
+          "5'd9",
+          "4'd9",
+          "2'd3",
+          "2'd1",
+          "2'd0",
+          "16'd1",
+          "4'd9",
+          "5'd9",
+          "2'd1"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "The prescale input determines the"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                106,
+                110
+              ],
+              "anchor": "prescale_reg <= (prescale << 3);"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 166 cycles (2.08 frames), 2 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 167",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 166,
+        "input_changes": 2,
+        "input_changes_exact": true,
+        "key": "7d28c2cf909eda7699dc162c5576cf0080ce268fac000326b7d288339c517be2",
+        "witness_frames": 2.075,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 167,
+          "input_changes": 4,
+          "input_changes_exact": true,
+          "key": "af15f63038bbe811f930898252d2980fa72e1a88a4ff6bcca91c596a7bf18572",
+          "witness_frames": 2.087
+        },
+        "active_frames": 2.05
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P24_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [27, 30]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [27, 30]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [27, 30] \"The prescale input determines the\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

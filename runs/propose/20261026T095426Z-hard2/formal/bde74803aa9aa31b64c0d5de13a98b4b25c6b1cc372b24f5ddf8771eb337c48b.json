@@ -1,0 +1,13 @@
+{
+ "bound_module": "uart_tx",
+ "depth": null,
+ "detail": "",
+ "input_changes": null,
+ "input_changes_exact": null,
+ "label": "P6_tx_rate_change_5a_full_frame",
+ "minimize_s": null,
+ "solve_s": 45.8,
+ "status": "unreachable",
+ "tb_text": null,
+ "total_s": 45.8
+}

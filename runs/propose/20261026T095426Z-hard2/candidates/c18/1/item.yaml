@@ -1,0 +1,38 @@
+id: P18
+description: 'While m_axis_tvalid is high with m_axis_tdata 8''h3C and m_axis_tready
+  low, the receiver rejects a start bit (prescale_reg 0, bit_cnt 10, rxd_reg high);
+  m_axis_tvalid stays high with overrun_error low until a handshake (m_axis_tvalid
+  and m_axis_tready high) transfers 8''h3C. After that, the receiver still takes in
+  a complete new frame: m_axis_tvalid rises again with m_axis_tdata 8''hA5 and overrun_error
+  low.'
+tier: T3
+mechanism:
+- sequence
+- interaction
+- data
+- boundary
+cover: P18_pending_word_survives_false_start
+sources:
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 1
+  anchor: False start bit detection.
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: Once TVALID is asserted, it must remain asserted until the handshake occurs.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 108
+  - 115
+  anchor: if (!rxd_reg) begin
+- type: BASE
+  point:
+    kind: v_branch
+    file: uart_rx.v
+    line: 109
+    name: else
+cover_module: cov_P18

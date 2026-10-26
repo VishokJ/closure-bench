@@ -1,0 +1,33 @@
+id: P22
+description: 'With prescale held at 16''d1, uart_tx sends two words back to back:
+  the first, sampled on txd at its eight data-bit boundaries, forms 8''h96, and the
+  second forms 8''h69. Every data bit lasts exactly 8 clocks between boundaries (prescale_reg
+  0). The second word is accepted (s_axis_tvalid high) on the very first idle clock
+  after the first word''s stop bit (prescale_reg 0, bit_cnt 0). The cover hits on
+  the cycle after the second word''s last data bit, with txd high and bit_cnt 0.'
+tier: T2
+mechanism:
+- boundary
+- data
+cover: P22_tx_min_prescale_b2b_96_69
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: it should be set to Fclk / (baud * 8)
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 101
+  - 105
+  anchor: '{data_reg, txd_reg} <= {1''b0, data_reg};'
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 86
+  - 100
+  anchor: if (s_axis_tvalid) begin
+cover_module: cov_P22

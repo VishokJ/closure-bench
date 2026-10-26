@@ -1,0 +1,223 @@
+{
+  "item": "P13",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, data, boundary",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "data",
+          "boundary"
+        ],
+        "reads": [
+          "busy",
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tvalid",
+          "rxd"
+        ],
+        "locals": [
+          "st",
+          "cnt"
+        ],
+        "constants": [
+          "2'd0",
+          "5'd0",
+          "2'd1",
+          "5'd0",
+          "2'd1",
+          "5'd31",
+          "5'd1",
+          "5'd0",
+          "5'd16",
+          "2'd2",
+          "5'd15",
+          "2'd3",
+          "2'd0",
+          "5'd0",
+          "2'd2",
+          "8'hA5"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "pc16550d",
+              "page": 16,
+              "anchor": "The UART will try to resynchronize after a framing error."
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                42,
+                44
+              ],
+              "anchor": "frame_error output and the received word will be discarded"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                126,
+                137
+              ],
+              "anchor": "frame_error_reg <= 1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 57,
+                "name": "frame_error"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 174 cycles (2.17 frames), 10 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 173",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 174,
+        "input_changes": 10,
+        "input_changes_exact": true,
+        "key": "9a44b3b1f01aa5fd32b0775e90a51ee4ddf82d167f6f06938ad84f34767dcadc",
+        "witness_frames": 2.175,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 173,
+          "input_changes": 10,
+          "input_changes_exact": true,
+          "key": "5b607a2036d33cd464d99882557c4eb81535f5fcc7581df4f42d577c0181a0f4",
+          "witness_frames": 2.162
+        },
+        "active_frames": 1.9
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "hit by random stimulus (rx: 1)",
+      "data": {
+        "hit_by_random": {
+          "rx": 1
+        }
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_branch uart_rx.v:122 else",
+          "v_toggle uart_rx.v:57 frame_error",
+          "v_toggle uart_rx.v:73 frame_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P13_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: DOC pc16550d page 16; README third_party/verilog-uart/README.md lines [42, 44]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "DOC pc16550d page 16",
+          "README third_party/verilog-uart/README.md lines [42, 44]"
+        ],
+        "requirement_keys": [
+          "DOC pc16550d page 16 \"The UART will try to resynchronize after a framing error.\"",
+          "README third_party/verilog-uart/README.md lines [42, 44] \"frame_error output and the received word will be discarded\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies R1",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

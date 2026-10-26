@@ -1,0 +1,58 @@
+# Official (docs/PLAN.md section 11, final eval): the 26 hard2 items (R12-R29,
+# T5-T12) only, null harness with the legality rules in the prompt, k=8,
+# max_tokens 65536, agent timeout 2400 s, provider errors retried (any left are
+# excluded as infrastructure by tools/analyze_eval). The model comes from -m.
+# Reasoning effort is set per model on the command line (both appear under
+# sampling in each run's configs/resolved/eval.json and on every call in
+# traces.jsonl):
+#   vf-eval @ configs/official_null.toml -m qwen/qwen3.8-27b -o outputs/official/qwen
+#   vf-eval @ configs/official_null.toml -m openai/gpt-6-sol --sampling.reasoning-effort high \
+#     -o outputs/official/gpt-6-sol
+# Qwen runs with its default thinking (reasoning_effort unset): Prime Inference
+# accepts the field for Qwen, but its levels do not scale Qwen's reasoning.
+# Each rollout's testbench is kept in traces.jsonl (info.submission,
+# info.submission_source) for regrading. Tags (padded vs the rest) are in
+# configs/probe_hard2_tags.yaml:
+#   tools/analyze_eval outputs/official/qwen outputs/official/gpt-6-sol \
+#     --out results/official --group-by-tag configs/probe_hard2_tags.yaml
+num_rollouts = 8                 # rollouts per task (-r)
+# Platform upload off: local traces in outputs/ are what the analysis reads.
+push = false
+
+[sampling]
+temperature = 1.0
+max_tokens = 65536
+
+[env.taskset]
+id = "closure-bench"
+design = "uart"
+# Pinned by digest (tag verilator-5.020 at the time of pinning).
+image = "docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155"
+harness = "null"
+# A 65k-token Qwen reply takes ~830 s at the observed rate; 900 s timed out 5/23
+# sanity rollouts before any reply.
+agent_timeout = 2400.0
+items = ["R12", "R13", "R14", "R15", "R16", "R17", "R18", "R19", "R20", "R21", "R22", "R23",
+         "R24", "R25", "R26", "R27", "R28", "R29", "T5", "T6", "T7", "T8", "T9", "T10",
+         "T11", "T12"]
+
+# Whole-episode retries: transient provider faults (5xx, 429, and a malformed
+# finish_reason "error" response), up to 3 per episode. Other errors are not retried.
+[[env.retries.rules]]
+type = "ProviderError"
+status_code = ["5xx", 429]
+max_retries = 3
+
+[[env.retries.rules]]
+type = "ProviderError"
+message = "finish_reason"
+max_retries = 3
+
+[env.agent.harness]
+id = "null"
+
+[env.agent.runtime]
+type = "prime"
+
+[env.agent.scoring]
+mode = "isolated"

@@ -1,0 +1,24 @@
+id: P17
+description: rst is first sampled high on exactly the clock where a good stop bit
+  is sampled (prescale_reg is 0, bit_cnt is 1, rxd_reg high) while m_axis_tvalid is
+  low. After rst is released, m_axis_tvalid shows no word other than 8'h5A, and its
+  first rise brings m_axis_tdata equal to 8'h5A from a new frame.
+tier: T2
+mechanism:
+- reset_timing
+- boundary
+- data
+cover: P17_rx_rst_at_stop_sample
+sources:
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 28
+  anchor: During reset, TVALID must be driven LOW.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 86
+  - 125
+  anchor: m_axis_tvalid_reg <= 1;
+cover_module: cov_P17

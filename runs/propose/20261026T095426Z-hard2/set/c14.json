@@ -1,0 +1,203 @@
+{
+  "item": "P14",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, interaction, data",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "interaction",
+          "data"
+        ],
+        "reads": [
+          "data_reg",
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tvalid"
+        ],
+        "locals": [],
+        "constants": [
+          "8'hA5",
+          "8'h5A"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                42,
+                44
+              ],
+              "anchor": "frame_error output and the received word will be discarded."
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "pc16550d",
+              "page": 16,
+              "anchor": "Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit is detected as a logic 0 bit"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                120,
+                128
+              ],
+              "anchor": "frame_error_reg <= 1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 73,
+                "name": "frame_error_reg"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 156 cycles (1.95 frames), 15 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 156",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 156,
+        "input_changes": 15,
+        "input_changes_exact": true,
+        "key": "50530314c8ba9ad871f2fdf6ed627210e4286b4944b6df421f44789dd2deab11",
+        "witness_frames": 1.95,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 156,
+          "input_changes": 16,
+          "input_changes_exact": true,
+          "key": "abc555b31f8cfa0928abb78d22d1a9ac942fb24d8da6beece2804e91d395f2bb",
+          "witness_frames": 1.95
+        },
+        "active_frames": 1.913
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_branch uart_rx.v:122 else",
+          "v_toggle uart_rx.v:57 frame_error",
+          "v_toggle uart_rx.v:73 frame_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P14_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [42, 44]; DOC pc16550d page 16",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [42, 44]",
+          "DOC pc16550d page 16"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [42, 44] \"frame_error output and the received word will be discarded.\"",
+          "DOC pc16550d page 16 \"Bit 3 is set to a logic 1 whenever the Stop bit following the last data bit or parity bit is detected as a logic 0 bit\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies R1",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

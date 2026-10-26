@@ -1,0 +1,44 @@
+id: P19
+description: 'On a clock where frame_error is high, m_axis_tvalid and m_axis_tready
+  are both high and m_axis_tdata is 8''h3C, so the pending word is accepted during
+  the frame-error strobe. On the next clock m_axis_tvalid is low and m_axis_tdata
+  is still 8''h3C: the bad frame does not overwrite or re-validate the word just handed
+  off.'
+tier: T2
+mechanism:
+- boundary
+- interaction
+- data
+cover: P19_accept_during_frame_error
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 42
+  - 44
+  anchor: If the receiver does not get a
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 101
+  - 103
+  anchor: if (m_axis_tvalid && m_axis_tready) begin
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 126
+  - 128
+  anchor: frame_error_reg <= 1;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 73
+    name: frame_error_reg
+cover_module: cov_P19

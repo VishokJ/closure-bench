@@ -1,0 +1,213 @@
+{
+  "item": "P16",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, interaction, data, boundary",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "interaction",
+          "data",
+          "boundary"
+        ],
+        "reads": [
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tready",
+          "m_axis_tvalid",
+          "overrun_error"
+        ],
+        "locals": [
+          "st"
+        ],
+        "constants": [
+          "8'h3C",
+          "8'hA5",
+          "8'h3C"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                38,
+                44
+              ],
+              "anchor": "from overrun_error and the word is discarded."
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                38,
+                44
+              ],
+              "anchor": "frame_error output and the received word will be discarded."
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                120,
+                128
+              ],
+              "anchor": "overrun_error_reg <= m_axis_tvalid_reg;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 56,
+                "name": "overrun_error"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 232 cycles (2.90 frames), 13 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 156",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 232,
+        "input_changes": 13,
+        "input_changes_exact": false,
+        "key": "69cd85593ae6ce675d2ed2cad860e9f646b39ac52dfbea93f5f66f1e02225402",
+        "witness_frames": 2.9,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 156,
+          "input_changes": 12,
+          "input_changes_exact": true,
+          "key": "594dd3bd83a903e2c3726ff709ecd348edc936d9ed2ef162711b0c24840eb4e7",
+          "witness_frames": 1.95
+        },
+        "active_frames": 2.85
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_branch uart_rx.v:122 else",
+          "v_toggle uart_rx.v:56 overrun_error",
+          "v_toggle uart_rx.v:57 frame_error",
+          "v_toggle uart_rx.v:72 overrun_error_reg",
+          "v_toggle uart_rx.v:73 frame_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P16_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [38, 44]; README third_party/verilog-uart/README.md lines [38, 44]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [38, 44]",
+          "README third_party/verilog-uart/README.md lines [38, 44]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [38, 44] \"from overrun_error and the word is discarded.\"",
+          "README third_party/verilog-uart/README.md lines [38, 44] \"frame_error output and the received word will be discarded.\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "implies R1, R3",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

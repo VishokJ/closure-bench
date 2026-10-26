@@ -1,0 +1,37 @@
+id: P8
+description: On uart_rx, overrun_error pulses while m_axis_tvalid is high and m_axis_tready
+  is low. At the next handshake (m_axis_tvalid and m_axis_tready both high), m_axis_tdata
+  is 8'hC3, overrun_error is low, and overrun_error has not pulsed again since the
+  tracked pulse.
+tier: T2
+mechanism:
+- sequence
+- interaction
+- boundary
+cover: P8_overrun_then_accept_newest
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 44
+  anchor: If the data word currently in the tdata output register is not read
+- type: DOC
+  role: requirement
+  doc: axis
+  page: 18
+  anchor: For a transfer to occur, both TVALID and TREADY must be asserted.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 101
+  - 125
+  anchor: overrun_error_reg <= m_axis_tvalid_reg;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 72
+    name: overrun_error_reg
+cover_module: cov_P8

@@ -1,0 +1,210 @@
+{
+  "item": "P12",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, data, boundary",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "data",
+          "boundary"
+        ],
+        "reads": [
+          "bit_cnt",
+          "data_reg",
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tvalid",
+          "prescale",
+          "prescale_reg",
+          "rxd_reg"
+        ],
+        "locals": [
+          "prev12",
+          "p2"
+        ],
+        "constants": [
+          "4'd1",
+          "19'd0",
+          "8'h12",
+          "4'd0",
+          "19'd0",
+          "16'd2",
+          "16'd2",
+          "8'h34",
+          "4'd1",
+          "19'd0",
+          "16'd2"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "The prescale input determines the"
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                42,
+                44
+              ],
+              "anchor": "stop bit of the right level, then a single pulse will be emitted from the"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 62,
+                "name": "prescale[1]"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 234 cycles (1.96 frames), 13 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 156",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 234,
+        "input_changes": 13,
+        "input_changes_exact": true,
+        "key": "d09340192861f306d8f83c961ca75a37c6e7c7ad829f258f2ab2e2a791ce6871",
+        "witness_frames": 1.963,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 156,
+          "input_changes": 12,
+          "input_changes_exact": true,
+          "key": "6ade7d6ff3076fe5428505e48a71a194ca6dda4d3d1edab087cc7e45967fb57a",
+          "witness_frames": 1.95
+        },
+        "active_frames": 1.9
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_toggle uart_rx.v:56 overrun_error",
+          "v_toggle uart_rx.v:62 prescale[1]",
+          "v_toggle uart_rx.v:72 overrun_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P12_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [27, 30]; README third_party/verilog-uart/README.md lines [42, 44]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [27, 30]",
+          "README third_party/verilog-uart/README.md lines [42, 44]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [27, 30] \"The prescale input determines the\"",
+          "README third_party/verilog-uart/README.md lines [42, 44] \"stop bit of the right level, then a single pulse will be emitted from the\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

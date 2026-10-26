@@ -1,0 +1,224 @@
+{
+  "item": "P21",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "reset_timing, data, boundary, sequence",
+      "data": {
+        "mechanisms": [
+          "reset_timing",
+          "data",
+          "boundary",
+          "sequence"
+        ],
+        "reads": [
+          "bit_cnt",
+          "prescale_reg",
+          "s_axis_tready",
+          "s_axis_tvalid",
+          "txd"
+        ],
+        "locals": [
+          "rst_q",
+          "st",
+          "shift",
+          "done"
+        ],
+        "constants": [
+          "3'd0",
+          "8'h00",
+          "3'd0",
+          "19'd0",
+          "4'd0",
+          "3'd1",
+          "3'd1",
+          "4'd9",
+          "3'd2",
+          "8'h00",
+          "3'd0",
+          "3'd2",
+          "19'd0",
+          "4'd0",
+          "4'd8",
+          "4'd1",
+          "3'd3",
+          "3'd3",
+          "8'hA5",
+          "3'd0",
+          "19'd0",
+          "4'd0",
+          "3'd4",
+          "8'h00",
+          "3'd4",
+          "19'd0",
+          "4'd0",
+          "4'd8",
+          "4'd1",
+          "3'd0",
+          "3'd0",
+          "8'h3C"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 28,
+              "anchor": "A Transmitter interface must only begin driving TVALID at a rising ACLK edge following a rising edge at which ARESETn is asserted HIGH."
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                35,
+                35
+              ],
+              "anchor": "destination only when both tvalid and tready are high"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                89,
+                100
+              ],
+              "anchor": "s_axis_tready_reg <= !s_axis_tready_reg;"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 157 cycles (1.96 frames), 3 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 158",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 157,
+        "input_changes": 3,
+        "input_changes_exact": true,
+        "key": "f796c55e34ea2404195ba2f255e8a2946ad7bd805ff51a3f10661a6e1c0da3cf",
+        "witness_frames": 1.963,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 158,
+          "input_changes": 3,
+          "input_changes_exact": true,
+          "key": "d0fba5eecbfc55bca912fc3af3a59ba9d558e2eb73eac7c6b67cb27556cca1f1",
+          "witness_frames": 1.975
+        },
+        "active_frames": 1.938
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P21_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: DOC axis page 28; README third_party/verilog-uart/README.md lines [35, 35]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "DOC axis page 28",
+          "README third_party/verilog-uart/README.md lines [35, 35]"
+        ],
+        "requirement_keys": [
+          "DOC axis page 28 \"A Transmitter interface must only begin driving TVALID at a rising ACLK edge following a rising edge at which ARESETn is asserted HIGH.\"",
+          "README third_party/verilog-uart/README.md lines [35, 35] \"destination only when both tvalid and tready are high\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

@@ -1,0 +1,193 @@
+{
+  "item": "P4",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, interaction, data, boundary",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "interaction",
+          "data",
+          "boundary"
+        ],
+        "reads": [
+          "bit_cnt",
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tvalid",
+          "overrun_error",
+          "prescale_reg",
+          "rxd_reg"
+        ],
+        "locals": [
+          "rxd_q",
+          "tv_q",
+          "cnt",
+          "seen",
+          "stage"
+        ],
+        "constants": [
+          "2'd0",
+          "19'd0",
+          "2'd0",
+          "4'd2",
+          "4'd9",
+          "2'd2",
+          "4'd0",
+          "4'd2",
+          "4'd9",
+          "2'd3",
+          "2'd1",
+          "8'hA5",
+          "8'h5A"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                105,
+                119
+              ],
+              "anchor": "data_reg <= {rxd_reg, data_reg[DATA_WIDTH-1:1]};"
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "pc16550d",
+              "page": 1,
+              "anchor": "The UART performs serial-to-parallel conversion on data characters received from a peripheral device or a MODEM"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 156 cycles (1.95 frames), 20 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 156",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 156,
+        "input_changes": 20,
+        "input_changes_exact": true,
+        "key": "593d3cc885e20e90eea5d4259c201747dd72f9468180bde5448b53294d08c0c0",
+        "witness_frames": 1.95,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 156,
+          "input_changes": 18,
+          "input_changes_exact": true,
+          "key": "7f4feaadd5a184b191cc60b4db8a866a4a69f718f15a227edaefe3f16018c484",
+          "witness_frames": 1.95
+        },
+        "active_frames": 1.9
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P4_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: DOC pc16550d page 1",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "DOC pc16550d page 1"
+        ],
+        "requirement_keys": [
+          "DOC pc16550d page 1 \"The UART performs serial-to-parallel conversion on data characters received from a peripheral device or a MODEM\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

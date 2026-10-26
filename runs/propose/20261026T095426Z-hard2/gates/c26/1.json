@@ -1,0 +1,188 @@
+{
+  "item": "P26",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, interaction, sequence",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "interaction",
+          "sequence"
+        ],
+        "reads": [
+          "bit_cnt",
+          "busy",
+          "prescale",
+          "s_axis_tready",
+          "s_axis_tvalid"
+        ],
+        "locals": [
+          "cnt",
+          "b2b"
+        ],
+        "constants": [
+          "5'd0",
+          "16'd1",
+          "5'd0",
+          "4'd0",
+          "4'd1",
+          "5'd1",
+          "5'd0",
+          "5'd31",
+          "5'd1",
+          "5'd9",
+          "16'd1"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                38,
+                39
+              ],
+              "anchor": "Both interfaces also present a 'busy' signal that is high when an operation is"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                86,
+                110
+              ],
+              "anchor": "prescale_reg <= (prescale << 3);"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 166 cycles (2.08 frames), 3 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 166",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 166,
+        "input_changes": 3,
+        "input_changes_exact": true,
+        "key": "42b840eea11fd4a4d15ed738672b54ec9952d30abdb506c31285bff7b139889b",
+        "witness_frames": 2.075,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 166,
+          "input_changes": 2,
+          "input_changes_exact": true,
+          "key": "1ff9d658307e2b87bee3b46ec957cc38b126d54fd52f759c320ae5e78f374c0d",
+          "witness_frames": 2.075
+        },
+        "active_frames": 2.025
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P26_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [38, 39]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [38, 39]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [38, 39] \"Both interfaces also present a 'busy' signal that is high when an operation is\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

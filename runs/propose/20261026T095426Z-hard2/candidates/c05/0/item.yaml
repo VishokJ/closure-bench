@@ -1,0 +1,32 @@
+id: P5
+description: uart_rx raises m_axis_tvalid with m_axis_tdata 8'hA5 while prescale is
+  16'd1. prescale then changes to 16'd2 on a clock where busy is low. The next rise
+  of m_axis_tvalid shows m_axis_tdata 8'h5A with prescale still 16'd2, and frame_error
+  stays low from the change until that rise.
+tier: T3
+mechanism:
+- sequence
+- data
+- boundary
+cover: P5_rx_prescale_change_between_frames
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: of a parameter so it can be changed at run time
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 111
+  - 133
+  anchor: prescale_reg <= (prescale << 3)-1;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 62
+    name: prescale[1]
+cover_module: cov_P5

@@ -1,0 +1,140 @@
+{
+  "item": "P22",
+  "accepted": false,
+  "failed_gate": "formal",
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, data",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "data"
+        ],
+        "reads": [
+          "bit_cnt",
+          "prescale",
+          "prescale_reg",
+          "s_axis_tvalid",
+          "txd"
+        ],
+        "locals": [
+          "shift",
+          "active",
+          "done",
+          "ok",
+          "cyc"
+        ],
+        "constants": [
+          "16'd1",
+          "5'd7",
+          "8'h00",
+          "5'd0",
+          "19'd0",
+          "5'd0",
+          "5'd31",
+          "5'd1",
+          "19'd0",
+          "4'd0",
+          "8'h00",
+          "19'd0",
+          "4'd0",
+          "4'd8",
+          "4'd1",
+          "8'h96",
+          "4'd0",
+          "16'd1"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "it should be set to Fclk / (baud * 8)"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                101,
+                105
+              ],
+              "anchor": "{data_reg, txd_reg} <= {1'b0, data_reg};"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": false,
+      "detail": "witness is 0.95 frames, below 1.5: make the target need more protocol activity (a further phase or an interaction), not more waiting or a slower prescale",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 76,
+        "input_changes": 2,
+        "input_changes_exact": true,
+        "key": "a948ce0dfb24154098941435d92447c660aeccb02c164ec6048a0bdbc449aada",
+        "witness_frames": 0.95,
+        "active_frames": 0.925
+      }
+    }
+  ],
+  "skipped": [
+    "baseline",
+    "gold",
+    "near_miss",
+    "determinism",
+    "value",
+    "duplicate"
+  ]
+}

@@ -1,0 +1,45 @@
+// Twin: same two-word sequence, but the second frame is received at
+// prescale 16'd1 instead of 16'd2.
+module cov_P12_twin (
+  input logic        clk,
+  input logic        rst,
+  input logic [15:0] prescale,
+  input logic [18:0] prescale_reg,
+  input logic [3:0]  bit_cnt,
+  input logic        rxd_reg,
+  input logic [7:0]  data_reg,
+  input logic        frame_error,
+  input logic        m_axis_tvalid,
+  input logic [7:0]  m_axis_tdata
+);
+
+  reg prev12;
+  reg p1;
+
+  always @(posedge clk) begin
+    if (rst) begin
+      prev12 <= 1'b0;
+      p1     <= 1'b0;
+    end else begin
+      if (frame_error) begin
+        prev12 <= 1'b0;
+      end
+      if (bit_cnt == 4'd1 && prescale_reg == 19'd0 && rxd_reg) begin
+        prev12 <= (data_reg == 8'h12);
+      end
+      if (bit_cnt == 4'd0 && prescale_reg == 19'd0 && !rxd_reg) begin
+        p1 <= (prescale == 16'd1);
+      end else if (prescale != 16'd1) begin
+        p1 <= 1'b0;
+      end
+    end
+  end
+
+  P12_twin_prescale1: cover property (@(posedge clk) disable iff (rst)
+    m_axis_tvalid && (m_axis_tdata == 8'h34) &&
+    ($past(bit_cnt) == 4'd1) && ($past(prescale_reg) == 19'd0) && $past(rxd_reg) &&
+    $past(prev12) && p1 && (prescale == 16'd1));
+
+endmodule
+
+bind uart_rx cov_P12_twin u_cov_P12_twin (.*);

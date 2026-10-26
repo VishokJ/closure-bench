@@ -1,0 +1,40 @@
+id: P16
+description: 'While m_axis_tvalid stays high holding m_axis_tdata 8''h3C with m_axis_tready
+  low and no handshake, frame_error first pulses for a bad frame. Later a good frame
+  completes: overrun_error is high, m_axis_tvalid is still high and m_axis_tdata has
+  changed from 8''h3C to 8''hA5.'
+tier: T3
+mechanism:
+- sequence
+- interaction
+- data
+- boundary
+cover: P16_frame_error_then_overrun
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 44
+  anchor: from overrun_error and the word is discarded.
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 44
+  anchor: frame_error output and the received word will be discarded.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 120
+  - 128
+  anchor: overrun_error_reg <= m_axis_tvalid_reg;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 56
+    name: overrun_error
+cover_module: cov_P16

@@ -1,0 +1,33 @@
+id: P11
+description: Two frames are received back to back with prescale held at 16'd1 and
+  frame_error never high. The first word is accepted (m_axis_tvalid rises with m_axis_tdata
+  8'h69, then falls). The second word then raises m_axis_tvalid with m_axis_tdata
+  8'h96.
+tier: T2
+mechanism:
+- boundary
+- data
+- sequence
+cover: P11_rx_min_prescale_two_words
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: it should be set to Fclk / (baud * 8)
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 33
+  - 36
+  anchor: Data is transferred from the source to the
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 130
+  - 137
+  anchor: prescale_reg <= (prescale << 2)-2;
+cover_module: cov_P11

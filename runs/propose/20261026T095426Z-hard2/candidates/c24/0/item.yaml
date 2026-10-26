@@ -1,0 +1,25 @@
+id: P24
+description: With prescale held at 16'd1, txd rises at the start of a stop bit, which
+  follows a 0 last data bit, on the clock where bit_cnt goes from 1 to 0. txd then
+  stays high for exactly 9 clocks and falls as the next back-to-back start bit, with
+  bit_cnt reloaded to 9 on that same clock.
+tier: T2
+mechanism:
+- boundary
+- sequence
+cover: P24_stop_9_clocks_prescale1
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: The prescale input determines the
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 106
+  - 110
+  anchor: prescale_reg <= (prescale << 3);
+cover_module: cov_P24

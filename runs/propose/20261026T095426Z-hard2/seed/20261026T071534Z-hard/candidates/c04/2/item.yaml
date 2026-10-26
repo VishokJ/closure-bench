@@ -1,0 +1,28 @@
+id: P4
+description: Two consecutive frames each carry a glitch inside a data bit (bit_cnt
+  from 2 to 9), where the synchronised input rxd_reg toggles and toggles back while
+  prescale_reg is non-zero and is unchanged on the sample cycle. The first frame delivers
+  m_axis_tvalid rising with m_axis_tdata 8'hA5. The next frame delivers m_axis_tvalid
+  rising with m_axis_tdata 8'h5A. frame_error and overrun_error stay low in between,
+  and frame_error is low at the second delivery.
+tier: T3
+mechanism:
+- sequence
+- interaction
+- data
+- boundary
+cover: P4_rx_glitch_off_sample_point_ignored
+sources:
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 105
+  - 119
+  anchor: data_reg <= {rxd_reg, data_reg[DATA_WIDTH-1:1]};
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 1
+  anchor: The UART performs serial-to-parallel conversion on data characters received
+    from a peripheral device or a MODEM
+cover_module: cov_P4

@@ -1,0 +1,123 @@
+{
+  "item": "P14",
+  "accepted": false,
+  "failed_gate": "citations",
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, interaction, data",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "interaction",
+          "data"
+        ],
+        "reads": [
+          "data_reg",
+          "frame_error",
+          "m_axis_tdata",
+          "m_axis_tvalid"
+        ],
+        "locals": [],
+        "constants": [
+          "8'hA5",
+          "8'h5A"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": false,
+      "detail": "DOC pc16550d p.16: anchor 'Bit 3 indicates that the received character did not have a valid Stop bit.' not on page (found on none)",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                42,
+                44
+              ],
+              "anchor": "frame_error output and the received word will be discarded."
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "pc16550d",
+              "page": 16,
+              "anchor": "Bit 3 indicates that the received character did not have a valid Stop bit."
+            },
+            false
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                120,
+                128
+              ],
+              "anchor": "frame_error_reg <= 1;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_rx.v",
+                "line": 73,
+                "name": "frame_error_reg"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    }
+  ],
+  "skipped": [
+    "formal",
+    "baseline",
+    "gold",
+    "near_miss",
+    "determinism",
+    "value",
+    "duplicate"
+  ]
+}

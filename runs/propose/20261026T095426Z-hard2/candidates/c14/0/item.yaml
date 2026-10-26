@@ -1,0 +1,36 @@
+id: P14
+description: On uart_rx, frame_error pulses for a frame whose shifted-in data_reg
+  is 8'h5A, while m_axis_tvalid is low and m_axis_tdata still holds the previously
+  accepted word 8'hA5. The bad word is discarded and the old output data is kept.
+tier: T2
+mechanism:
+- boundary
+- interaction
+- data
+cover: P14_frame_error_keeps_old_tdata
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 42
+  - 44
+  anchor: frame_error output and the received word will be discarded.
+- type: DOC
+  role: requirement
+  doc: pc16550d
+  page: 16
+  anchor: Bit 3 indicates that the received character did not have a valid Stop bit.
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 120
+  - 128
+  anchor: frame_error_reg <= 1;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 73
+    name: frame_error_reg
+cover_module: cov_P14

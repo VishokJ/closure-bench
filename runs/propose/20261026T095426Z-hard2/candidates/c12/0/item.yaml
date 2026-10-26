@@ -1,0 +1,33 @@
+id: P12
+description: Two consecutive words are delivered on m_axis_tdata (m_axis_tvalid high),
+  8'h12 and then 8'h34, with no frame_error pulse between them. The frame carrying
+  8'h34 is received with prescale held at 16'd2 from its start-bit detection until
+  the word is delivered.
+tier: T3
+mechanism:
+- sequence
+- data
+- boundary
+cover: P12_rx_prescale2_two_words
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: The prescale input determines the
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 42
+  - 44
+  anchor: stop bit of the right level, then a single pulse will be emitted from the
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_rx.v
+    line: 62
+    name: prescale[1]
+cover_module: cov_P12

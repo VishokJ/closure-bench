@@ -1,0 +1,224 @@
+{
+  "item": "P23",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, data, boundary",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "data",
+          "boundary"
+        ],
+        "reads": [
+          "bit_cnt",
+          "busy",
+          "data_reg",
+          "prescale",
+          "prescale_reg",
+          "s_axis_tvalid",
+          "txd"
+        ],
+        "locals": [
+          "shift",
+          "p_ok",
+          "first_ok"
+        ],
+        "constants": [
+          "8'h00",
+          "19'd0",
+          "4'd0",
+          "8'h00",
+          "16'd2",
+          "19'd0",
+          "4'd0",
+          "4'd8",
+          "4'd1",
+          "8'h12",
+          "16'd2",
+          "16'd2",
+          "19'd0",
+          "4'd2",
+          "8'h34"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "it should be set to Fclk / (baud * 8)"
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                38,
+                39
+              ],
+              "anchor": "Both interfaces also present a 'busy' signal that is high when an operation is"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                89,
+                100
+              ],
+              "anchor": "s_axis_tready_reg <= !s_axis_tready_reg;"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_tx.v",
+                "line": 60,
+                "name": "prescale[1]"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 292 cycles (1.82 frames), 4 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 293",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 292,
+        "input_changes": 4,
+        "input_changes_exact": false,
+        "key": "d3708760e9b24e542d3c1828f1a769bbfc981fffe13c2cc180cbd42342bf88fb",
+        "witness_frames": 1.825,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 293,
+          "input_changes": 5,
+          "input_changes_exact": false,
+          "key": "bd940c27d4c1f364f4c1e6d96ae2b583e8bd8b8aed5706b7bcd0651de3926ce3",
+          "witness_frames": 1.831
+        },
+        "active_frames": 1.812
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_toggle uart_tx.v:60 prescale[1]"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P23_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: README third_party/verilog-uart/README.md lines [27, 30]; README third_party/verilog-uart/README.md lines [38, 39]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "README third_party/verilog-uart/README.md lines [27, 30]",
+          "README third_party/verilog-uart/README.md lines [38, 39]"
+        ],
+        "requirement_keys": [
+          "README third_party/verilog-uart/README.md lines [27, 30] \"it should be set to Fclk / (baud * 8)\"",
+          "README third_party/verilog-uart/README.md lines [38, 39] \"Both interfaces also present a 'busy' signal that is high when an operation is\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

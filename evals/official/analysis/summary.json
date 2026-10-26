@@ -1,0 +1,5394 @@
+{
+  "groups": [
+    {
+      "label": "nvidia/nemotron-3-nano-30b-a3b \u00b7 null \u00b7 max_tokens=65536",
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
+      "role": "calibration model",
+      "harness": "null",
+      "max_tokens": 65536,
+      "max_turns": null,
+      "runs": [
+        "closure-bench--nvidia--nemotron-3-nano-30b-a3b--null--aded5d0b"
+      ],
+      "aggregate": {
+        "rollouts": 208,
+        "infra_errors": 0,
+        "graded": 208,
+        "hits": 16,
+        "pass_at_1": 0.0769,
+        "truncated": 0,
+        "truncation_rate": 0.0,
+        "no_reply": 0,
+        "pass_at_1_untruncated": 0.0769,
+        "compiled": 96,
+        "pass_at_1_compiled": 0.1667,
+        "outcomes": {
+          "no_submission": 3,
+          "policy_violation": 1,
+          "illegal_stimulus": 17,
+          "compile_error": 109,
+          "timeout": 21,
+          "runtime_error": 3,
+          "no_finish": 0,
+          "missed": 38,
+          "hit": 16
+        },
+        "mean_tokens": 46900.2837,
+        "mean_input_tokens": 23288.5,
+        "mean_cached_input_tokens": 16246.1538,
+        "mean_output_tokens": 23611.7837,
+        "output_tokens_finished": {
+          "mean": 23611.7837,
+          "median": 21297.5
+        },
+        "output_tokens_truncated": {
+          "mean": null,
+          "median": null
+        },
+        "all_truncated": false,
+        "mean_turns": 1.0,
+        "mean_run_sh_calls": 0.0,
+        "rollouts_calling_run_sh": 0,
+        "mean_sim_seconds": 9.216,
+        "submission_source": {
+          "reply": 208
+        },
+        "stop_condition": {
+          "agent_completed": 208
+        },
+        "bootstrap95": [
+          0.024,
+          0.1442
+        ],
+        "bootstrap95_untruncated": [
+          0.024,
+          0.1442
+        ],
+        "bootstrap95_compiled": [
+          0.0581,
+          0.299
+        ],
+        "all_truncated_tasks": [],
+        "task_mean_pass_at_1": 0.0769,
+        "pass_at_8": 0.2692,
+        "bootstrap95_pass_at_8": [
+          0.1154,
+          0.4615
+        ],
+        "pass_at_8_tasks": 26,
+        "tasks_graded": 26,
+        "tasks_mixed": 7,
+        "tasks_no_hit": 19,
+        "tasks_all_hit": 0
+      },
+      "tasks": {
+        "uart/R12": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.4345
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 3,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 5,
+            "hit": 0
+          },
+          "mean_tokens": 52432.0,
+          "mean_input_tokens": 23275.0,
+          "mean_cached_input_tokens": 13200.0,
+          "mean_output_tokens": 29157.0,
+          "output_tokens_finished": {
+            "mean": 29157,
+            "median": 29198.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.0975,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R13": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 2,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.6576
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 6,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 2,
+            "hit": 0
+          },
+          "mean_tokens": 43590.5,
+          "mean_input_tokens": 23263.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 20327.5,
+          "output_tokens_finished": {
+            "mean": 20327.5,
+            "median": 20663.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 2.1187,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R14": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.5615
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 5,
+            "timeout": 3,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 0
+          },
+          "mean_tokens": 47584.375,
+          "mean_input_tokens": 23278.0,
+          "mean_cached_input_tokens": 13200.0,
+          "mean_output_tokens": 24306.375,
+          "output_tokens_finished": {
+            "mean": 24306.375,
+            "median": 25490.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 25.5763,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R15": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 4,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.4899
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 4,
+            "timeout": 1,
+            "runtime_error": 1,
+            "no_finish": 0,
+            "missed": 2,
+            "hit": 0
+          },
+          "mean_tokens": 51284.625,
+          "mean_input_tokens": 23316.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 27968.625,
+          "output_tokens_finished": {
+            "mean": 27968.625,
+            "median": 27192.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 10.72,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R16": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.5615
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 1,
+            "compile_error": 5,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 0
+          },
+          "mean_tokens": 43536.25,
+          "mean_input_tokens": 23288.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 20248.25,
+          "output_tokens_finished": {
+            "mean": 20248.25,
+            "median": 20575.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 10.1687,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R17": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.3903
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 1,
+            "no_finish": 0,
+            "missed": 5,
+            "hit": 0
+          },
+          "mean_tokens": 50887.875,
+          "mean_input_tokens": 23254.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 27633.875,
+          "output_tokens_finished": {
+            "mean": 27633.875,
+            "median": 25488.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.0362,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R18": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 2,
+          "pass_at_1": 0.25,
+          "wilson95": [
+            0.0715,
+            0.5907
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.25,
+          "wilson95_untruncated": [
+            0.0715,
+            0.5907
+          ],
+          "compiled": 4,
+          "pass_at_1_compiled": 0.5,
+          "wilson95_compiled": [
+            0.15,
+            0.85
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 4,
+            "timeout": 2,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 2
+          },
+          "mean_tokens": 43295.5,
+          "mean_input_tokens": 23274.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 20021.5,
+          "output_tokens_finished": {
+            "mean": 20021.5,
+            "median": 19566.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 18.2063,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R19": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 2,
+          "pass_at_1": 0.25,
+          "wilson95": [
+            0.0715,
+            0.5907
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.25,
+          "wilson95_untruncated": [
+            0.0715,
+            0.5907
+          ],
+          "compiled": 4,
+          "pass_at_1_compiled": 0.5,
+          "wilson95_compiled": [
+            0.15,
+            0.85
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 4,
+            "timeout": 0,
+            "runtime_error": 1,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 2
+          },
+          "mean_tokens": 41201.125,
+          "mean_input_tokens": 23275.0,
+          "mean_cached_input_tokens": 13200.0,
+          "mean_output_tokens": 17926.125,
+          "output_tokens_finished": {
+            "mean": 17926.125,
+            "median": 17505.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.1463,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R20": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 1,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.7935
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 1,
+            "illegal_stimulus": 0,
+            "compile_error": 7,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 0
+          },
+          "mean_tokens": 56162.5,
+          "mean_input_tokens": 23304.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 32858.5,
+          "output_tokens_finished": {
+            "mean": 32858.5,
+            "median": 30708.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 0.0225,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R21": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 1,
+          "pass_at_1": 0.125,
+          "wilson95": [
+            0.0224,
+            0.4709
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.125,
+          "wilson95_untruncated": [
+            0.0224,
+            0.4709
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.3333,
+          "wilson95_compiled": [
+            0.0615,
+            0.7923
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 5,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 2,
+            "hit": 1
+          },
+          "mean_tokens": 35652.625,
+          "mean_input_tokens": 23269.0,
+          "mean_cached_input_tokens": 18480.0,
+          "mean_output_tokens": 12383.625,
+          "output_tokens_finished": {
+            "mean": 12383.625,
+            "median": 11353.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 2.7937,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R22": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 3,
+          "pass_at_1": 0.375,
+          "wilson95": [
+            0.1368,
+            0.6943
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.375,
+          "wilson95_untruncated": [
+            0.1368,
+            0.6943
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.6,
+          "wilson95_compiled": [
+            0.2307,
+            0.8824
+          ],
+          "outcomes": {
+            "no_submission": 1,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 3
+          },
+          "mean_tokens": 40996.625,
+          "mean_input_tokens": 23270.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 17726.625,
+          "output_tokens_finished": {
+            "mean": 17726.625,
+            "median": 16634.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 11.6612,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R23": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.5615
+          ],
+          "outcomes": {
+            "no_submission": 1,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 4,
+            "timeout": 2,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 0
+          },
+          "mean_tokens": 39944.125,
+          "mean_input_tokens": 23256.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 16688.125,
+          "output_tokens_finished": {
+            "mean": 16688.125,
+            "median": 17182.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 17.8525,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R24": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 5,
+          "pass_at_1": 0.625,
+          "wilson95": [
+            0.3057,
+            0.8632
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.625,
+          "wilson95_untruncated": [
+            0.3057,
+            0.8632
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 0.8333,
+          "wilson95_compiled": [
+            0.4365,
+            0.9699
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 5
+          },
+          "mean_tokens": 44301.25,
+          "mean_input_tokens": 23262.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 21039.25,
+          "output_tokens_finished": {
+            "mean": 21039.25,
+            "median": 19328.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 13.1513,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R25": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.5615
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 5,
+            "timeout": 2,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 0
+          },
+          "mean_tokens": 57670.375,
+          "mean_input_tokens": 23289.0,
+          "mean_cached_input_tokens": 13200.0,
+          "mean_output_tokens": 34381.375,
+          "output_tokens_finished": {
+            "mean": 34381.375,
+            "median": 34594.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 17.5312,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R26": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.4345
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 3,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 5,
+            "hit": 0
+          },
+          "mean_tokens": 46843.875,
+          "mean_input_tokens": 23275.0,
+          "mean_cached_input_tokens": 18480.0,
+          "mean_output_tokens": 23568.875,
+          "output_tokens_finished": {
+            "mean": 23568.875,
+            "median": 23246.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.5775,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R27": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.5615
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 5,
+            "timeout": 3,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 0
+          },
+          "mean_tokens": 65756.75,
+          "mean_input_tokens": 23286.0,
+          "mean_cached_input_tokens": 18480.0,
+          "mean_output_tokens": 42470.75,
+          "output_tokens_finished": {
+            "mean": 42470.75,
+            "median": 43132.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 24.8825,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R28": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 1,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.7935
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 7,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 0
+          },
+          "mean_tokens": 48568.375,
+          "mean_input_tokens": 23320.0,
+          "mean_cached_input_tokens": 18480.0,
+          "mean_output_tokens": 25248.375,
+          "output_tokens_finished": {
+            "mean": 25248.375,
+            "median": 23595.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 8.2363,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R29": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.5615
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 5,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 2,
+            "hit": 0
+          },
+          "mean_tokens": 53451.0,
+          "mean_input_tokens": 23284.0,
+          "mean_cached_input_tokens": 18480.0,
+          "mean_output_tokens": 30167.0,
+          "output_tokens_finished": {
+            "mean": 30167,
+            "median": 27527.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 9.815,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T5": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 2,
+          "pass_at_1": 0.25,
+          "wilson95": [
+            0.0715,
+            0.5907
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.25,
+          "wilson95_untruncated": [
+            0.0715,
+            0.5907
+          ],
+          "compiled": 4,
+          "pass_at_1_compiled": 0.5,
+          "wilson95_compiled": [
+            0.15,
+            0.85
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 2,
+            "compile_error": 4,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 2
+          },
+          "mean_tokens": 43653.125,
+          "mean_input_tokens": 23288.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 20365.125,
+          "output_tokens_finished": {
+            "mean": 20365.125,
+            "median": 18165.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 3.0587,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T6": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 3,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.5615
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 5,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 3,
+            "hit": 0
+          },
+          "mean_tokens": 47110.375,
+          "mean_input_tokens": 23314.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 23796.375,
+          "output_tokens_finished": {
+            "mean": 23796.375,
+            "median": 22700.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 2.1725,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T7": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 4,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.4899
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 2,
+            "compile_error": 4,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 0
+          },
+          "mean_tokens": 47656.875,
+          "mean_input_tokens": 23308.0,
+          "mean_cached_input_tokens": 18480.0,
+          "mean_output_tokens": 24348.875,
+          "output_tokens_finished": {
+            "mean": 24348.875,
+            "median": 22799.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 10.4913,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T8": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 2,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.6576
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 1,
+            "compile_error": 6,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 0
+          },
+          "mean_tokens": 42973.875,
+          "mean_input_tokens": 23334.0,
+          "mean_cached_input_tokens": 13200.0,
+          "mean_output_tokens": 19639.875,
+          "output_tokens_finished": {
+            "mean": 19639.875,
+            "median": 17624.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 1.4637,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T9": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.4345
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 4,
+            "compile_error": 3,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 0
+          },
+          "mean_tokens": 43333.25,
+          "mean_input_tokens": 23324.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 20009.25,
+          "output_tokens_finished": {
+            "mean": 20009.25,
+            "median": 18804.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 11.4938,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T10": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.4345
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 2,
+            "compile_error": 3,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 3,
+            "hit": 0
+          },
+          "mean_tokens": 44082.25,
+          "mean_input_tokens": 23305.0,
+          "mean_cached_input_tokens": 21120.0,
+          "mean_output_tokens": 20777.25,
+          "output_tokens_finished": {
+            "mean": 20777.25,
+            "median": 20019.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.4025,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T11": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 1,
+          "pass_at_1": 0.125,
+          "wilson95": [
+            0.0224,
+            0.4709
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.125,
+          "wilson95_untruncated": [
+            0.0224,
+            0.4709
+          ],
+          "compiled": 7,
+          "pass_at_1_compiled": 0.1429,
+          "wilson95_compiled": [
+            0.0257,
+            0.5131
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 4,
+            "compile_error": 1,
+            "timeout": 1,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 1
+          },
+          "mean_tokens": 42586.75,
+          "mean_input_tokens": 23287.0,
+          "mean_cached_input_tokens": 18480.0,
+          "mean_output_tokens": 19299.75,
+          "output_tokens_finished": {
+            "mean": 19299.75,
+            "median": 18909.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 13.3938,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T12": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3244
+          ],
+          "compiled": 2,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.6576
+          ],
+          "outcomes": {
+            "no_submission": 1,
+            "policy_violation": 0,
+            "illegal_stimulus": 1,
+            "compile_error": 5,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 0
+          },
+          "mean_tokens": 44851.125,
+          "mean_input_tokens": 23303.0,
+          "mean_cached_input_tokens": 15840.0,
+          "mean_output_tokens": 21548.125,
+          "output_tokens_finished": {
+            "mean": 21548.125,
+            "median": 20042.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 1.5462,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        }
+      },
+      "by_tag": {
+        "padded": {
+          "tasks": [
+            "uart/R20",
+            "uart/R21",
+            "uart/R28",
+            "uart/T6",
+            "uart/T7"
+          ],
+          "rollouts": 40,
+          "infra_errors": 0,
+          "graded": 40,
+          "hits": 1,
+          "pass_at_1": 0.025,
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.025,
+          "compiled": 12,
+          "pass_at_1_compiled": 0.0833,
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 1,
+            "illegal_stimulus": 2,
+            "compile_error": 28,
+            "timeout": 2,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 6,
+            "hit": 1
+          },
+          "mean_tokens": 47030.15,
+          "mean_input_tokens": 23303.0,
+          "mean_cached_input_tokens": 17424.0,
+          "mean_output_tokens": 23727.15,
+          "output_tokens_finished": {
+            "mean": 23727.15,
+            "median": 22002.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.7432,
+          "submission_source": {
+            "reply": 40
+          },
+          "stop_condition": {
+            "agent_completed": 40
+          },
+          "bootstrap95": [
+            0.0,
+            0.075
+          ],
+          "bootstrap95_untruncated": [
+            0.0,
+            0.075
+          ],
+          "bootstrap95_compiled": [
+            0.0,
+            0.2308
+          ],
+          "all_truncated_tasks": [],
+          "task_mean_pass_at_1": 0.025,
+          "pass_at_8": 0.2,
+          "bootstrap95_pass_at_8": [
+            0.0,
+            0.6
+          ],
+          "pass_at_8_tasks": 5,
+          "tasks_graded": 5,
+          "tasks_mixed": 1,
+          "tasks_no_hit": 4,
+          "tasks_all_hit": 0
+        },
+        "untagged": {
+          "tasks": [
+            "uart/R12",
+            "uart/R13",
+            "uart/R14",
+            "uart/R15",
+            "uart/R16",
+            "uart/R17",
+            "uart/R18",
+            "uart/R19",
+            "uart/R22",
+            "uart/R23",
+            "uart/R24",
+            "uart/R25",
+            "uart/R26",
+            "uart/R27",
+            "uart/R29",
+            "uart/T5",
+            "uart/T8",
+            "uart/T9",
+            "uart/T10",
+            "uart/T11",
+            "uart/T12"
+          ],
+          "rollouts": 168,
+          "infra_errors": 0,
+          "graded": 168,
+          "hits": 15,
+          "pass_at_1": 0.0893,
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0893,
+          "compiled": 84,
+          "pass_at_1_compiled": 0.1786,
+          "outcomes": {
+            "no_submission": 3,
+            "policy_violation": 0,
+            "illegal_stimulus": 15,
+            "compile_error": 81,
+            "timeout": 19,
+            "runtime_error": 3,
+            "no_finish": 0,
+            "missed": 32,
+            "hit": 15
+          },
+          "mean_tokens": 46869.3631,
+          "mean_input_tokens": 23285.0476,
+          "mean_cached_input_tokens": 15965.7143,
+          "mean_output_tokens": 23584.3155,
+          "output_tokens_finished": {
+            "mean": 23584.3155,
+            "median": 21218.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 10.281,
+          "submission_source": {
+            "reply": 168
+          },
+          "stop_condition": {
+            "agent_completed": 168
+          },
+          "bootstrap95": [
+            0.0298,
+            0.1726
+          ],
+          "bootstrap95_untruncated": [
+            0.0298,
+            0.1726
+          ],
+          "bootstrap95_compiled": [
+            0.0588,
+            0.3229
+          ],
+          "all_truncated_tasks": [],
+          "task_mean_pass_at_1": 0.0893,
+          "pass_at_8": 0.2857,
+          "bootstrap95_pass_at_8": [
+            0.0952,
+            0.4762
+          ],
+          "pass_at_8_tasks": 21,
+          "tasks_graded": 21,
+          "tasks_mixed": 6,
+          "tasks_no_hit": 15,
+          "tasks_all_hit": 0
+        }
+      }
+    },
+    {
+      "label": "openai/gpt-6-sol \u00b7 null \u00b7 max_tokens=65536",
+      "model": "openai/gpt-6-sol",
+      "role": null,
+      "harness": "null",
+      "max_tokens": 65536,
+      "max_turns": null,
+      "runs": [
+        "closure-bench--openai--gpt-6-sol--null--2fc9e854"
+      ],
+      "aggregate": {
+        "rollouts": 208,
+        "infra_errors": 0,
+        "graded": 208,
+        "hits": 175,
+        "pass_at_1": 0.8413,
+        "truncated": 0,
+        "truncation_rate": 0.0,
+        "no_reply": 0,
+        "pass_at_1_untruncated": 0.8413,
+        "compiled": 182,
+        "pass_at_1_compiled": 0.9615,
+        "outcomes": {
+          "no_submission": 0,
+          "policy_violation": 0,
+          "illegal_stimulus": 0,
+          "compile_error": 26,
+          "timeout": 0,
+          "runtime_error": 0,
+          "no_finish": 0,
+          "missed": 7,
+          "hit": 175
+        },
+        "mean_tokens": 23448.5288,
+        "mean_input_tokens": 21632.8077,
+        "mean_cached_input_tokens": 0.0,
+        "mean_output_tokens": 1815.7212,
+        "output_tokens_finished": {
+          "mean": 1815.7212,
+          "median": 1774.0
+        },
+        "output_tokens_truncated": {
+          "mean": null,
+          "median": null
+        },
+        "all_truncated": false,
+        "mean_turns": 1.0,
+        "mean_run_sh_calls": 0.0,
+        "rollouts_calling_run_sh": 0,
+        "mean_sim_seconds": 6.8575,
+        "submission_source": {
+          "reply": 208
+        },
+        "stop_condition": {
+          "agent_completed": 208
+        },
+        "bootstrap95": [
+          0.7356,
+          0.9375
+        ],
+        "bootstrap95_untruncated": [
+          0.7356,
+          0.9375
+        ],
+        "bootstrap95_compiled": [
+          0.8984,
+          1.0
+        ],
+        "all_truncated_tasks": [],
+        "task_mean_pass_at_1": 0.8413,
+        "pass_at_8": 1.0,
+        "bootstrap95_pass_at_8": [
+          1.0,
+          1.0
+        ],
+        "pass_at_8_tasks": 26,
+        "tasks_graded": 26,
+        "tasks_mixed": 9,
+        "tasks_no_hit": 0,
+        "tasks_all_hit": 17
+      },
+      "tasks": {
+        "uart/R12": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 6,
+          "pass_at_1": 0.75,
+          "wilson95": [
+            0.4093,
+            0.9285
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.75,
+          "wilson95_untruncated": [
+            0.4093,
+            0.9285
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6097,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 6
+          },
+          "mean_tokens": 23640.5,
+          "mean_input_tokens": 21617.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2023.5,
+          "output_tokens_finished": {
+            "mean": 2023.5,
+            "median": 2036.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 8.025,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R13": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 1,
+          "pass_at_1": 0.125,
+          "wilson95": [
+            0.0224,
+            0.4709
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.125,
+          "wilson95_untruncated": [
+            0.0224,
+            0.4709
+          ],
+          "compiled": 1,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.2065,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 7,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 1
+          },
+          "mean_tokens": 23874.625,
+          "mean_input_tokens": 21609.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2265.625,
+          "output_tokens_finished": {
+            "mean": 2265.625,
+            "median": 2214.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 1.2788,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R14": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 4,
+          "pass_at_1": 0.5,
+          "wilson95": [
+            0.2152,
+            0.7848
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.5,
+          "wilson95_untruncated": [
+            0.2152,
+            0.7848
+          ],
+          "compiled": 4,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.5101,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 4,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 4
+          },
+          "mean_tokens": 24426.25,
+          "mean_input_tokens": 21624.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2802.25,
+          "output_tokens_finished": {
+            "mean": 2802.25,
+            "median": 2652.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.1387,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R15": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 24377.875,
+          "mean_input_tokens": 21659.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2718.875,
+          "output_tokens_finished": {
+            "mean": 2718.875,
+            "median": 2736.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.3012,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R16": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23088.625,
+          "mean_input_tokens": 21628.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1460.625,
+          "output_tokens_finished": {
+            "mean": 1460.625,
+            "median": 1493.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.975,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R17": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 22523.125,
+          "mean_input_tokens": 21599.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 924.125,
+          "output_tokens_finished": {
+            "mean": 924.125,
+            "median": 918.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 11.6338,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R18": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23090.5,
+          "mean_input_tokens": 21617.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1473.5,
+          "output_tokens_finished": {
+            "mean": 1473.5,
+            "median": 1523.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 8.8775,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R19": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 7,
+          "pass_at_1": 0.875,
+          "wilson95": [
+            0.5291,
+            0.9776
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.875,
+          "wilson95_untruncated": [
+            0.5291,
+            0.9776
+          ],
+          "compiled": 7,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6457,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 1,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 7
+          },
+          "mean_tokens": 22977.875,
+          "mean_input_tokens": 21618.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1359.875,
+          "output_tokens_finished": {
+            "mean": 1359.875,
+            "median": 1318.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.4387,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R20": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23684.25,
+          "mean_input_tokens": 21646.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2038.25,
+          "output_tokens_finished": {
+            "mean": 2038.25,
+            "median": 1986.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 9.9125,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R21": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 22893.625,
+          "mean_input_tokens": 21611.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1282.625,
+          "output_tokens_finished": {
+            "mean": 1282.625,
+            "median": 1279.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.0437,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R22": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 22766.875,
+          "mean_input_tokens": 21611.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1155.875,
+          "output_tokens_finished": {
+            "mean": 1155.875,
+            "median": 1130.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.2162,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R23": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 3,
+          "pass_at_1": 0.375,
+          "wilson95": [
+            0.1368,
+            0.6943
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.375,
+          "wilson95_untruncated": [
+            0.1368,
+            0.6943
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.6,
+          "wilson95_compiled": [
+            0.2307,
+            0.8824
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 3,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 2,
+            "hit": 3
+          },
+          "mean_tokens": 23831.75,
+          "mean_input_tokens": 21601.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2230.75,
+          "output_tokens_finished": {
+            "mean": 2230.75,
+            "median": 2267.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.2675,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R24": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23431.75,
+          "mean_input_tokens": 21606.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1825.75,
+          "output_tokens_finished": {
+            "mean": 1825.75,
+            "median": 1644.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.3887,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R25": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 6,
+          "pass_at_1": 0.75,
+          "wilson95": [
+            0.4093,
+            0.9285
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.75,
+          "wilson95_untruncated": [
+            0.4093,
+            0.9285
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6097,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 6
+          },
+          "mean_tokens": 23531.875,
+          "mean_input_tokens": 21634.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1897.875,
+          "output_tokens_finished": {
+            "mean": 1897.875,
+            "median": 1995.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.1012,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R26": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 3,
+          "pass_at_1": 0.375,
+          "wilson95": [
+            0.1368,
+            0.6943
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.375,
+          "wilson95_untruncated": [
+            0.1368,
+            0.6943
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 0.375,
+          "wilson95_compiled": [
+            0.1368,
+            0.6943
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 5,
+            "hit": 3
+          },
+          "mean_tokens": 23369.5,
+          "mean_input_tokens": 21620.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1749.5,
+          "output_tokens_finished": {
+            "mean": 1749.5,
+            "median": 1591.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.89,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R27": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 7,
+          "pass_at_1": 0.875,
+          "wilson95": [
+            0.5291,
+            0.9776
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.875,
+          "wilson95_untruncated": [
+            0.5291,
+            0.9776
+          ],
+          "compiled": 7,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6457,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 1,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 7
+          },
+          "mean_tokens": 23868.875,
+          "mean_input_tokens": 21629.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2239.875,
+          "output_tokens_finished": {
+            "mean": 2239.875,
+            "median": 2209.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 8.12,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R28": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23165.5,
+          "mean_input_tokens": 21662.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1503.5,
+          "output_tokens_finished": {
+            "mean": 1503.5,
+            "median": 1582.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.165,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R29": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 2,
+          "pass_at_1": 0.25,
+          "wilson95": [
+            0.0715,
+            0.5907
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.25,
+          "wilson95_untruncated": [
+            0.0715,
+            0.5907
+          ],
+          "compiled": 2,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.3424,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 6,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 2
+          },
+          "mean_tokens": 23565.0,
+          "mean_input_tokens": 21630.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1935.0,
+          "output_tokens_finished": {
+            "mean": 1935,
+            "median": 2085.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 2.6812,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T5": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23202.0,
+          "mean_input_tokens": 21637.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1565.0,
+          "output_tokens_finished": {
+            "mean": 1565,
+            "median": 1634.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.6762,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T6": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23342.625,
+          "mean_input_tokens": 21664.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1678.625,
+          "output_tokens_finished": {
+            "mean": 1678.625,
+            "median": 1604.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.7162,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T7": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23321.25,
+          "mean_input_tokens": 21658.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1663.25,
+          "output_tokens_finished": {
+            "mean": 1663.25,
+            "median": 1697.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.8212,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T8": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23786.125,
+          "mean_input_tokens": 21678.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 2108.125,
+          "output_tokens_finished": {
+            "mean": 2108.125,
+            "median": 2064.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.9487,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T9": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23456.25,
+          "mean_input_tokens": 21667.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1789.25,
+          "output_tokens_finished": {
+            "mean": 1789.25,
+            "median": 1826.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.0,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T10": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23256.125,
+          "mean_input_tokens": 21649.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1607.125,
+          "output_tokens_finished": {
+            "mean": 1607.125,
+            "median": 1570.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.7662,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T11": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23598.75,
+          "mean_input_tokens": 21632.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1966.75,
+          "output_tokens_finished": {
+            "mean": 1966.75,
+            "median": 1958.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.4638,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T12": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 23590.25,
+          "mean_input_tokens": 21647.0,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1943.25,
+          "output_tokens_finished": {
+            "mean": 1943.25,
+            "median": 1913.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.4463,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        }
+      },
+      "by_tag": {
+        "padded": {
+          "tasks": [
+            "uart/R20",
+            "uart/R21",
+            "uart/R28",
+            "uart/T6",
+            "uart/T7"
+          ],
+          "rollouts": 40,
+          "infra_errors": 0,
+          "graded": 40,
+          "hits": 40,
+          "pass_at_1": 1.0,
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "compiled": 40,
+          "pass_at_1_compiled": 1.0,
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 40
+          },
+          "mean_tokens": 23281.45,
+          "mean_input_tokens": 21648.2,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1633.25,
+          "output_tokens_finished": {
+            "mean": 1633.25,
+            "median": 1612.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.5317,
+          "submission_source": {
+            "reply": 40
+          },
+          "stop_condition": {
+            "agent_completed": 40
+          },
+          "bootstrap95": [
+            1.0,
+            1.0
+          ],
+          "bootstrap95_untruncated": [
+            1.0,
+            1.0
+          ],
+          "bootstrap95_compiled": [
+            1.0,
+            1.0
+          ],
+          "all_truncated_tasks": [],
+          "task_mean_pass_at_1": 1.0,
+          "pass_at_8": 1.0,
+          "bootstrap95_pass_at_8": [
+            1.0,
+            1.0
+          ],
+          "pass_at_8_tasks": 5,
+          "tasks_graded": 5,
+          "tasks_mixed": 0,
+          "tasks_no_hit": 0,
+          "tasks_all_hit": 5
+        },
+        "untagged": {
+          "tasks": [
+            "uart/R12",
+            "uart/R13",
+            "uart/R14",
+            "uart/R15",
+            "uart/R16",
+            "uart/R17",
+            "uart/R18",
+            "uart/R19",
+            "uart/R22",
+            "uart/R23",
+            "uart/R24",
+            "uart/R25",
+            "uart/R26",
+            "uart/R27",
+            "uart/R29",
+            "uart/T5",
+            "uart/T8",
+            "uart/T9",
+            "uart/T10",
+            "uart/T11",
+            "uart/T12"
+          ],
+          "rollouts": 168,
+          "infra_errors": 0,
+          "graded": 168,
+          "hits": 135,
+          "pass_at_1": 0.8036,
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.8036,
+          "compiled": 142,
+          "pass_at_1_compiled": 0.9507,
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 26,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 7,
+            "hit": 135
+          },
+          "mean_tokens": 23488.3095,
+          "mean_input_tokens": 21629.1429,
+          "mean_cached_input_tokens": 0.0,
+          "mean_output_tokens": 1859.1667,
+          "output_tokens_finished": {
+            "mean": 1859.1667,
+            "median": 1864.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.6969,
+          "submission_source": {
+            "reply": 168
+          },
+          "stop_condition": {
+            "agent_completed": 168
+          },
+          "bootstrap95": [
+            0.6726,
+            0.9226
+          ],
+          "bootstrap95_untruncated": [
+            0.6726,
+            0.9226
+          ],
+          "bootstrap95_compiled": [
+            0.8662,
+            1.0
+          ],
+          "all_truncated_tasks": [],
+          "task_mean_pass_at_1": 0.8036,
+          "pass_at_8": 1.0,
+          "bootstrap95_pass_at_8": [
+            1.0,
+            1.0
+          ],
+          "pass_at_8_tasks": 21,
+          "tasks_graded": 21,
+          "tasks_mixed": 9,
+          "tasks_no_hit": 0,
+          "tasks_all_hit": 12
+        }
+      }
+    },
+    {
+      "label": "qwen/qwen3.8-27b \u00b7 null \u00b7 max_tokens=65536",
+      "model": "qwen/qwen3.8-27b",
+      "role": null,
+      "harness": "null",
+      "max_tokens": 65536,
+      "max_turns": null,
+      "runs": [
+        "closure-bench--qwen--qwen3.8-27b--null--ec46d01c"
+      ],
+      "aggregate": {
+        "rollouts": 208,
+        "infra_errors": 1,
+        "graded": 207,
+        "hits": 138,
+        "pass_at_1": 0.6667,
+        "truncated": 14,
+        "truncation_rate": 0.0676,
+        "no_reply": 0,
+        "pass_at_1_untruncated": 0.715,
+        "compiled": 173,
+        "pass_at_1_compiled": 0.7977,
+        "outcomes": {
+          "no_submission": 18,
+          "policy_violation": 0,
+          "illegal_stimulus": 15,
+          "compile_error": 16,
+          "timeout": 0,
+          "runtime_error": 7,
+          "no_finish": 0,
+          "missed": 13,
+          "hit": 138
+        },
+        "mean_tokens": 64091.401,
+        "mean_input_tokens": 23458.6908,
+        "mean_cached_input_tokens": 5617.8551,
+        "mean_output_tokens": 40632.7101,
+        "output_tokens_finished": {
+          "mean": 38826.2539,
+          "median": 39428
+        },
+        "output_tokens_truncated": {
+          "mean": 65536,
+          "median": 65536.0
+        },
+        "all_truncated": false,
+        "mean_turns": 1.0,
+        "mean_run_sh_calls": 0.0,
+        "rollouts_calling_run_sh": 0,
+        "mean_sim_seconds": 6.381,
+        "submission_source": {
+          "none": 18,
+          "reply": 189
+        },
+        "stop_condition": {
+          "agent_completed": 207,
+          "provider_error": 1
+        },
+        "bootstrap95": [
+          0.5604,
+          0.7718
+        ],
+        "bootstrap95_untruncated": [
+          0.6237,
+          0.8061
+        ],
+        "bootstrap95_compiled": [
+          0.7,
+          0.8901
+        ],
+        "all_truncated_tasks": [],
+        "task_mean_pass_at_1": 0.6669,
+        "pass_at_8": 0.96,
+        "bootstrap95_pass_at_8": [
+          0.88,
+          1.0
+        ],
+        "pass_at_8_tasks": 25,
+        "tasks_graded": 26,
+        "tasks_mixed": 19,
+        "tasks_no_hit": 1,
+        "tasks_all_hit": 6
+      },
+      "tasks": {
+        "uart/R12": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 6,
+          "pass_at_1": 0.75,
+          "wilson95": [
+            0.4093,
+            0.9285
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.75,
+          "wilson95_untruncated": [
+            0.4093,
+            0.9285
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6097,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 6
+          },
+          "mean_tokens": 70996.625,
+          "mean_input_tokens": 23443.0,
+          "mean_cached_input_tokens": 5040.0,
+          "mean_output_tokens": 47553.625,
+          "output_tokens_finished": {
+            "mean": 47553.625,
+            "median": 44748.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.1187,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R13": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 5,
+          "pass_at_1": 0.625,
+          "wilson95": [
+            0.3057,
+            0.8632
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.625,
+          "wilson95_untruncated": [
+            0.3057,
+            0.8632
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 0.8333,
+          "wilson95_compiled": [
+            0.4365,
+            0.9699
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 1,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 5
+          },
+          "mean_tokens": 67147.75,
+          "mean_input_tokens": 23435.0,
+          "mean_cached_input_tokens": 7720.0,
+          "mean_output_tokens": 43712.75,
+          "output_tokens_finished": {
+            "mean": 43712.75,
+            "median": 44181.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.1687,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R14": {
+          "rollouts": 8,
+          "infra_errors": 1,
+          "graded": 7,
+          "hits": 5,
+          "pass_at_1": 0.7143,
+          "wilson95": [
+            0.3589,
+            0.9178
+          ],
+          "truncated": 1,
+          "truncation_rate": 0.1429,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.8333,
+          "wilson95_untruncated": [
+            0.4365,
+            0.9699
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 0.8333,
+          "wilson95_compiled": [
+            0.4365,
+            0.9699
+          ],
+          "outcomes": {
+            "no_submission": 1,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 5
+          },
+          "mean_tokens": 71839.0,
+          "mean_input_tokens": 23451.0,
+          "mean_cached_input_tokens": 6610.2857,
+          "mean_output_tokens": 48388.0,
+          "output_tokens_finished": {
+            "mean": 45530,
+            "median": 45634.5
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.93,
+          "submission_source": {
+            "none": 1,
+            "reply": 6
+          },
+          "stop_condition": {
+            "agent_completed": 7,
+            "provider_error": 1
+          }
+        },
+        "uart/R15": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 4,
+          "pass_at_1": 0.5,
+          "wilson95": [
+            0.2152,
+            0.7848
+          ],
+          "truncated": 1,
+          "truncation_rate": 0.125,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.5714,
+          "wilson95_untruncated": [
+            0.2505,
+            0.8418
+          ],
+          "compiled": 7,
+          "pass_at_1_compiled": 0.5714,
+          "wilson95_compiled": [
+            0.2505,
+            0.8418
+          ],
+          "outcomes": {
+            "no_submission": 1,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 3,
+            "hit": 4
+          },
+          "mean_tokens": 65885.375,
+          "mean_input_tokens": 23484.0,
+          "mean_cached_input_tokens": 2744.0,
+          "mean_output_tokens": 42401.375,
+          "output_tokens_finished": {
+            "mean": 39096.4286,
+            "median": 36701
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.8687,
+          "submission_source": {
+            "none": 1,
+            "reply": 7
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R16": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 7,
+          "pass_at_1": 0.875,
+          "wilson95": [
+            0.5291,
+            0.9776
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.875,
+          "wilson95_untruncated": [
+            0.5291,
+            0.9776
+          ],
+          "compiled": 7,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6457,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 1,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 7
+          },
+          "mean_tokens": 61992.125,
+          "mean_input_tokens": 23457.0,
+          "mean_cached_input_tokens": 6069.5,
+          "mean_output_tokens": 38535.125,
+          "output_tokens_finished": {
+            "mean": 38535.125,
+            "median": 42265.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.4325,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R17": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 51598.625,
+          "mean_input_tokens": 23422.0,
+          "mean_cached_input_tokens": 3226.0,
+          "mean_output_tokens": 28176.625,
+          "output_tokens_finished": {
+            "mean": 28176.625,
+            "median": 28122.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 8.3037,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R18": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 7,
+          "pass_at_1": 0.875,
+          "wilson95": [
+            0.5291,
+            0.9776
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.875,
+          "wilson95_untruncated": [
+            0.5291,
+            0.9776
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 0.875,
+          "wilson95_compiled": [
+            0.5291,
+            0.9776
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 1,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 7
+          },
+          "mean_tokens": 53178.125,
+          "mean_input_tokens": 23440.0,
+          "mean_cached_input_tokens": 8784.0,
+          "mean_output_tokens": 29738.125,
+          "output_tokens_finished": {
+            "mean": 29738.125,
+            "median": 29693.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 8.715,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R19": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 51777.5,
+          "mean_input_tokens": 23443.0,
+          "mean_cached_input_tokens": 5784.0,
+          "mean_output_tokens": 28334.5,
+          "output_tokens_finished": {
+            "mean": 28334.5,
+            "median": 28282.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.1275,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R20": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 5,
+          "pass_at_1": 0.625,
+          "wilson95": [
+            0.3057,
+            0.8632
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.625,
+          "wilson95_untruncated": [
+            0.3057,
+            0.8632
+          ],
+          "compiled": 7,
+          "pass_at_1_compiled": 0.7143,
+          "wilson95_compiled": [
+            0.3589,
+            0.9178
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 1,
+            "timeout": 0,
+            "runtime_error": 2,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 5
+          },
+          "mean_tokens": 62710.375,
+          "mean_input_tokens": 23472.0,
+          "mean_cached_input_tokens": 7428.0,
+          "mean_output_tokens": 39238.375,
+          "output_tokens_finished": {
+            "mean": 39238.375,
+            "median": 40086.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.1638,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R21": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 58493.875,
+          "mean_input_tokens": 23440.0,
+          "mean_cached_input_tokens": 5770.0,
+          "mean_output_tokens": 35053.875,
+          "output_tokens_finished": {
+            "mean": 35053.875,
+            "median": 33342.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.5762,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R22": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 7,
+          "pass_at_1": 0.875,
+          "wilson95": [
+            0.5291,
+            0.9776
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.875,
+          "wilson95_untruncated": [
+            0.5291,
+            0.9776
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 0.875,
+          "wilson95_compiled": [
+            0.5291,
+            0.9776
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 7
+          },
+          "mean_tokens": 66210.125,
+          "mean_input_tokens": 23441.0,
+          "mean_cached_input_tokens": 3030.0,
+          "mean_output_tokens": 42769.125,
+          "output_tokens_finished": {
+            "mean": 42769.125,
+            "median": 42127.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.67,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R23": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 6,
+          "pass_at_1": 0.75,
+          "wilson95": [
+            0.4093,
+            0.9285
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.75,
+          "wilson95_untruncated": [
+            0.4093,
+            0.9285
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6097,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 6
+          },
+          "mean_tokens": 68027.75,
+          "mean_input_tokens": 23428.0,
+          "mean_cached_input_tokens": 5670.0,
+          "mean_output_tokens": 44599.75,
+          "output_tokens_finished": {
+            "mean": 44599.75,
+            "median": 44434.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.5375,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R24": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 54411.375,
+          "mean_input_tokens": 23432.0,
+          "mean_cached_input_tokens": 4926.0,
+          "mean_output_tokens": 30979.375,
+          "output_tokens_finished": {
+            "mean": 30979.375,
+            "median": 28306.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.5162,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R25": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 4,
+          "pass_at_1": 0.5,
+          "wilson95": [
+            0.2152,
+            0.7848
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.5,
+          "wilson95_untruncated": [
+            0.2152,
+            0.7848
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.8,
+          "wilson95_compiled": [
+            0.3755,
+            0.9638
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 3,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 4
+          },
+          "mean_tokens": 62516.625,
+          "mean_input_tokens": 23459.0,
+          "mean_cached_input_tokens": 3032.0,
+          "mean_output_tokens": 39057.625,
+          "output_tokens_finished": {
+            "mean": 39057.625,
+            "median": 42279.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.635,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R26": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 0,
+          "pass_at_1": 0.0,
+          "wilson95": [
+            0.0,
+            0.3244
+          ],
+          "truncated": 2,
+          "truncation_rate": 0.25,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.0,
+          "wilson95_untruncated": [
+            0.0,
+            0.3903
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.0,
+          "wilson95_compiled": [
+            0.0,
+            0.4345
+          ],
+          "outcomes": {
+            "no_submission": 2,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 1,
+            "timeout": 0,
+            "runtime_error": 1,
+            "no_finish": 0,
+            "missed": 4,
+            "hit": 0
+          },
+          "mean_tokens": 61418.625,
+          "mean_input_tokens": 23445.0,
+          "mean_cached_input_tokens": 8600.0,
+          "mean_output_tokens": 37973.625,
+          "output_tokens_finished": {
+            "mean": 28786.1667,
+            "median": 27157.0
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536.0
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.2062,
+          "submission_source": {
+            "none": 2,
+            "reply": 6
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R27": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 5,
+          "pass_at_1": 0.625,
+          "wilson95": [
+            0.3057,
+            0.8632
+          ],
+          "truncated": 1,
+          "truncation_rate": 0.125,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.7143,
+          "wilson95_untruncated": [
+            0.3589,
+            0.9178
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.5655,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 2,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 1,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 5
+          },
+          "mean_tokens": 67762.5,
+          "mean_input_tokens": 23456.0,
+          "mean_cached_input_tokens": 8976.5,
+          "mean_output_tokens": 44306.5,
+          "output_tokens_finished": {
+            "mean": 41273.7143,
+            "median": 41091
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.7763,
+          "submission_source": {
+            "none": 2,
+            "reply": 6
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R28": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 5,
+          "pass_at_1": 0.625,
+          "wilson95": [
+            0.3057,
+            0.8632
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.625,
+          "wilson95_untruncated": [
+            0.3057,
+            0.8632
+          ],
+          "compiled": 7,
+          "pass_at_1_compiled": 0.7143,
+          "wilson95_compiled": [
+            0.3589,
+            0.9178
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 1,
+            "timeout": 0,
+            "runtime_error": 2,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 5
+          },
+          "mean_tokens": 61690.25,
+          "mean_input_tokens": 23487.0,
+          "mean_cached_input_tokens": 7788.0,
+          "mean_output_tokens": 38203.25,
+          "output_tokens_finished": {
+            "mean": 38203.25,
+            "median": 41782.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 8.9925,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/R29": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 5,
+          "pass_at_1": 0.625,
+          "wilson95": [
+            0.3057,
+            0.8632
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.625,
+          "wilson95_untruncated": [
+            0.3057,
+            0.8632
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 0.8333,
+          "wilson95_compiled": [
+            0.4365,
+            0.9699
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 5
+          },
+          "mean_tokens": 66652.75,
+          "mean_input_tokens": 23455.0,
+          "mean_cached_input_tokens": 6064.0,
+          "mean_output_tokens": 43197.75,
+          "output_tokens_finished": {
+            "mean": 43197.75,
+            "median": 46117.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.2763,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T5": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 55393.125,
+          "mean_input_tokens": 23461.0,
+          "mean_cached_input_tokens": 5786.0,
+          "mean_output_tokens": 31932.125,
+          "output_tokens_finished": {
+            "mean": 31932.125,
+            "median": 30740.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.4525,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T6": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 3,
+          "pass_at_1": 0.375,
+          "wilson95": [
+            0.1368,
+            0.6943
+          ],
+          "truncated": 2,
+          "truncation_rate": 0.25,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.5,
+          "wilson95_untruncated": [
+            0.1876,
+            0.8124
+          ],
+          "compiled": 6,
+          "pass_at_1_compiled": 0.5,
+          "wilson95_compiled": [
+            0.1876,
+            0.8124
+          ],
+          "outcomes": {
+            "no_submission": 2,
+            "policy_violation": 0,
+            "illegal_stimulus": 2,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 3
+          },
+          "mean_tokens": 73850.125,
+          "mean_input_tokens": 23486.0,
+          "mean_cached_input_tokens": 9118.0,
+          "mean_output_tokens": 50364.125,
+          "output_tokens_finished": {
+            "mean": 45306.8333,
+            "median": 45343.0
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536.0
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 5.7525,
+          "submission_source": {
+            "none": 2,
+            "reply": 6
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T7": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 4,
+          "pass_at_1": 0.5,
+          "wilson95": [
+            0.2152,
+            0.7848
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.5,
+          "wilson95_untruncated": [
+            0.2152,
+            0.7848
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 0.5,
+          "wilson95_compiled": [
+            0.2152,
+            0.7848
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 4,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 4
+          },
+          "mean_tokens": 62332.5,
+          "mean_input_tokens": 23480.0,
+          "mean_cached_input_tokens": 164.0,
+          "mean_output_tokens": 38852.5,
+          "output_tokens_finished": {
+            "mean": 38852.5,
+            "median": 36383.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.18,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T8": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 8,
+          "pass_at_1": 1.0,
+          "wilson95": [
+            0.6756,
+            1.0
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 1.0,
+          "wilson95_untruncated": [
+            0.6756,
+            1.0
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.6756,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 8
+          },
+          "mean_tokens": 70164.875,
+          "mean_input_tokens": 23505.0,
+          "mean_cached_input_tokens": 5872.0,
+          "mean_output_tokens": 46659.875,
+          "output_tokens_finished": {
+            "mean": 46659.875,
+            "median": 44513.0
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.6475,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T9": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 1,
+          "pass_at_1": 0.125,
+          "wilson95": [
+            0.0224,
+            0.4709
+          ],
+          "truncated": 3,
+          "truncation_rate": 0.375,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.2,
+          "wilson95_untruncated": [
+            0.0362,
+            0.6245
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.2,
+          "wilson95_compiled": [
+            0.0362,
+            0.6245
+          ],
+          "outcomes": {
+            "no_submission": 3,
+            "policy_violation": 0,
+            "illegal_stimulus": 4,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 1
+          },
+          "mean_tokens": 71868.875,
+          "mean_input_tokens": 23495.0,
+          "mean_cached_input_tokens": 8840.0,
+          "mean_output_tokens": 48373.875,
+          "output_tokens_finished": {
+            "mean": 38076.6,
+            "median": 40469
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.4675,
+          "submission_source": {
+            "none": 3,
+            "reply": 5
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T10": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 3,
+          "pass_at_1": 0.375,
+          "wilson95": [
+            0.1368,
+            0.6943
+          ],
+          "truncated": 0,
+          "truncation_rate": 0.0,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.375,
+          "wilson95_untruncated": [
+            0.1368,
+            0.6943
+          ],
+          "compiled": 8,
+          "pass_at_1_compiled": 0.375,
+          "wilson95_compiled": [
+            0.1368,
+            0.6943
+          ],
+          "outcomes": {
+            "no_submission": 0,
+            "policy_violation": 0,
+            "illegal_stimulus": 5,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 3
+          },
+          "mean_tokens": 62300.5,
+          "mean_input_tokens": 23476.0,
+          "mean_cached_input_tokens": 5834.0,
+          "mean_output_tokens": 38824.5,
+          "output_tokens_finished": {
+            "mean": 38824.5,
+            "median": 35628.5
+          },
+          "output_tokens_truncated": {
+            "mean": null,
+            "median": null
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.3237,
+          "submission_source": {
+            "reply": 8
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T11": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 4,
+          "pass_at_1": 0.5,
+          "wilson95": [
+            0.2152,
+            0.7848
+          ],
+          "truncated": 1,
+          "truncation_rate": 0.125,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.5714,
+          "wilson95_untruncated": [
+            0.2505,
+            0.8418
+          ],
+          "compiled": 5,
+          "pass_at_1_compiled": 0.8,
+          "wilson95_compiled": [
+            0.3755,
+            0.9638
+          ],
+          "outcomes": {
+            "no_submission": 3,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 4
+          },
+          "mean_tokens": 71907.125,
+          "mean_input_tokens": 23458.0,
+          "mean_cached_input_tokens": 224.0,
+          "mean_output_tokens": 48449.125,
+          "output_tokens_finished": {
+            "mean": 46008.1429,
+            "median": 46550
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.0325,
+          "submission_source": {
+            "none": 3,
+            "reply": 5
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        },
+        "uart/T12": {
+          "rollouts": 8,
+          "infra_errors": 0,
+          "graded": 8,
+          "hits": 4,
+          "pass_at_1": 0.5,
+          "wilson95": [
+            0.2152,
+            0.7848
+          ],
+          "truncated": 3,
+          "truncation_rate": 0.375,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.8,
+          "wilson95_untruncated": [
+            0.3755,
+            0.9638
+          ],
+          "compiled": 4,
+          "pass_at_1_compiled": 1.0,
+          "wilson95_compiled": [
+            0.5101,
+            1.0
+          ],
+          "outcomes": {
+            "no_submission": 4,
+            "policy_violation": 0,
+            "illegal_stimulus": 0,
+            "compile_error": 0,
+            "timeout": 0,
+            "runtime_error": 0,
+            "no_finish": 0,
+            "missed": 0,
+            "hit": 4
+          },
+          "mean_tokens": 75218.375,
+          "mean_input_tokens": 23474.0,
+          "mean_cached_input_tokens": 3088.0,
+          "mean_output_tokens": 51744.375,
+          "output_tokens_finished": {
+            "mean": 43469.4,
+            "median": 40970
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 4.1025,
+          "submission_source": {
+            "none": 4,
+            "reply": 4
+          },
+          "stop_condition": {
+            "agent_completed": 8
+          }
+        }
+      },
+      "by_tag": {
+        "padded": {
+          "tasks": [
+            "uart/R20",
+            "uart/R21",
+            "uart/R28",
+            "uart/T6",
+            "uart/T7"
+          ],
+          "rollouts": 40,
+          "infra_errors": 0,
+          "graded": 40,
+          "hits": 25,
+          "pass_at_1": 0.625,
+          "truncated": 2,
+          "truncation_rate": 0.05,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.6579,
+          "compiled": 36,
+          "pass_at_1_compiled": 0.6944,
+          "outcomes": {
+            "no_submission": 2,
+            "policy_violation": 0,
+            "illegal_stimulus": 6,
+            "compile_error": 2,
+            "timeout": 0,
+            "runtime_error": 4,
+            "no_finish": 0,
+            "missed": 1,
+            "hit": 25
+          },
+          "mean_tokens": 63815.425,
+          "mean_input_tokens": 23473.0,
+          "mean_cached_input_tokens": 6053.6,
+          "mean_output_tokens": 40342.425,
+          "output_tokens_finished": {
+            "mean": 39016.4474,
+            "median": 39212.0
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536.0
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 7.333,
+          "submission_source": {
+            "none": 2,
+            "reply": 38
+          },
+          "stop_condition": {
+            "agent_completed": 40
+          },
+          "bootstrap95": [
+            0.475,
+            0.825
+          ],
+          "bootstrap95_untruncated": [
+            0.5278,
+            0.8421
+          ],
+          "bootstrap95_compiled": [
+            0.5429,
+            0.8649
+          ],
+          "all_truncated_tasks": [],
+          "task_mean_pass_at_1": 0.625,
+          "pass_at_8": 1.0,
+          "bootstrap95_pass_at_8": [
+            1.0,
+            1.0
+          ],
+          "pass_at_8_tasks": 5,
+          "tasks_graded": 5,
+          "tasks_mixed": 4,
+          "tasks_no_hit": 0,
+          "tasks_all_hit": 1
+        },
+        "untagged": {
+          "tasks": [
+            "uart/R12",
+            "uart/R13",
+            "uart/R14",
+            "uart/R15",
+            "uart/R16",
+            "uart/R17",
+            "uart/R18",
+            "uart/R19",
+            "uart/R22",
+            "uart/R23",
+            "uart/R24",
+            "uart/R25",
+            "uart/R26",
+            "uart/R27",
+            "uart/R29",
+            "uart/T5",
+            "uart/T8",
+            "uart/T9",
+            "uart/T10",
+            "uart/T11",
+            "uart/T12"
+          ],
+          "rollouts": 168,
+          "infra_errors": 1,
+          "graded": 167,
+          "hits": 113,
+          "pass_at_1": 0.6766,
+          "truncated": 12,
+          "truncation_rate": 0.0719,
+          "no_reply": 0,
+          "pass_at_1_untruncated": 0.729,
+          "compiled": 137,
+          "pass_at_1_compiled": 0.8248,
+          "outcomes": {
+            "no_submission": 16,
+            "policy_violation": 0,
+            "illegal_stimulus": 9,
+            "compile_error": 14,
+            "timeout": 0,
+            "runtime_error": 3,
+            "no_finish": 0,
+            "missed": 12,
+            "hit": 113
+          },
+          "mean_tokens": 64157.503,
+          "mean_input_tokens": 23455.2635,
+          "mean_cached_input_tokens": 5513.485,
+          "mean_output_tokens": 40702.2395,
+          "output_tokens_finished": {
+            "mean": 38779.6258,
+            "median": 39442
+          },
+          "output_tokens_truncated": {
+            "mean": 65536,
+            "median": 65536.0
+          },
+          "all_truncated": false,
+          "mean_turns": 1.0,
+          "mean_run_sh_calls": 0.0,
+          "rollouts_calling_run_sh": 0,
+          "mean_sim_seconds": 6.1529,
+          "submission_source": {
+            "none": 16,
+            "reply": 151
+          },
+          "stop_condition": {
+            "agent_completed": 167,
+            "provider_error": 1
+          },
+          "bootstrap95": [
+            0.5536,
+            0.7892
+          ],
+          "bootstrap95_untruncated": [
+            0.6138,
+            0.8272
+          ],
+          "bootstrap95_compiled": [
+            0.7054,
+            0.922
+          ],
+          "all_truncated_tasks": [],
+          "task_mean_pass_at_1": 0.6769,
+          "pass_at_8": 0.95,
+          "bootstrap95_pass_at_8": [
+            0.85,
+            1.0
+          ],
+          "pass_at_8_tasks": 20,
+          "tasks_graded": 21,
+          "tasks_mixed": 15,
+          "tasks_no_hit": 1,
+          "tasks_all_hit": 5
+        }
+      }
+    }
+  ]
+}

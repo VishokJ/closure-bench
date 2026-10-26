@@ -1,0 +1,32 @@
+id: P6
+description: uart_tx loads a frame with prescale 1. After it, with busy low, s_axis_tvalid
+  loads a frame with prescale 3. While prescale stays 3, every data bit (bit_cnt 8
+  down to 1) starts with prescale_reg reloaded to 19'd23. The txd values at those
+  bit starts, including the last one at bit_cnt 1, form 8'h5A.
+tier: T3
+mechanism:
+- sequence
+- data
+- boundary
+cover: P6_tx_rate_change_5a_data
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: so it can be changed at run time
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 93
+  - 110
+  anchor: prescale_reg <= (prescale << 3)-1;
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_tx.v
+    line: 60
+    name: prescale[1]
+cover_module: cov_P6

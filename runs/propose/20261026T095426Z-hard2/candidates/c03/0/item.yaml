@@ -1,0 +1,26 @@
+id: P3
+description: 'After the receiver delivers a word (m_axis_tvalid rises while bit_cnt
+  is 0), it accepts the next start bit (bit_cnt loads 4''d10) one or two clocks after
+  that rise, with no false start or frame error in between. That second frame then
+  completes: m_axis_tvalid rises again with m_axis_tdata 8''h5A and frame_error low.'
+tier: T2
+mechanism:
+- boundary
+- sequence
+- data
+cover: P3_short_stop_back_to_back
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 38
+  - 44
+  anchor: If the receiver does not get a
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_rx.v
+  lines:
+  - 120
+  - 137
+  anchor: bit_cnt <= DATA_WIDTH+2;
+cover_module: cov_P3

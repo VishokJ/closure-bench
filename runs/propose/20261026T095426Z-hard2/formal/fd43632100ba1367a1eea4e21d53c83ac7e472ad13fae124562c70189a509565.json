@@ -1,0 +1,13 @@
+{
+ "bound_module": "uart_rx",
+ "depth": 157,
+ "detail": "",
+ "input_changes": 12,
+ "input_changes_exact": true,
+ "label": "P17_rx_rst_at_stop_sample",
+ "minimize_s": 29.1,
+ "solve_s": 4.7,
+ "status": "reachable",
+ "tb_text": "// Formal witness for P17_rx_rst_at_stop_sample (closure_core/formal.py): the shortest legal input\n// trace Yosys/SymbiYosys found (157 cycles), replayed on the uart_rx ports.\n// A gold candidate, never shown to an agent; Verilator decides whether it hits.\n`timescale 1ns / 1ps\n\nmodule tb;\n  logic clk = 1'b0;\n  always #5 clk = ~clk;\n  logic rst = 1'd1;\n  logic rxd = 1'd0;\n  logic m_axis_tready = 1'd1;\n  logic [15:0] prescale = 16'd1;\n  wire  [7:0] m_axis_tdata;\n  wire  m_axis_tvalid;\n  wire  busy;\n  wire  overrun_error;\n  wire  frame_error;\n\n  uart_rx dut (.clk(clk), .rst(rst), .rxd(rxd), .m_axis_tready(m_axis_tready), .prescale(prescale), .m_axis_tdata(m_axis_tdata), .m_axis_tvalid(m_axis_tvalid), .busy(busy), .overrun_error(overrun_error), .frame_error(frame_error));\n\n  initial begin\n    @(negedge clk);\n    rst = 1'd0;\n    repeat (20) @(negedge clk);\n    rxd = 1'd1;\n    repeat (56) @(negedge clk);\n    rst = 1'd1;\n    @(negedge clk);\n    rst = 1'd0; rxd = 1'd0;\n    repeat (19) @(negedge clk);\n    rxd = 1'd1;\n    repeat (5) @(negedge clk);\n    rxd = 1'd0;\n    repeat (11) @(negedge clk);\n    rxd = 1'd1;\n    repeat (9) @(negedge clk);\n    rxd = 1'd0;\n    repeat (12) @(negedge clk);\n    rxd = 1'd1;\n    repeat (5) @(negedge clk);\n    rxd = 1'd0;\n    repeat (11) @(negedge clk);\n    rxd = 1'd1;\n    repeat (8) @(negedge clk);\n    $finish;\n  end\nendmodule\n",
+ "total_s": 33.8
+}

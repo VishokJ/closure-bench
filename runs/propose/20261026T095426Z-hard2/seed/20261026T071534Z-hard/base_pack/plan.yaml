@@ -1,0 +1,541 @@
+# Coverage plan: one entry per behaviour that must be verified.
+#
+# Every item cites at least one pinned source; tools/check verifies them:
+#   RTL / README  file + lines at the pinned commit; the anchor must appear on those lines
+#   DOC           document from sources.yaml + page; the anchor must appear on that page
+#   BASE          a baseline coverage point that must exist with 0 hits
+#
+# role (optional, default evidence): `requirement` marks a DOC or README source
+# that states what the design must do. A verified requirement is value evidence
+# on its own (tools/check, gate value). RTL and BASE never count: they say what
+# the design does, not what it must do.
+#
+# provenance.status:
+#   auto_accepted  passed every mechanical gate; not yet audited
+#   audited        additionally spot-checked by a person (see provenance.audited_by)
+design: uart
+
+items:
+  - id: R1
+    cover: R1_frame_error
+    cover_module: cov_R1
+    description: >-
+      The receiver flags a frame error: a frame ends with the stop bit low,
+      so frame_error pulses and the word is discarded.
+    tier: T0
+    provenance:
+      proposed_by: claude-opus-5.5
+      status: auto_accepted
+      audited_by: null
+    sources:
+      - type: RTL
+        file: third_party/verilog-uart/rtl/uart_rx.v
+        lines: [126, 127]
+        anchor: "frame_error_reg <= 1;"
+      - type: README
+        role: requirement
+        file: third_party/verilog-uart/README.md
+        lines: [42, 44]
+        anchor: "frame_error output and the received word will be discarded"
+      - type: DOC
+        role: requirement
+        doc: pc16550d
+        section: "8.4 Line Status Register, bit 3"
+        page: 16
+        anchor: "This bit is the Framing Error (FE) indicator"
+      - type: BASE
+        point: {kind: v_branch, file: uart_rx.v, line: 122, name: else}
+
+  - id: R2
+    description: A start bit is rejected as false. At the mid-start-bit sample (prescale_reg == 0 and bit_cnt
+      == 10) the synchronised input rxd_reg is already high again, so the receiver abandons the frame.
+    tier: T1
+    cover: R2_false_start_rejected
+    sources:
+    - type: BASE
+      point:
+        kind: v_branch
+        file: uart_rx.v
+        line: 109
+        name: else
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 108
+      - 115
+      anchor: bit_cnt <= 0;
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 1
+      anchor: YFalse start bit detection.
+    cover_module: cov_R2
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c01
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R3
+    description: While m_axis_tvalid is high holding 8'h3C and m_axis_tready is low, a second good frame
+      completes. At that point overrun_error is high, m_axis_tvalid is still high and m_axis_tdata has changed
+      to 8'hA5.
+    tier: T1
+    cover: R3_overrun_second_word
+    sources:
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 56
+        name: overrun_error
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 72
+        name: overrun_error_reg
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 120
+      - 125
+      anchor: overrun_error_reg <= m_axis_tvalid_reg;
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 39
+      - 42
+      anchor: before another word is received, then a single cycle pulse will be emitted
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 16
+      anchor: This bit is the Overrun Error (OE) indicator.
+    cover_module: cov_R3
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c02
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R4
+    description: On uart_rx, m_axis_tvalid stays high with m_axis_tready low for at least four consecutive
+      cycles, m_axis_tdata does not change and overrun_error stays low throughout. On the first cycle m_axis_tready
+      is high the word is accepted with m_axis_tvalid high, m_axis_tdata equal to 8'hA5 and overrun_error
+      low.
+    tier: T1
+    cover: R4_rx_backpressure_hold
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 101
+      - 103
+      anchor: if (m_axis_tvalid && m_axis_tready) begin
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 18
+      anchor: it must remain asse rted until the handshake occurs.
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 31
+      - 36
+      anchor: Data is transferred from the source to the
+    cover_module: cov_R4
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c03
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R5
+    description: rst is asserted while busy and m_axis_tvalid are both high. After rst is released with
+      m_axis_tvalid and busy low, the receiver later presents a new word with m_axis_tvalid high and m_axis_tdata
+      equal to 8'hA5.
+    tier: T1
+    cover: R5_rst_mid_frame_pending
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 87
+      - 95
+      anchor: m_axis_tvalid_reg <= 0;
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 28
+      anchor: During reset, TV ALID  must be driven LOW.
+    cover_module: cov_R5
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c04
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: T1
+    description: While the transmitter is busy (busy is 1) and txd is low, rst is sampled high. On the next
+      clock txd is 1 (mark) and busy is 0.
+    tier: T1
+    cover: T1_tx_reset_mid_frame_low
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 79
+      - 84
+      anchor: txd_reg <= 1;
+    - type: DOC
+      role: requirement
+      doc: pc16550d
+      page: 12
+      anchor: set to the Marking (logic 1) stateupon a Master Reset
+    cover_module: cov_T1
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c05
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R6
+    description: While rxd is held low continuously, frame_error pulses a second time with rxd low at every
+      clock since the previous frame_error pulse. At that second pulse m_axis_tvalid is low.
+    tier: T1
+    cover: R6_break_repeated_frame_error
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 126
+      - 137
+      anchor: frame_error_reg <= 1;
+    - type: DOC
+      doc: pc16550d
+      page: 16
+      anchor: will try to resynchronize after a framing error
+    - type: BASE
+      point:
+        kind: v_branch
+        file: uart_rx.v
+        line: 122
+        name: else
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 57
+        name: frame_error
+    cover_module: cov_R6
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c06
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R7
+    description: With prescale held at 16'hFFFF, the receiver's prescale_reg must be loaded with the full,
+      untruncated 19-bit bit-period reload 19'h7FFF7. After that, m_axis_tvalid must rise with m_axis_tdata
+      == 8'hA5.
+    tier: T1
+    cover: R7_rx_max_prescale
+    sources:
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: it should be set to Fclk / (baud * 8)
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 116
+      - 118
+      anchor: prescale_reg <= (prescale << 3)-1;
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 62
+        name: prescale[1]
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 62
+        name: prescale[3]
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 62
+        name: prescale[4]
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 62
+        name: prescale[5]
+    cover_module: cov_R7
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c07
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: T2
+    description: With prescale held at 16'hFFFF, uart_tx accepts a byte and shifts it out on txd. Sampled
+      at the eight data-bit boundaries, txd forms 8'h5A. On the cycle after the last data bit, prescale_reg
+      is 19'h7FFF8, bit_cnt is 0 and txd is high (stop bit).
+    tier: T1
+    cover: T2_tx_max_prescale_5a
+    sources:
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_tx.v
+        line: 60
+        name: prescale[1]
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_tx.v
+        line: 60
+        name: prescale[3]
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_tx.v
+        line: 60
+        name: prescale[4]
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_tx.v
+        line: 60
+        name: prescale[5]
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 102
+      - 110
+      anchor: prescale_reg <= (prescale << 3);
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 27
+      - 30
+      anchor: it should be set to Fclk / (baud * 8)
+    cover_module: cov_T2
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c08
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R8
+    description: While the receiver is busy (busy 1) on a new frame and still holds an already handed-off
+      word (m_axis_tdata 8'hA5, m_axis_tvalid 0), rst is sampled high. On the next clock, with rst still
+      high, busy is 0, m_axis_tvalid is 0 and m_axis_tdata is 8'h00.
+    tier: T1
+    cover: R8_reset_midframe_clears_outputs
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 87
+      - 95
+      anchor: m_axis_tdata_reg <= 0;
+    - type: README
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 38
+      - 39
+      anchor: high when an operation is
+    - type: DOC
+      role: requirement
+      doc: axis
+      page: 28
+      anchor: During reset, TV ALID  must be driven LOW.
+    cover_module: cov_R8
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c09
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R9
+    description: While the receiver is mid-bit (prescale_reg above 19'd16), rst is first sampled high with
+      rxd low. rxd then stays low through the reset and after its release, busy is low on the first two
+      clocks after rst falls, and busy is high on the third.
+    tier: T2
+    cover: R9_rx_reset_mid_frame_prompt_restart
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 90
+      - 91
+      anchor: prescale_reg <= 0;
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 130
+      - 137
+      anchor: busy_reg <= 1;
+    cover_module: cov_R9
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c10
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R10
+    description: rst is sampled high on a clock where frame_error is high. On the next clock rst is still
+      high and frame_error is low, so reset clears the frame-error strobe.
+    tier: T2
+    cover: R10_rst_clears_frame_error
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 87
+      - 95
+      anchor: frame_error_reg <= 0;
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 42
+      - 44
+      anchor: single pulse will be emitted from the
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 57
+        name: frame_error
+    cover_module: cov_R10
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c11
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: R11
+    description: While overrun_error is high, rst is sampled high on that same clock; on the next clock
+      rst is still high and overrun_error is low, so reset clears the overrun strobe.
+    tier: T2
+    cover: R11_rst_clears_overrun
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_rx.v
+      lines:
+      - 87
+      - 95
+      anchor: overrun_error_reg <= 0;
+    - type: README
+      role: requirement
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 40
+      - 42
+      anchor: single cycle pulse will be emitted
+    - type: BASE
+      point:
+        kind: v_toggle
+        file: uart_rx.v
+        line: 56
+        name: overrun_error
+    cover_module: cov_R11
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c12
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: T3
+    description: With the idle transmitter showing s_axis_tready high, rst is sampled high on three consecutive
+      clocks. s_axis_tready is 0 on the second and third of those clocks, so it stays low for the whole
+      held reset.
+    tier: T1
+    cover: T3_tready_low_through_held_reset
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 79
+      - 84
+      anchor: s_axis_tready_reg <= 0;
+    - type: README
+      file: third_party/verilog-uart/README.md
+      lines:
+      - 33
+      - 36
+      anchor: The destination will accept data
+    cover_module: cov_T3
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c14
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null
+
+  - id: T4
+    description: 'rst is sampled high while the transmitter''s prescale_reg is above 19''d16 (reset in the
+      middle of a bit). After rst is released, s_axis_tready must rise exactly on the second clock after
+      release: it is low when sampled on the first clock and high when sampled on the second clock.'
+    tier: T2
+    cover: T4_tx_reset_mid_frame_ready_timing
+    sources:
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 79
+      - 84
+      anchor: prescale_reg <= 0;
+    - type: RTL
+      file: third_party/verilog-uart/rtl/uart_tx.v
+      lines:
+      - 89
+      - 91
+      anchor: s_axis_tready_reg <= 1;
+    cover_module: cov_T4
+    provenance:
+      proposed_by: anthropic/claude-opus-5.5
+      run_id: 20261025T225526Z-full
+      candidate: c15
+      prompt_sha: 8e69ff949f0794310f47fd692f9743453d204eaaea1649bf9aaef9f5405ac1be
+      status: auto_accepted
+      audited_by: null

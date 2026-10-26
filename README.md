@@ -1,11 +1,26 @@
 # closure-bench
 
-A small coverage-closure benchmark for agents, built as a `verifiers` environment.
-The agent writes a testbench that reaches an uncovered behaviour in an
-open-source UART; the grader re-runs it in a clean environment and checks
-coverage.
+Hard, verified coverage-closure tasks for RL, built as a `verifiers` (v1) environment.
+The agent gets an open-source UART (alexforencich/verilog-uart), its existing
+regression and one coverage target that regression misses, and writes a
+SystemVerilog testbench. The grader re-runs it in a fresh, offline sandbox and
+scores 1 if our cover point fires with legal stimulus. Formal search (Yosys)
+proves every target reachable and writes its gold.
 
-Status: grader, validity gates and the Prime eval adapter in place for the first task (R1).
+- **[REPORT.md](REPORT.md)**: how tasks are built, how the grader works, results and failure analysis
+- **[APPENDIX.md](APPENDIX.md)**: details behind every section
+- **[FRICTION.md](FRICTION.md)**: problems with verifiers, Prime Lab and the toolchain, with recommendations
+- **[evals/](evals/)**: the official runs (traces, configs, analysis)
+
+## Results
+
+26 hard tasks (R12-R29, T5-T12), k=8, temperature 1.0, null harness, legality rules in the prompt.
+
+| Model | pass@1 [95% CI] | pass@8 | Tasks mixed / never / always |
+| --- | --- | --- | --- |
+| gpt-6-sol, high effort | 84% [74, 94] | 100% | 9 / 0 / 17 |
+| Qwen 3.8-27b | 67% [57, 78] | 96% | 19 / 1 / 6 |
+| Nemotron 3 Nano (calibration) | 8% [2, 14] | 27% | 7 / 19 / 0 |
 
 ## Layout
 - `third_party/verilog-uart/` pinned, unmodified design under test (see UPSTREAM.md)
@@ -26,9 +41,16 @@ Status: grader, validity gates and the Prime eval adapter in place for the first
 - `environments/closure_bench/` verifiers v1 adapter: one task per plan item; the
   agent's sandbox never contains the grader, golds or near-misses, and grading
   runs in a fresh, offline sandbox with only the submitted testbench restored
-- `configs/` eval configs (`slice_r1.toml`: R1, null harness, Prime sandboxes)
+- `configs/` eval configs (`official_null.toml`: the official runs; `slice_r1.toml`: one task, for smoke tests)
 - `tests/` unit tests for the gate logic and the grader bundle
 - `tools/run_tb` run one testbench and write annotated coverage
+- `tools/analyze_eval` pass@k, bootstrap intervals and outcome tables from `traces.jsonl` files
+- `tools/failure_analysis` root cause of every failed rollout, replay next to the formal gold,
+  skill axes and RL views (`docs/FAILURES.md`)
+- `evals/official/<model>/` the official runs: `traces.jsonl.gz` (provider-internal
+  `provider_state` blobs removed) and the resolved eval config; `evals/official/analysis/`
+  and `evals/failures/` hold the outputs of the two tools above
+- `runs/propose/` the proposer runs that produced the shipped plan
 - `tools/regrade` re-grade the submissions in verifiers `traces.jsonl` files with the
   current grader (in the task image); prints every changed status or reward
 - `tools/formal` formal measurement (Yosys + SymbiYosys) per plan item: shortest
@@ -81,3 +103,15 @@ set -a; source .env; set +a                         # PRIME_API_KEY
 vf-validate closure-bench --runtime.type prime -n 1 --only-gold   # gold scores 1
 vf-eval @ configs/slice_r1.toml
 ```
+
+### Official runs and analysis
+```bash
+vf-eval @ configs/official_null.toml -m qwen/qwen3.8-27b -o outputs/official/qwen
+vf-eval @ configs/official_null.toml -m openai/gpt-6-sol --sampling.reasoning-effort high \
+  -o outputs/official/gpt-6-sol
+tools/analyze_eval outputs/official/qwen outputs/official/gpt-6-sol --out results/official \
+  --group-by-tag configs/probe_hard2_tags.yaml
+# Failure analysis: rebuild every label from the recorded run, with no model calls or simulations
+tools/failure_analysis --replay runs/failures/20261026T182236Z-hard2-official
+```
+The traces in `evals/official/` are gzipped; `gunzip -k` them to rerun the analysis on the published runs.

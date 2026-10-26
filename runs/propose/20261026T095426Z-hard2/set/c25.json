@@ -1,0 +1,210 @@
+{
+  "item": "P25",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, interaction, data, sequence",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "interaction",
+          "data",
+          "sequence"
+        ],
+        "reads": [
+          "bit_cnt",
+          "busy",
+          "prescale_reg",
+          "s_axis_tdata",
+          "s_axis_tvalid",
+          "txd"
+        ],
+        "locals": [
+          "tv_q",
+          "st",
+          "shift",
+          "done"
+        ],
+        "constants": [
+          "2'd0",
+          "8'h00",
+          "2'd0",
+          "4'd1",
+          "4'd8",
+          "8'h3C",
+          "2'd1",
+          "2'd1",
+          "8'h3C",
+          "2'd0",
+          "19'd0",
+          "4'd0",
+          "2'd2",
+          "8'h00",
+          "19'd0",
+          "4'd1",
+          "4'd8",
+          "4'd1",
+          "2'd0",
+          "8'h3C"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 18,
+              "anchor": "Either TVALID or TREADY can be asserted first, or both can be asserted in the same ACLK cycle."
+            },
+            true
+          ],
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 18,
+              "anchor": "For a transfer to occur, both TVALID and TREADY must be asserted."
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                86,
+                100
+              ],
+              "anchor": "if (s_axis_tvalid) begin"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 157 cycles (1.96 frames), 4 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 157",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 157,
+        "input_changes": 4,
+        "input_changes_exact": true,
+        "key": "740436c57a3aed9759390e1e8a49d1e9198dd1d23f801b25397c5c5a77fd23a6",
+        "witness_frames": 1.962,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 157,
+          "input_changes": 4,
+          "input_changes_exact": true,
+          "key": "061218d22c02cd99f3e5e86bf23e3be30658b4a1d45d3de1a0e6fcc3991b4c29",
+          "witness_frames": 1.962
+        },
+        "active_frames": 1.938
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": []
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P25_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: DOC axis page 18; DOC axis page 18",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "DOC axis page 18",
+          "DOC axis page 18"
+        ],
+        "requirement_keys": [
+          "DOC axis page 18 \"Either TVALID or TREADY can be asserted first, or both can be asserted in the same ACLK cycle.\"",
+          "DOC axis page 18 \"For a transfer to occur, both TVALID and TREADY must be asserted.\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

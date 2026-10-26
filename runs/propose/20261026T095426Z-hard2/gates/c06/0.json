@@ -1,0 +1,161 @@
+{
+  "item": "P6",
+  "accepted": false,
+  "failed_gate": "formal",
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "sequence, data",
+      "data": {
+        "mechanisms": [
+          "sequence",
+          "data"
+        ],
+        "reads": [
+          "bit_cnt",
+          "busy",
+          "prescale",
+          "prescale_reg",
+          "s_axis_tvalid",
+          "txd"
+        ],
+        "locals": [
+          "st",
+          "shift"
+        ],
+        "constants": [
+          "2'd0",
+          "8'h00",
+          "19'd0",
+          "4'd0",
+          "8'h00",
+          "16'd1",
+          "2'd1",
+          "2'd1",
+          "16'd3",
+          "2'd2",
+          "2'd0",
+          "2'd1",
+          "16'd1",
+          "2'd0",
+          "2'd2",
+          "2'd3",
+          "16'd3",
+          "2'd0",
+          "2'd2",
+          "19'd23",
+          "4'd1",
+          "4'd8",
+          "19'd24",
+          "4'd0",
+          "2'd3",
+          "2'd0",
+          "2'd3",
+          "16'd3",
+          "19'd0",
+          "4'd0",
+          "8'h5A"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                27,
+                30
+              ],
+              "anchor": "so it can be changed at run time"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_tx.v",
+              "lines": [
+                93,
+                110
+              ],
+              "anchor": "prescale_reg <= (prescale << 3);"
+            },
+            true
+          ],
+          [
+            {
+              "type": "BASE",
+              "point": {
+                "kind": "v_toggle",
+                "file": "uart_tx.v",
+                "line": 60,
+                "name": "prescale[1]"
+              }
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": false,
+      "detail": "the target cover P6_tx_rate_change_5a_full_frame is unreachable (bound 300 cycles, formal environment in designs/uart/formal/): no stimulus the environment allows reaches it. Check the cover condition against the RTL and the assumptions.",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "unreachable",
+        "witness_depth": null,
+        "input_changes": null,
+        "input_changes_exact": null,
+        "key": "bde74803aa9aa31b64c0d5de13a98b4b25c6b1cc372b24f5ddf8771eb337c48b"
+      }
+    }
+  ],
+  "skipped": [
+    "baseline",
+    "gold",
+    "near_miss",
+    "determinism",
+    "value",
+    "duplicate"
+  ]
+}

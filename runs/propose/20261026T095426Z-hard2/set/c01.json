@@ -1,0 +1,206 @@
+{
+  "item": "P1",
+  "accepted": true,
+  "failed_gate": null,
+  "gates": [
+    {
+      "gate": "format",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_sync",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "cover_policy",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "violations": []
+      }
+    },
+    {
+      "gate": "description_sync",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "missing": []
+      }
+    },
+    {
+      "gate": "mechanism",
+      "ok": true,
+      "detail": "boundary, interaction, data",
+      "data": {
+        "mechanisms": [
+          "boundary",
+          "interaction",
+          "data"
+        ],
+        "reads": [
+          "m_axis_tdata",
+          "m_axis_tready",
+          "m_axis_tvalid"
+        ],
+        "locals": [
+          "q_valid",
+          "q_ready",
+          "q_data"
+        ],
+        "constants": [
+          "8'h00",
+          "8'h3C",
+          "8'hA5"
+        ]
+      }
+    },
+    {
+      "gate": "citations",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "verified": [
+          [
+            {
+              "type": "DOC",
+              "role": "requirement",
+              "doc": "axis",
+              "page": 18,
+              "anchor": "For a transfer to occur, both TVALID and TREADY must be asserted."
+            },
+            true
+          ],
+          [
+            {
+              "type": "README",
+              "role": "requirement",
+              "file": "third_party/verilog-uart/README.md",
+              "lines": [
+                34,
+                36
+              ],
+              "anchor": "Data is transferred from the source to the"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                101,
+                103
+              ],
+              "anchor": "if (m_axis_tvalid && m_axis_tready) begin"
+            },
+            true
+          ],
+          [
+            {
+              "type": "RTL",
+              "file": "third_party/verilog-uart/rtl/uart_rx.v",
+              "lines": [
+                120,
+                125
+              ],
+              "anchor": "overrun_error_reg <= m_axis_tvalid_reg;"
+            },
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "gate": "formal",
+      "ok": true,
+      "detail": "witness depth 156 cycles (1.95 frames), 13 input changes (bound 300 cycles, formal environment in designs/uart/formal/); twin witness depth 156",
+      "data": {
+        "gold_source": "formal",
+        "bound": 300,
+        "min_frames": 1.5,
+        "assumptions": "designs/uart/formal/",
+        "status": "reachable",
+        "witness_depth": 156,
+        "input_changes": 13,
+        "input_changes_exact": true,
+        "key": "cf5680a8ece6ee11879355aac74e3b6d590f592a75babe513476478afc7cf90d",
+        "witness_frames": 1.95,
+        "twin": {
+          "status": "reachable",
+          "witness_depth": 156,
+          "input_changes": 13,
+          "input_changes_exact": true,
+          "key": "68adbc413e85bb38937d51683047e3a7485a5c7fe841686e7258e700aa995965",
+          "witness_frames": 1.95
+        },
+        "active_frames": 1.9
+      }
+    },
+    {
+      "gate": "baseline",
+      "ok": true,
+      "detail": "",
+      "data": {
+        "hit_by_random": {}
+      }
+    },
+    {
+      "gate": "gold",
+      "ok": true,
+      "detail": "status ok, hits 1",
+      "data": {
+        "gold_source": "formal",
+        "holes_hit": [
+          "v_toggle uart_rx.v:56 overrun_error",
+          "v_toggle uart_rx.v:72 overrun_error_reg"
+        ]
+      }
+    },
+    {
+      "gate": "near_miss",
+      "ok": true,
+      "detail": "1 near-miss TBs miss",
+      "data": {
+        "overlap": {
+          "P1_twin.sv": 1.0
+        },
+        "low_overlap": []
+      }
+    },
+    {
+      "gate": "determinism",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    },
+    {
+      "gate": "value",
+      "ok": true,
+      "detail": "evidence spec; kills 0 baseline survivors; requirements: DOC axis page 18; README third_party/verilog-uart/README.md lines [34, 36]",
+      "data": {
+        "evidence": "spec",
+        "kills": [],
+        "only_by_this_gold": [],
+        "requirements": [
+          "DOC axis page 18",
+          "README third_party/verilog-uart/README.md lines [34, 36]"
+        ],
+        "requirement_keys": [
+          "DOC axis page 18 \"For a transfer to occur, both TVALID and TREADY must be asserted.\"",
+          "README third_party/verilog-uart/README.md lines [34, 36] \"Data is transferred from the source to the\""
+        ]
+      }
+    },
+    {
+      "gate": "duplicate",
+      "ok": true,
+      "detail": "",
+      "data": {}
+    }
+  ],
+  "skipped": []
+}

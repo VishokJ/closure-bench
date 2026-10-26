@@ -1,0 +1,33 @@
+id: P6
+description: 'uart_tx sends one frame with prescale 1. After that frame has finished
+  and busy is low, s_axis_tvalid starts a new frame with prescale 3. While prescale
+  stays 3, every data bit (bit_cnt 8 down to 1) starts with prescale_reg reloaded
+  to 19''d23. The txd values at those bit starts form 8''h5A. The stop bit then starts
+  with prescale_reg 19''d24 and txd high. The target is reached when the stop bit
+  ends: prescale_reg and bit_cnt are 0 and txd is still high.'
+tier: T3
+mechanism:
+- sequence
+- data
+cover: P6_tx_rate_change_5a_full_frame
+sources:
+- type: README
+  role: requirement
+  file: third_party/verilog-uart/README.md
+  lines:
+  - 27
+  - 30
+  anchor: so it can be changed at run time
+- type: RTL
+  file: third_party/verilog-uart/rtl/uart_tx.v
+  lines:
+  - 93
+  - 110
+  anchor: prescale_reg <= (prescale << 3);
+- type: BASE
+  point:
+    kind: v_toggle
+    file: uart_tx.v
+    line: 60
+    name: prescale[1]
+cover_module: cov_P6

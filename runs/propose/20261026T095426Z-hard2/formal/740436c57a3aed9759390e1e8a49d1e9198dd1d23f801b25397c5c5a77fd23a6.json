@@ -1,0 +1,13 @@
+{
+ "bound_module": "uart_tx",
+ "depth": 157,
+ "detail": "",
+ "input_changes": 4,
+ "input_changes_exact": true,
+ "label": "P25_tvalid_rise_mid_frame",
+ "minimize_s": 18.5,
+ "solve_s": 2.9,
+ "status": "reachable",
+ "tb_text": "// Formal witness for P25_tvalid_rise_mid_frame (closure_core/formal.py): the shortest legal input\n// trace Yosys/SymbiYosys found (157 cycles), replayed on the uart_tx ports.\n// A gold candidate, never shown to an agent; Verilator decides whether it hits.\n`timescale 1ns / 1ps\n\nmodule tb;\n  logic clk = 1'b0;\n  always #5 clk = ~clk;\n  logic rst = 1'd1;\n  logic [7:0] s_axis_tdata = 8'd60;\n  logic s_axis_tvalid = 1'd0;\n  logic [15:0] prescale = 16'd1;\n  wire  s_axis_tready;\n  wire  txd;\n  wire  busy;\n\n  uart_tx dut (.clk(clk), .rst(rst), .s_axis_tdata(s_axis_tdata), .s_axis_tvalid(s_axis_tvalid), .prescale(prescale), .s_axis_tready(s_axis_tready), .txd(txd), .busy(busy));\n\n  initial begin\n    @(negedge clk);\n    rst = 1'd0; s_axis_tvalid = 1'd1;\n    repeat (2) @(negedge clk);\n    s_axis_tvalid = 1'd0;\n    repeat (64) @(negedge clk);\n    s_axis_tvalid = 1'd1;\n    repeat (91) @(negedge clk);\n    $finish;\n  end\nendmodule\n",
+ "total_s": 21.4
+}
