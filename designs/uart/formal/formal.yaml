@@ -1,0 +1,26 @@
+# Formal environment (closure_core/formal.py, tools/formal): one formal top per
+# module a cover binds to. Hand-reviewed design-pack input; the assumptions
+# live in the env files, each with its source.
+#
+# inputs: the formal top's free inputs besides clk; they must equal the DUT's
+#   input port names and widths, because a witness is replayed on the DUT's
+#   ports. outputs: the DUT's output ports, declared by the witness testbench.
+# Formal measures; Verilator decides (a witness counts only if it scores 1).
+#
+# bound: cycles searched per cover. 300 fits two frames at prescale 1 (about 80
+#   cycles each) plus reset, enough for every two-frame item (deepest: 158).
+# timeout: seconds per item for tools/formal, including the input-change
+#   minimisation (which may stop early: input_changes_exact false).
+bound: 300
+timeout: 900
+tops:
+  uart_rx:
+    file: env_rx.sv
+    module: formal_rx
+    inputs: {rst: 1, rxd: 1, m_axis_tready: 1, prescale: 16}
+    outputs: {m_axis_tdata: 8, m_axis_tvalid: 1, busy: 1, overrun_error: 1, frame_error: 1}
+  uart_tx:
+    file: env_tx.sv
+    module: formal_tx
+    inputs: {rst: 1, s_axis_tdata: 8, s_axis_tvalid: 1, prescale: 16}
+    outputs: {s_axis_tready: 1, txd: 1, busy: 1}

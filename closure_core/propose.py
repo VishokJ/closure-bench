@@ -40,8 +40,12 @@ from closure_core.design import Design, find_repo_root, load_design
 ROOT = find_repo_root()
 PROMPTS = Path(__file__).with_name("prompts")
 PRIME_BASE_URL = "https://api.pinference.ai/api/v1"
+# Pipeline image (tag formal): Verilator 5.020 plus the formal tools in /opt/oss-cad-suite.
+# The agent and grading sandboxes use the Verilator-only image (taskset DEFAULT_IMAGE):
+# a bash agent with SymbiYosys could get a witness from a model checker.
+# tests/test_images.py keeps the two apart and checks Verilator is the same in both.
 IMAGE = ("docker.io/vishokjcs/closure-bench-toolchain@"
-         "sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155")
+         "sha256:89f72e65e6a136f18f7187eeac78ec8a43d4ea51ebddbec0b2ce2dae5c11f5fa")
 RETRIES = 2
 GATES = ["format", "cover_sync", "cover_policy", "description_sync", "citations", "baseline", "gold", "near_miss",
          "determinism", "value", "duplicate"]

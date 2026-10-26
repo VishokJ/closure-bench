@@ -7,6 +7,8 @@ Duplicates are compared among the selected items only.
 
 Mutant results are cached in results/check/mutation_cache.json.
 
+Runs in the pipeline image (closure_core.propose.IMAGE), like every gate.
+
 Usage:  tools/check [--design uart] [--item R1 ...] [--offline] [-j N]
 Exit 0 only if every gate passes for every selected item.
 """

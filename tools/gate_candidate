@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Gate one candidate plan item (closure_core/candidate.py) without touching designs/.
 
+Runs in the pipeline image (closure_core.propose.IMAGE).
+
 Usage:  tools/gate_candidate <candidate_dir> [--design uart | --base PACK] [-j N] [--out result.json] [--offline]
 Prints one line per gate and writes the full result as JSON.
 Exit 0 if the candidate is accepted, 1 if rejected.

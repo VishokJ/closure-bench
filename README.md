@@ -24,7 +24,13 @@ Status: grader, validity gates and the Prime eval adapter in place for the first
 - `configs/` eval configs (`slice_r1.toml`: R1, null harness, Prime sandboxes)
 - `tests/` unit tests for the gate logic and the grader bundle
 - `tools/run_tb` run one testbench and write annotated coverage
-- `docker/toolchain/` pinned Verilator 5.020 image used everywhere
+- `tools/formal` formal measurement (Yosys + SymbiYosys) per plan item: shortest
+  witness within a bound, its depth and input changes, converted to a testbench
+  that the grader must score 1. It measures; Verilator decides. Formal
+  environment (hand-reviewed assumptions) in `designs/uart/formal/`
+- `docker/toolchain/` two pinned images from one Dockerfile: `task` (Verilator
+  5.020 only: agent and grading sandboxes) and `pipeline` (plus the formal tools:
+  checks, gates, proposer)
 
 ## Usage
 Requires Verilator 5.020 (or the toolchain image) and [uv](https://docs.astral.sh/uv/).
@@ -33,10 +39,12 @@ The cover policy reads Verilator's XML, whose layout is version-specific, so it
 refuses any Verilator other than 5.020. On a host without it, run inside the image:
 
 ```bash
-# Multi-platform index, as pinned in the eval configs. On Apple silicon, if Docker
-# Desktop refuses the index digest, use the arm64 manifest:
-#   sha256:79661c70cb6e254e83aa326515b897219b8980448e39fe97b417bf70bf2f713c
-IMAGE=docker.io/vishokjcs/closure-bench-toolchain@sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155
+# Pipeline image (Verilator 5.020 + formal tools), arm64 manifest for local Docker.
+# Code pins the multi-platform index sha256:89f72e65e6a136f18f7187eeac78ec8a43d4ea51ebddbec0b2ce2dae5c11f5fa
+# (amd64 sha256:79c76896bdf1c3ff1f4f7cdc8043a27167be33f22be29b66c9d5974b2672957b).
+# Tasks (agent and grading sandboxes, eval configs) use the Verilator-only image
+# sha256:3678cddfbaca54b466be876f97aaa5beccdef1a71aced176bc6ba8ea293c4155 (arm64 sha256:79661c70cb6e254e83aa326515b897219b8980448e39fe97b417bf70bf2f713c).
+IMAGE=docker.io/vishokjcs/closure-bench-toolchain@sha256:af43bde0ec76736914394e7cfb19a778b529c6c179475143fbf70cc3b407914f
 
 # Run the baseline and see what it leaves uncovered
 docker run --rm -v "$PWD":/repo -w /repo "$IMAGE" \
@@ -45,6 +53,9 @@ docker run --rm -v "$PWD":/repo -w /repo "$IMAGE" \
 # Validity suite (downloads cited documents to ~/.cache/closure-bench)
 docker run --rm -v "$PWD":/repo -w /repo \
   -v "$HOME/.cache/closure-bench":/root/.cache/closure-bench "$IMAGE" tools/check -j 8
+
+# Formal measurement: report and witness testbenches in results/formal/ (gitignored)
+docker run --rm --network none -v "$PWD":/repo -w /repo "$IMAGE" tools/formal -j 8
 
 # Unit tests: on the host (the fixture drift test skips without Verilator 5.020) ...
 uv run --extra dev pytest tests

@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Formal measurement of every plan item: shortest witness, then Verilator decides.
+
+Thin CLI over closure_core.formal.cover_witness. Per item: bounded cover check,
+witness depth and input changes, witness converted to a testbench and graded by
+the existing grader (Verilator). Formal suggests, Verilator decides: a witness
+counts only if it scores 1. Nothing here touches the reward.
+
+Witness testbenches are golds: they are written under results/ (gitignored,
+never bundled) and must never reach an agent.
+
+Runs in the pipeline image (closure_core.propose.IMAGE), the only one with the
+formal tools (/opt/oss-cad-suite).
+
+Status per item: reachable, unreachable_within_bound or timeout. With --prove, an
+item unreachable within the bound also gets a k-induction proof that its cover
+never fires (closure_core.formal.prove_unreachable): proven_unreachable, or it
+stays unreachable_within_bound when induction is inconclusive. A proof holds
+under the formal environment's assumptions only.
+
+--bound and --timeout default to bound/timeout in designs/<name>/formal/formal.yaml.
+
+Usage:  tools/formal [--items R1 T3] [--bound N] [--timeout S] [--prove] [-j 4] [--out results/formal]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from closure_core import load_design, propose  # noqa: E402
+from closure_core.formal import FORMAL_HOME, UnsupportedCover, cover_witness, prove_unreachable  # noqa: E402
+from closure_core.grader import grade  # noqa: E402
+
+
+def measure(design_name: str, item_id: str, bound: int, timeout: float, out: Path, prove: bool) -> dict:
+    design = load_design(design_name)
+    cover = design.pack / "covers" / f"{item_id}.sv"
+    try:
+        r = cover_witness(design.pack, cover, bound=bound, timeout=timeout)
+    except UnsupportedCover as e:
+        return {"id": item_id, "status": "unsupported", "error": str(e)}
+    row = {"id": item_id, **{k: v for k, v in r.items() if k != "tb_text"}, "witness": None, "proof": None}
+    if r["status"] == "unreachable":
+        row["status"] = "unreachable_within_bound"
+        if prove:
+            row["proof"] = prove_unreachable(design.pack, cover, timeout=timeout)
+            if row["proof"]["status"] == "proven_unreachable":
+                row["status"] = "proven_unreachable"
+    if r["tb_text"]:
+        path = out / "witness" / f"{item_id}.sv"
+        path.write_text(r["tb_text"])
+        g = grade(design, [item_id], r["tb_text"])
+        row["witness"] = {"file": str(path.relative_to(ROOT) if path.is_relative_to(ROOT) else path),
+                          "status": g.status,
+                          "reward": g.reward, "target_hits": g.target_hits[item_id],
+                          "diagnostics": g.diagnostics[:2000], "toolchain": g.toolchain}
+    return row
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--design", default="uart")
+    ap.add_argument("--items", nargs="*", help="plan IDs (default: all)")
+    ap.add_argument("--bound", type=int, help="cycles (default: formal.yaml bound)")
+    ap.add_argument("--timeout", type=float, help="seconds per item (default: formal.yaml timeout)")
+    ap.add_argument("--prove", action="store_true",
+                    help="k-induction proof for items unreachable within the bound")
+    ap.add_argument("-j", type=int, default=4)
+    ap.add_argument("--out", type=Path, default=ROOT / "results" / "formal")
+    a = ap.parse_args()
+
+    if not (FORMAL_HOME / "bin" / "sby").exists():
+        print(f"tools/formal: no formal tools at {FORMAL_HOME}; run in the pipeline image "
+              f"{propose.IMAGE}", file=sys.stderr)
+        return 2
+    design = load_design(a.design)
+    spec = yaml.safe_load((design.pack / "formal" / "formal.yaml").read_text())
+    a.bound = spec["bound"] if a.bound is None else a.bound
+    a.timeout = float(spec["timeout"]) if a.timeout is None else a.timeout
+    ids = a.items or [it.id for it in design.plan]
+    out = a.out.resolve()
+    (out / "witness").mkdir(parents=True, exist_ok=True)
+    with ProcessPoolExecutor(a.j) as ex:
+        rows = list(ex.map(measure, [a.design] * len(ids), ids, [a.bound] * len(ids),
+                           [a.timeout] * len(ids), [out] * len(ids), [a.prove] * len(ids)))
+
+    print(f"{'item':6} {'status':24} {'depth':>5} {'changes':>7} {'solve_s':>7} {'total_s':>7}  witness")
+    for r in rows:
+        w = r.get("witness")
+        verdict = "-" if not w else f"{w['status']} reward={w['reward']:.0f}"
+        if r.get("proof"):
+            verdict = f"k-induction: {r['proof']['status']} k={r['proof']['k']} ({r['proof']['solve_s']} s)"
+        print(f"{r['id']:6} {r['status']:24} {r.get('depth') or '-':>5} "
+              f"{r.get('input_changes') if r.get('input_changes') is not None else '-':>7} "
+              f"{r.get('solve_s') or '-':>7} {r.get('total_s') or '-':>7}  {verdict}")
+    report = {"design": a.design, "bound": a.bound, "timeout_s": a.timeout, "prove": a.prove, "items": rows}
+    (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    print(f"wrote {out / 'report.json'}")
+    mismatch = [r["id"] for r in rows if r.get("witness") and r["witness"]["reward"] != 1.0]
+    if mismatch:
+        print(f"SEMANTIC MISMATCH (formal reached, Verilator did not): {' '.join(mismatch)}")
+    return 1 if mismatch else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

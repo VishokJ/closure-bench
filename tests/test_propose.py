@@ -263,7 +263,8 @@ def test_author_all_parallel(scratch):
         assert all(json.loads(f.read_text())["response"]["text"] == f"no bundle for {c['title']}" for f in files)
 
 
-IMAGE_ARM = "docker.io/vishokjcs/closure-bench-toolchain@sha256:79661c70cb6e254e83aa326515b897219b8980448e39fe97b417bf70bf2f713c"
+# arm64 manifest of propose.IMAGE (the pipeline image), for local Docker on Apple silicon.
+IMAGE_ARM = "docker.io/vishokjcs/closure-bench-toolchain@sha256:af43bde0ec76736914394e7cfb19a778b529c6c179475143fbf70cc3b407914f"
 
 
 def _have_image() -> bool:

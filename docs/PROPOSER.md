@@ -144,7 +144,7 @@ survivor pass adds. `progress_total` covers both.
 ```bash
 uv pip install -e ".[propose]"          # openai client
 set -a; source .env; set +a             # PRIME_API_KEY (bills the key owner)
-IMAGE=docker.io/vishokjcs/closure-bench-toolchain@sha256:79661c70cb6e254e83aa326515b897219b8980448e39fe97b417bf70bf2f713c  # arm64
+IMAGE=docker.io/vishokjcs/closure-bench-toolchain@sha256:af43bde0ec76736914394e7cfb19a778b529c6c179475143fbf70cc3b407914f  # pipeline image, arm64
 tools/check                                                  # in the image first: caches docs and mutants
 tools/propose_plan --image "$IMAGE" --stage-a-only --tag smoke
 tools/propose_plan --image "$IMAGE" --stage-a-only --full-docs --tag smoke-full
