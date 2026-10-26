@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from closure_core import candidate, gates, propose
+from closure_core import candidate, formal, gates, propose
 from closure_core.design import PlanItem, load_design
 
 from test_gate_candidate import FATAL, PACK, empty_pack, gate_of, needs_sim, r1_candidate, run
@@ -26,11 +26,25 @@ ITEM = PlanItem("P1", "P1_frame_error", "cov_P1", "d", "T0")
 KW = {"assumptions": ENV, "bound": 300}
 
 
-def add_formal_env(pack: Path, bound: int = 300, timeout: int = 900) -> Path:
-    """A minimal formal environment (the real one is designs/uart/formal/)."""
+@pytest.fixture(autouse=True)
+def fresh_formal_version():
+    """gates.formal_version() is cached per process. Tests here swap closure_core.formal
+    for a fake; a version cached under the fake (None) would outlive the test and give
+    later tests in the same xdist worker different witness keys than gate_candidate's."""
+    gates.formal_version.cache_clear()
+    yield
+    gates.formal_version.cache_clear()
+
+
+def add_formal_env(pack: Path, bound: int = 300, timeout: int = 900, frame_cycles: str | None = None,
+                   active_signal: str | None = None) -> Path:
+    """A minimal formal environment (the real one is designs/uart/formal/). frame_cycles
+    only where a test needs frames: the canned witnesses elsewhere are not formal.py's."""
     (pack / "formal").mkdir(exist_ok=True)
+    spec = {"bound": bound, "timeout": timeout, "tops": {"uart_rx": {"file": "env_rx.sv", "module": "formal_rx"}}}
     (pack / "formal" / "formal.yaml").write_text(yaml.safe_dump(
-        {"bound": bound, "timeout": timeout, "tops": {"uart_rx": {"file": "env_rx.sv", "module": "formal_rx"}}}))
+        spec | ({"frame_cycles": frame_cycles} if frame_cycles else {})
+        | ({"active_signal": active_signal} if active_signal else {})))
     (pack / "formal" / "env_rx.sv").write_text("module formal_rx; endmodule\n")
     return pack
 
@@ -59,10 +73,125 @@ def test_formal_rejections_are_distinct(status, words):
         assert ENV in r.detail  # the repair turn learns where the assumptions are
 
 
-def test_formal_min_depth():
-    r = gates.formal(ITEM, reach(depth=10), **KW, min_depth=50)
-    assert r.ok is False and r.detail == "witness depth 10 < 50: make the target require more"
-    assert gates.formal(ITEM, reach(depth=50), **KW, min_depth=50).ok is True
+# --- witness length in frames: pure ---------------------------------------------------------
+
+TOP = {"inputs": {"rst": 1, "rxd": 1, "m_axis_tready": 1, "prescale": 16},
+       "outputs": {"m_axis_tdata": 8, "m_axis_tvalid": 1, "busy": 1, "overrun_error": 1, "frame_error": 1}}
+FRAME = "80 * prescale"  # designs/uart/formal/formal.yaml
+
+
+def trace(cycles: int, prescale: int, *, slow: int = 1) -> list[dict]:
+    """A witness-shaped trace: reset, then rxd toggling every 8 bit-clocks; slow > 1
+    repeats each step, i.e. the same stimulus at a `slow` times longer bit period."""
+    steps = [{"rst": int(k == 0), "rxd": (k // 8) % 2, "m_axis_tready": 1, "prescale": prescale}
+             for k in range(cycles)]
+    return [s for s in steps for _ in range(slow)]
+
+
+def frames(steps: list[dict]) -> float:
+    tb = formal.witness_testbench(steps, TOP, "uart_rx", "P1_x")
+    return gates.witness_frames(tb, len(steps), FRAME)
+
+
+def test_frames_are_cycles_over_the_frame_length():
+    assert frames(trace(80, 1)) == pytest.approx(1.0)
+    assert frames(trace(156, 1)) == pytest.approx(1.95)
+    assert frames(trace(80, 4)) == pytest.approx(0.25)
+
+
+def test_a_slower_prescale_does_not_add_frames():
+    """The smoke-run padding: the same witness at prescale 2 takes twice the cycles."""
+    assert frames(trace(156, 2, slow=2)) == pytest.approx(frames(trace(156, 1)))
+    assert len(trace(156, 2, slow=2)) == 312
+
+
+def test_frames_follow_prescale_changes():
+    steps = trace(40, 1) + trace(160, 4)          # 40/80 + 160/320
+    assert frames(steps) == pytest.approx(1.0)
+
+
+def test_frames_count_only_the_witness_cycles():
+    """The testbench pads two cycles after the last step; depth decides what counts."""
+    tb = formal.witness_testbench(trace(80, 1), TOP, "uart_rx", "P1_x")
+    assert gates.witness_frames(tb, 40, FRAME) == pytest.approx(0.5)
+
+
+def test_real_witness_measures_one_frame():
+    tb = (Path(__file__).parent / "fixtures" / "formal" / "witness_R1.sv").read_text()
+    assert gates.witness_frames(tb, 80, FRAME) == pytest.approx(1.0)  # R1 at prescale 1
+
+
+@pytest.mark.parametrize("expr", ["80 * prescale ** 2", "__import__('os')", "80 * baud", "80.5 * prescale"])
+def test_frame_formula_is_restricted(expr):
+    with pytest.raises(ValueError, match="only integers"):
+        gates.witness_frames(formal.witness_testbench(trace(8, 1), TOP, "uart_rx", "x"), 8, expr)
+
+
+def test_frame_formula_must_be_positive():
+    with pytest.raises(ValueError, match="is 0"):
+        gates.witness_frames(formal.witness_testbench(trace(8, 0), TOP, "uart_rx", "x"), 8, FRAME)
+
+
+def test_formal_min_frames():
+    tb = formal.witness_testbench(trace(80, 1), TOP, "uart_rx", "P1_x")
+    one = reach(depth=80, tb=tb)
+    r = gates.formal(ITEM, one, **KW, min_frames=1.9, frame_cycles=FRAME)
+    assert r.ok is False and r.detail == (
+        "witness is 1.00 frames, below 1.9: make the target need more protocol activity (a further phase "
+        "or an interaction), not more waiting or a slower prescale")
+    assert (r.data["witness_depth"], r.data["witness_frames"]) == (80, 1.0)  # cycles still recorded
+    two = reach(depth=156, tb=formal.witness_testbench(trace(156, 1), TOP, "uart_rx", "P1_x"))
+    r = gates.formal(ITEM, two, **KW, min_frames=1.9, frame_cycles=FRAME)
+    assert r.ok is True and "(1.95 frames)" in r.detail
+    with pytest.raises(gates.FormalError, match="needs frame_cycles"):
+        gates.formal(ITEM, one, **KW, min_frames=1.9)
+
+
+def test_unreadable_witness_is_an_infrastructure_error():
+    with pytest.raises(gates.FormalError, match="cannot measure the witness in frames"):
+        gates.formal(ITEM, reach(), **KW, frame_cycles=FRAME)  # not formal.py's testbench
+
+
+def test_the_pack_states_its_frame_length():
+    st = gates.formal_settings(load_design(PACK))
+    assert (st["frame_cycles"], st["active_signal"]) == (FRAME, "busy")
+
+
+# --- active_frames: a measurement (busy time in frames), never a decision ---------------------
+
+def test_active_frames_from_probe_lines():
+    log = "CBA 0 0 1\nCBA 4 1 1\nCBA 84 0 1\nCBA 100 1 4\nCBA_END\n"
+    # busy 4..84 at prescale 1 (80/80) and 100..260 at prescale 4 (160/320)
+    assert gates.active_frames_from_log(log, 260, "busy", FRAME) == pytest.approx(1.5)
+    with pytest.raises(ValueError, match="incomplete"):
+        gates.active_frames_from_log("CBA 0 0 1\n", 260, "busy", FRAME)
+
+
+def test_probe_is_appended_before_endmodule():
+    tb = formal.witness_testbench(trace(8, 1), TOP, "uart_rx", "x")
+    probed = gates.active_probe(tb, 8, "busy", FRAME)
+    assert probed.startswith(tb[:tb.rindex("endmodule")]) and probed.rstrip().endswith("endmodule")
+    assert '$display("CBA %0d %0d %0d", cb_t, busy, prescale);' in probed
+
+
+def one_frame(idle_after: int = 0) -> list[dict]:
+    """Reset, one good 8N1 frame (0x55) at prescale 1, then idle_after cycles of line idle."""
+    bits = [1] * 3 + [b for bit in [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1] for b in [bit] * 8] + [1] * idle_after
+    return [{"rst": int(k == 0), "rxd": b, "m_axis_tready": 1, "prescale": 1} for k, b in enumerate([1] + bits)]
+
+
+@needs_sim
+def test_active_frames_ignore_waiting():
+    """Idle cycles after the frame add witness frames but no active frames."""
+    d = load_design(PACK)
+    got = {}
+    for idle in (0, 80):
+        steps = one_frame(idle)
+        w = {"tb_text": formal.witness_testbench(steps, TOP, "uart_rx", "x"), "depth": len(steps)}
+        got[idle] = (gates.witness_frames(w["tb_text"], w["depth"], FRAME),
+                     gates.active_frames(d, w, FRAME, "busy")["active_frames"])
+    assert got[80][0] == pytest.approx(got[0][0] + 1.0)
+    assert got[80][1] == got[0][1] and 0.9 < got[0][1] < 1.0, got
 
 
 def test_formal_twin():
@@ -193,7 +322,7 @@ def test_formal_settings_come_from_formal_yaml(tmp_path):
     with pytest.raises(gates.FormalError, match="bound and timeout"):
         gates.formal_settings(load_design(none))
     d = load_design(add_formal_env(empty_pack(tmp_path / "p"), bound=123, timeout=45))
-    assert gates.formal_settings(d) == {"bound": 123, "timeout": 45.0}
+    assert gates.formal_settings(d) == {"bound": 123, "timeout": 45.0, "frame_cycles": None, "active_signal": None}
 
 
 def test_witness_key_covers_the_whole_formal_folder(pack):
@@ -309,14 +438,14 @@ def seed(cache: Path, base: Path, cand: Path, by_label: dict[str, dict]):
 
 
 def gold_less(tmp_path: Path, by_label: dict[str, dict], twin: str | None = None, keep_near_miss=True,
-              **kw) -> dict:
+              frame_cycles: str | None = None, active_signal: str | None = None, **kw) -> dict:
     cand = r1_candidate(tmp_path / "c")
     (cand / "gold.sv").unlink()
     if not keep_near_miss:
         shutil.rmtree(cand / "near_miss")
     if twin:
         (cand / "twin.sv").write_text(twin)
-    base = add_formal_env(empty_pack(tmp_path / "base"))
+    base = add_formal_env(empty_pack(tmp_path / "base"), frame_cycles=frame_cycles, active_signal=active_signal)
     seed(tmp_path / "witnesses", base, cand, by_label)
     return run(tmp_path, cand, base, witness_cache=tmp_path / "witnesses", **kw)
 
@@ -368,9 +497,17 @@ def test_twin_that_misses_is_the_near_miss(tmp_path):
 
 
 @needs_sim
-def test_min_depth_rejects_a_shallow_witness(tmp_path):
-    res = gold_less(tmp_path, {"P1_frame_error": {**WITNESS, "tb_text": stimulus()}}, min_depth=500)
-    assert res["failed_gate"] == "formal" and "witness depth 120 < 500" in gate_of(res, "formal")["detail"]
+def test_min_frames_rejects_a_one_frame_witness(tmp_path):
+    """End to end with R1's real formal witness (one frame at prescale 1)."""
+    tb = (Path(__file__).parent / "fixtures" / "formal" / "witness_R1.sv").read_text()
+    w = {"P1_frame_error": {**WITNESS, "depth": 80, "tb_text": tb}}
+    res = gold_less(tmp_path / "a", w, frame_cycles=FRAME, active_signal="busy", min_frames=1.9)
+    assert res["failed_gate"] == "formal"
+    assert gate_of(res, "formal")["detail"].startswith("witness is 1.00 frames, below 1.9")
+    assert gate_of(res, "formal")["data"]["active_frames"] == 0.963  # recorded on rejections too
+    res = gold_less(tmp_path / "b", w, frame_cycles=FRAME, min_frames=0.9)
+    assert res["accepted"], res["failed_gate"]
+    assert gate_of(res, "formal")["data"]["witness_frames"] == 1.0
 
 
 @needs_sim

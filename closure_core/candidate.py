@@ -113,13 +113,14 @@ def add(pack: Path, cand: Path, reach_gold: str | None = None, twin_near_miss: s
 
 
 def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: bool = False,
-         witness_cache: Path | None = None, min_depth: int | None = None,
+         witness_cache: Path | None = None, min_frames: float | None = None,
          require_mechanism: bool = False) -> dict:
     """Run the gates on one candidate; stops at the first failure.
 
     witness_cache: directory of formal witnesses by key (gates.witness); a run
     keeps its own, so a replay reuses every witness instead of re-solving.
-    min_depth: reject reach witnesses shallower than this (hardening).
+    min_frames: reject target witnesses shorter than this many frames (hardening;
+    the frame length comes from the pack's formal.yaml).
     require_mechanism: item.yaml must declare at least gates.MIN_MECHANISMS distinct
     difficulty mechanisms (target-only runs).
     Raises infra.InfraError (gates.FormalError is one) when the machine fails, e.g. a
@@ -175,16 +176,24 @@ def gate(base_pack: Path, cand: Path, *, cache_path: Path, j: int = 4, offline: 
         if has_gold and not twin:
             ok(gates.formal(it, None))  # n/a
         else:
-            bound = gates.formal_settings(design)["bound"]
+            st = gates.formal_settings(design)
+            bound = st["bound"]
             # Named as the repo path the proposer sees, also when the base is a run's snapshot.
-            kw = {"assumptions": f"designs/{base.name}/{gates.FORMAL_DIR}/", "bound": bound, "min_depth": min_depth}
+            kw = {"assumptions": f"designs/{base.name}/{gates.FORMAL_DIR}/", "bound": bound,
+                  "min_frames": min_frames, "frame_cycles": st["frame_cycles"]}
             w = None if has_gold else gates.witness(design, design.pack / "covers" / f"{i}.sv", witness_cache)
+            # A measurement, not a decision: how much of the witness is protocol activity.
+            probe = (pool.submit(gates.active_frames, design, w, st["frame_cycles"], st["active_signal"])
+                     if w and w["status"] == "reachable" and w.get("tb_text") and st["frame_cycles"]
+                     and st["active_signal"] else None)
             fr = gates.formal(it, w, **kw)
             tw = None
             if fr.ok in (True, "n/a") and twin:  # the twin only once the target is settled
                 tv = gates.twin_policy(design, twin, i)
                 tw = None if tv else gates.witness(design, twin, witness_cache)
                 fr = gates.formal(it, w, tw, twin_violations=tv, **kw)
+            if probe:
+                fr.data.update(probe.result())
             if not ok(fr):
                 return finish(i)
             # The witnesses join the overlay as the reach gold and a near-miss.

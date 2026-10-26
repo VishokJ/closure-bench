@@ -23,11 +23,16 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--design", default="uart")
     ap.add_argument("--full-docs", action="store_true", help="every page, not only context_pages")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--no-progress", action="store_true",
+                      help="leave out progress_before (the mutation sweep and gold runs): starts in seconds")
+    mode.add_argument("--progress-only", action="store_true", help="write only progress_before")
     ap.add_argument("-j", type=int, default=default_jobs(),
                     help="parallel simulations (mutants, golds; default: cores - 2)")
     args = ap.parse_args()
-    propose.dump(args.out, propose.build_context_pack(load_design(args.design), full_docs=args.full_docs,
-                                                      j=args.j))
+    design = load_design(args.design)
+    propose.dump(args.out, propose.progress_before(design, j=args.j) if args.progress_only else
+                 propose.build_context_pack(design, full_docs=args.full_docs, j=args.j, progress=not args.no_progress))
     return 0
 
 

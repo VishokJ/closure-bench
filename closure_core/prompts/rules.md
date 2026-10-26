@@ -72,9 +72,12 @@ Every item cites at least one source; each is verified mechanically.
 
 - `RTL` / `README`: `file` (repository path), `lines: [first, last]`, and an
   `anchor` string that appears verbatim on those lines.
-- `DOC`: `doc` (id), `page`, `anchor` copied verbatim from the page text given
-  below. The text was extracted from the PDF and has artefacts (e.g.
-  `TV ALID`); copy them exactly. Use only the pages given.
+- `DOC`: `doc` (id), `page`, and an `anchor`: a sentence quoted from that page
+  as it reads in the document. Spacing does not matter (the PDF text below has
+  extraction artefacts such as `TV ALID` or `TheUART`; quote the words
+  normally), but letters and punctuation must match, including case. The
+  anchor must appear on that page only: if it also appears elsewhere, quote
+  more of the sentence. Use only the pages given.
 - `BASE`: `point: {kind, file, line, name}`, a baseline coverage hole from the
   list below (0 hits).
 - Mark a `DOC` or `README` source `role: requirement` only if it states what

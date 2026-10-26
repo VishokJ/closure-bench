@@ -50,6 +50,12 @@ PRIME_BASE_URL = "https://api.pinference.ai/api/v1"
 IMAGE = ("docker.io/vishokjcs/closure-bench-toolchain@"
          "sha256:89f72e65e6a136f18f7187eeac78ec8a43d4ea51ebddbec0b2ce2dae5c11f5fa")
 RETRIES = 2
+# --target-only default for --min-frames. Calibrated on the formal witnesses of the 13
+# reachable plan items and the 3 targets of a min-depth-160 smoke run (2026-10-26):
+# two-frame targets measure 1.950-1.966 frames, one-frame ones 1.000-1.050, single
+# events below 0.09. 1.9 accepts two frames and rejects one.
+TARGET_MIN_FRAMES = 1.9
+
 GATES = ["format", "cover_sync", "cover_policy", "description_sync", "mechanism", "citations", "formal", "baseline",
          "gold", "near_miss", "determinism", "value", "duplicate"]
 PREFIX = {"uart_rx": "R", "uart_tx": "T"}  # bind target -> ID prefix; anything else is M
@@ -71,10 +77,13 @@ def load(path: Path):
 # --- context pack (built in the image: needs Verilator and pypdf) --------------------------
 
 def build_context_pack(design: Design, *, full_docs: bool = False, cache_path: Path | None = None,
-                       j: int = 8) -> dict:
+                       j: int = 8, progress: bool = True) -> dict:
+    """What the model is shown, as data. progress: also the existing plan's progress
+    (progress_before: a mutation sweep and every gold; not shown to the model). A
+    target-only run leaves it out to start in seconds; finish() computes it then."""
     from concurrent.futures import ThreadPoolExecutor
 
-    from closure_core import citations, gates, mutants, sim
+    from closure_core import citations, gates, sim
     from closure_core.infra import simulate
 
     # Shown to the model as repo paths, also when the pack is a run's base_pack snapshot.
@@ -84,7 +93,9 @@ def build_context_pack(design: Design, *, full_docs: bool = False, cache_path: P
             return f"designs/{design.name}/{p.relative_to(design.pack)}"
         return str(p.relative_to(design.repo_root))
 
-    sims = {n: simulate(design, b["file"].read_text(), top=b["top"]) for n, b in design.baselines.items()}
+    with ThreadPoolExecutor(j) as pool:
+        sims = {n: f.result() for n, f in {n: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
+                                           for n, b in design.baselines.items()}.items()}
     hits: dict[tuple, int] = {}
     for s in sims.values():
         for p in s.points:
@@ -103,15 +114,7 @@ def build_context_pack(design: Design, *, full_docs: bool = False, cache_path: P
         docs[doc] = {"title": meta["title"],
                      "pages": [{**c, "text": pages[c["page"] - 1]} for c in chosen]}
     readme = design.repo_root / "third_party/verilog-uart/README.md"
-    with ThreadPoolExecutor(j) as pool:
-        mutation = gates.mutation_runs(design, design.golds, pool,
-                                       cache_path or ROOT / "results" / "check" / "mutation_cache.json")
-        gold_sims = {i: f.result() for i, f in {i: pool.submit(simulate, design, p.read_text())
-                                                 for i, p in design.golds.items()}.items()}
-    hole_keys = gates.holes(sims)
-    survivors = sorted(mutation["unexplained"] + mutation["survivors_killed_by_gold"])
-    by_id = {m.id: m for f, (lo, hi) in design.mutate.items() for m in mutants.generate(f, lo, hi)}
-    return {
+    pack = {
         "design": design.name,
         "toolchain": sim.verilator_version(),
         "verilator_flags": list(sim.VERILATOR_FLAGS),
@@ -127,22 +130,45 @@ def build_context_pack(design: Design, *, full_docs: bool = False, cache_path: P
         "full_docs": full_docs,
         # Shown only in target-only mode: the formal environment (what formal may assume).
         "formal": {f"designs/{design.name}/{gates.FORMAL_DIR}/{n}": t for n, t in gates.formal_files(design).items()},
-        # Not shown to the model: what the existing plan already achieves, so the
-        # summary can report what a run adds (see summarize, "progress").
-        "progress_before": {
-            "survivors": survivors,
-            "survivor_details": {i: {"file": by_id[i].file, "line": by_id[i].line, "op": by_id[i].op,
-                                     "original": by_id[i].original.strip(), "mutated": by_id[i].mutated.strip()}
-                                 for i in survivors},
-            "killed_by_plan": mutation["survivors_killed_by_gold"],
-            "holes": hole_keys,
-            "waived_holes": sorted(k for k in gates.waived_holes(design) if k in hole_keys),
-            "closed_by_plan": sorted({k for s in gold_sims.values() if s.sim.status == "ok"
-                                      for k in gates.hit_points(s)} & set(hole_keys)),
-            "requirements_by_plan": sorted({gates.requirement_key(s) for it in design.plan for s in it.sources
-                                            if s.get("role") == "requirement"
-                                            and s["type"] in gates.REQUIREMENT_TYPES}),
-        },
+    }
+    if progress:
+        pack["progress_before"] = progress_before(design, sims, cache_path=cache_path, j=j)
+    return pack
+
+
+def progress_before(design: Design, sims: dict | None = None, *, cache_path: Path | None = None,
+                    j: int = 8) -> dict:
+    """Not shown to the model: what the existing plan already achieves, so the
+    summary can report what a run adds (see summarize, "progress"). sims: the
+    baseline simulations, if already run."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from closure_core import gates, mutants
+    from closure_core.infra import simulate
+    with ThreadPoolExecutor(j) as pool:
+        if sims is None:
+            sims = {n: f.result() for n, f in {n: pool.submit(simulate, design, b["file"].read_text(), top=b["top"])
+                                               for n, b in design.baselines.items()}.items()}
+        mutation = gates.mutation_runs(design, design.golds, pool,
+                                       cache_path or ROOT / "results" / "check" / "mutation_cache.json")
+        gold_sims = {i: f.result() for i, f in {i: pool.submit(simulate, design, p.read_text())
+                                                 for i, p in design.golds.items()}.items()}
+    hole_keys = gates.holes(sims)
+    survivors = sorted(mutation["unexplained"] + mutation["survivors_killed_by_gold"])
+    by_id = {m.id: m for f, (lo, hi) in design.mutate.items() for m in mutants.generate(f, lo, hi)}
+    return {
+        "survivors": survivors,
+        "survivor_details": {i: {"file": by_id[i].file, "line": by_id[i].line, "op": by_id[i].op,
+                                 "original": by_id[i].original.strip(), "mutated": by_id[i].mutated.strip()}
+                             for i in survivors},
+        "killed_by_plan": mutation["survivors_killed_by_gold"],
+        "holes": hole_keys,
+        "waived_holes": sorted(k for k in gates.waived_holes(design) if k in hole_keys),
+        "closed_by_plan": sorted({k for s in gold_sims.values() if s.sim.status == "ok"
+                                  for k in gates.hit_points(s)} & set(hole_keys)),
+        "requirements_by_plan": sorted({gates.requirement_key(s) for it in design.plan for s in it.sources
+                                        if s.get("role") == "requirement"
+                                        and s["type"] in gates.REQUIREMENT_TYPES}),
     }
 
 
@@ -368,14 +394,14 @@ class Executor:
         return subprocess.run(argv, cwd=ROOT, capture_output=True, text=True)
 
     def gate(self, cand: Path, out: Path, base: Path | None = None, formal: dict | None = None) -> dict:
-        """formal: formal_opts(...), the run's witness cache and minimum depth."""
+        """formal: formal_opts(...), the run's witness cache and minimum frames."""
         argv = ["tools/gate_candidate", _rel(cand), "--out", _rel(out), "-j", str(self.j)]
         if base:
             argv += ["--base", _rel(base)]
         if formal:
             argv += ["--witness-cache", _rel(formal["cache"])]
             argv += ["--require-mechanism"] if formal.get("require_mechanism") else []
-            argv += ["--min-depth", str(formal["min_depth"])] if formal.get("min_depth") is not None else []
+            argv += ["--min-frames", str(formal["min_frames"])] if formal.get("min_frames") is not None else []
         p = self.run(argv)
         if p.returncode == 2 and not out.exists():  # the machine failed, not the candidate
             raise InfraError(p.stderr.strip()[-2000:])
@@ -383,11 +409,18 @@ class Executor:
             raise RuntimeError(f"gate_candidate failed:\n{p.stdout[-2000:]}\n{p.stderr[-2000:]}")
         return load(out)
 
-    def context_pack(self, out: Path, full_docs: bool, base: Path) -> dict:
+    def context_pack(self, out: Path, full_docs: bool, base: Path, progress: bool = True) -> dict:
         p = self.run(["tools/context_pack", "--out", _rel(out), "--design", _rel(base), "-j", str(self.j),
-                      *(["--full-docs"] if full_docs else [])])
+                      *(["--full-docs"] if full_docs else []), *([] if progress else ["--no-progress"])])
         if p.returncode != 0:
             raise RuntimeError(f"context_pack failed:\n{p.stderr[-2000:]}")
+        return load(out)
+
+    def progress_before(self, out: Path, base: Path) -> dict:
+        p = self.run(["tools/context_pack", "--out", _rel(out), "--design", _rel(base), "-j", str(self.j),
+                      "--progress-only"])
+        if p.returncode != 0:
+            raise RuntimeError(f"context_pack --progress-only failed:\n{p.stderr[-2000:]}")
         return load(out)
 
     def check(self) -> dict:
@@ -454,9 +487,15 @@ def _number(cands: list[dict], start: int, pass_no: int) -> list[dict]:
     return cands
 
 
+def _before(run_dir: Path) -> dict:
+    """The existing plan's progress: from the context pack, or measured by finish()."""
+    pack = load(run_dir / "context_pack.json")
+    return pack["progress_before"] if "progress_before" in pack else load(run_dir / "progress_before.json")
+
+
 def survivor_prompt(run_dir: Path, context: str) -> tuple[str, list[str]]:
     """Pass 2 prompt from pass 1's set stage, and the survivors it lists."""
-    before = load(run_dir / "context_pack.json")["progress_before"]
+    before = _before(run_dir)
     cands = load(run_dir / "candidates.json")["candidates"]
     acc = {c["cid"]: _final_attempt(run_dir, c["cid"])[1] for c in cands
            if c["pass"] == 1 and (s := run_dir / "set" / f"{c['cid']}.json").exists() and load(s)["accepted"]}
@@ -477,7 +516,7 @@ def survivor_prompt(run_dir: Path, context: str) -> tuple[str, list[str]]:
 def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
         max_candidates: int = 20, stage_a_only: bool = False, full_docs: bool = False,
         write: bool = False, base: Path | None = None, survivor_pass: bool = False,
-        parallel: int = 1, target_only: bool = False, min_depth: int | None = None) -> dict:
+        parallel: int = 1, target_only: bool = False, min_frames: float | None = None) -> dict:
     """base: the pack to gate against (default designs/<design_name>; tests pass another).
 
     survivor_pass: after pass 1 and its set stage, a second Stage A sees the
@@ -485,14 +524,16 @@ def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
     parallel: Stage B conversations at a time (model calls dominate the run time).
     target_only: Stage B writes no gold (prompts/author_target.md); formal finds it.
     The survivor pass is off in this mode: a reach gold kills no mutant.
-    min_depth: the formal gate's minimum witness depth (bound and timeout come
-    from the pack's formal/formal.yaml).
+    min_frames: the formal gate's minimum target witness length in frames (bound,
+    timeout and the frame length come from the pack's formal/formal.yaml).
     """
     survivor_pass = survivor_pass and not target_only
     run_dir.mkdir(parents=True)
     # Every gate in this run, and in its replay, uses this snapshot of the pack.
     shutil.copytree(base or ROOT / "designs" / design_name, run_dir / "base_pack")
-    pack = executor.context_pack(run_dir / "context_pack.json", full_docs, run_dir / "base_pack")
+    # Target-only: no mutation sweep at startup (no survivor pass to show it to); finish() measures it.
+    pack = executor.context_pack(run_dir / "context_pack.json", full_docs, run_dir / "base_pack",
+                                 progress=not target_only)
     rules = (PROMPTS / "rules.md").read_text()
     context = render_context(pack, rules, target_only)
     dump(run_dir / "manifest.json", {
@@ -501,7 +542,7 @@ def run(run_dir: Path, model, executor: Executor, *, design_name: str = "uart",
         "prompt_sha": prompt_sha(), "context_pack_sha": sha256((run_dir / "context_pack.json").read_text()),
         "full_docs": full_docs, "max_candidates": max_candidates, "stage_a_only": stage_a_only,
         "write": write, "design": design_name, "survivor_pass": survivor_pass, "parallel": parallel,
-        "target_only": target_only, "min_depth": min_depth})
+        "target_only": target_only, "min_frames": min_frames})
     (run_dir / "prompts").mkdir()
     for name, text in prompt_files().items():
         (run_dir / "prompts" / name).write_text(text)
@@ -539,9 +580,9 @@ def enumerate_prompt(context: str, target_only: bool = False) -> str:
 
 
 def formal_opts(run_dir: Path, manifest: dict) -> dict:
-    """The formal gate's settings for a run: its own witness cache, minimum depth, and
-    (target-only) the required difficulty mechanism."""
-    return {"cache": run_dir / "formal", "min_depth": manifest.get("min_depth"),
+    """The formal gate's settings for a run: its own witness cache, minimum frames, and
+    (target-only) the required difficulty mechanisms."""
+    return {"cache": run_dir / "formal", "min_frames": manifest.get("min_frames"),
             "require_mechanism": bool(manifest.get("target_only"))}
 
 
@@ -882,7 +923,7 @@ def summarize(run_dir: Path) -> dict:
     # Infrastructure aborts are not decisions: those candidates are left out of every count.
     cands = [c for c in rec["candidates"] if c["cid"] not in infra]
     pack = load(run_dir / "context_pack.json")
-    before = pack["progress_before"]
+    before = _before(run_dir)
     tasks = [c for c in cands if c.get("kind") == "task"]
     set_res = {p.stem: load(p) for p in sorted((run_dir / "set").glob("*.json"))}
     context_pages = {(d, p["page"]) for d, doc in pack["docs"].items() for p in doc["pages"]}
@@ -915,9 +956,10 @@ def summarize(run_dir: Path) -> dict:
                           if _gate_data(r, "baseline").get("hit_by_random")},
         "mechanisms": {m: sorted(cid for cid, r in acc_all.items() if m in _gate_data(r, "mechanism").get("mechanisms", []))
                        for m in sorted({m for r in acc_all.values() for m in _gate_data(r, "mechanism").get("mechanisms", [])})},
-        # Formal witnesses of accepted candidates: reach golds (the depth is the hardening
-        # signal) and twin near-misses.
+        # Formal witnesses of accepted candidates: reach golds (the length in frames is the
+        # hardening signal, the depth in cycles a recorded measure) and twin near-misses.
         "witnesses": {cid: {"gold_source": f["gold_source"], "witness_depth": f.get("witness_depth"),
+                            "witness_frames": f.get("witness_frames"), "active_frames": f.get("active_frames"),
                             "input_changes": f.get("input_changes"),
                             "twin_depth": (f.get("twin") or {}).get("witness_depth")}
                       for cid, r in acc_all.items()
@@ -945,6 +987,10 @@ def summarize(run_dir: Path) -> dict:
 
 
 def finish(run_dir: Path, executor: Executor) -> dict:
+    """Summarise; first measure the existing plan's progress if the context pack left it out
+    (on the run's base_pack, so the numbers match a run that measured it at startup)."""
+    if "progress_before" not in load(run_dir / "context_pack.json") and not (run_dir / "progress_before.json").exists():
+        executor.progress_before(run_dir / "progress_before.json", run_dir / "base_pack")
     s = summarize(run_dir)
     dump(run_dir / "summary.json", s)
     return s
@@ -1005,8 +1051,9 @@ def replay(run_dir: Path, executor: Executor) -> list[str]:
     again.mkdir(parents=True)
     diffs: list[str] = []
     manifest, rec = load(run_dir / "manifest.json"), load(run_dir / "candidates.json")
-    for f in ("candidates.json", "context_pack.json"):
-        shutil.copy(run_dir / f, again / f)
+    for f in ("candidates.json", "context_pack.json", "progress_before.json"):
+        if (run_dir / f).exists():
+            shutil.copy(run_dir / f, again / f)
     shutil.copytree(run_dir / "responses", again / "responses")  # inputs: the summary counts attempts
     if (run_dir / "formal").exists():  # recorded witnesses: replay does not re-solve
         shutil.copytree(run_dir / "formal", again / "formal")

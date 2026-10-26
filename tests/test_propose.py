@@ -358,7 +358,10 @@ def test_scripted_target_only_run_and_replay(scratch):
     s = propose.run(run_dir, model, SeedingExecutor(witnesses), base=base, survivor_pass=True, target_only=True)
     manifest = json.loads((run_dir / "manifest.json").read_text())
     assert manifest["target_only"] is True and manifest["survivor_pass"] is False
-    assert manifest["min_depth"] is None
+    assert manifest["min_frames"] is None
+    # Target-only: no mutation sweep at startup; finish() measured the plan's progress instead.
+    assert "progress_before" not in json.loads((run_dir / "context_pack.json").read_text())
+    assert (run_dir / "progress_before.json").exists()
 
     prompt = json.loads((run_dir / "responses/c01/0.json").read_text())["messages"][0]["content"]
     assert "## Formal environment" in prompt and "### designs/uart/formal/env_rx.sv" in prompt
@@ -376,8 +379,8 @@ def test_scripted_target_only_run_and_replay(scratch):
     p1 = s["passes"]["1"]
     assert p1["accepted"] == ["c01"] and p1["rejected_at_set"] == {"c02": "duplicate"}
     assert p1["repair"] == {"failed_first_attempt": 1, "repaired": 1, "rate": 1.0}
-    assert s["witnesses"] == {"c01": {"gold_source": "formal", "witness_depth": 120, "input_changes": 22,
-                                      "twin_depth": 121}}
+    assert s["witnesses"] == {"c01": {"gold_source": "formal", "witness_depth": 120, "witness_frames": None,
+                                      "active_frames": None, "input_changes": 22, "twin_depth": 121}}
     assert p1["progress"]["mutants"]["killed_by_run"] == []  # reach golds kill nothing
     # Keyed by the cover text, so per ID: P1 target, bad twin, good twin; P2 target and twin.
     assert len(list((run_dir / "formal").glob("*.json"))) == 5
@@ -447,32 +450,45 @@ def test_cache_save_parallel_containers():
         shutil.rmtree(d, ignore_errors=True)
 
 
+RX_TOP = {"inputs": {"rst": 1, "rxd": 1, "m_axis_tready": 1, "prescale": 16},
+          "outputs": {"m_axis_tdata": 8, "m_axis_tvalid": 1, "busy": 1, "overrun_error": 1, "frame_error": 1}}
+
+
+def uart_witness(*stops: int, data: int = 0x55) -> dict:
+    """A witness in formal.py's testbench format: reset, then one 8N1 frame per stop
+    bit given (stop 0: a framing error), at prescale 1 (8 clocks per bit)."""
+    from closure_core import formal
+    steps = [{"rst": 1, "rxd": 1}] + [{"rst": 0, "rxd": 1}] * 3
+    for stop in stops:
+        bits = [0] + [(data >> i) & 1 for i in range(8)] + [stop, 1]
+        steps += [{"rst": 0, "rxd": b} for b in bits for _ in range(8)]
+    steps = [{**st, "m_axis_tready": 1, "prescale": 1} for st in steps]
+    return {"status": "reachable", "tb_text": formal.witness_testbench(steps, RX_TOP, "uart_rx", "x"),
+            "depth": len(steps), "input_changes": 1}
+
+
 @needs_sim
-def test_target_only_min_depth_repair(scratch):
-    """--min-depth: a shallow witness is rejected at formal, and the repair turn tells the
-    model to make the target require more; a deeper target is then accepted."""
-    fatal = 'if (!saw_frame_error) $fatal(1, "frame_error never pulsed");'
-    stim = (PACK / "gold" / "R1.sv").read_text().replace(fatal, "")
-    good = (PACK / "near_miss" / "R1_good_stop.sv").read_text()
+def test_target_only_min_frames_repair(scratch):
+    """--min-frames: a one-frame witness is rejected at formal, and the repair turn asks
+    for more protocol activity; a two-frame target is then accepted."""
     deeper = target_bundle().replace("ITEM_frame_error: cover", "ITEM_frame_error_deep: cover") \
                             .replace("cover: ITEM_frame_error", "cover: ITEM_frame_error_deep")
-    witnesses = {"frame_error": {"status": "reachable", "tb_text": stim, "depth": 80, "input_changes": 1},
-                 "frame_error_deep": {"status": "reachable", "tb_text": stim, "depth": 200, "input_changes": 9},
-                 "twin_good_stop": {"status": "reachable", "tb_text": good, "depth": 81, "input_changes": 1}}
+    witnesses = {"frame_error": uart_witness(0), "frame_error_deep": uart_witness(1, 0),
+                 "twin_good_stop": uart_witness(1)}
     one_task = STAGE_A_TARGET[:STAGE_A_TARGET.index("- title: frame error again")] + "</candidates>\n"
     model = propose.ScriptedModel([one_task, target_bundle(), deeper])
-    base = empty_pack(scratch / "base")
-    (base / "formal").mkdir(exist_ok=True)
-    (base / "formal" / "formal.yaml").write_text("bound: 300\ntimeout: 900\ntops: {}\n")
+    base = empty_pack(scratch / "base")  # designs/uart/formal/formal.yaml: frame_cycles 80 * prescale
     run_dir = scratch / "run"
-    s = propose.run(run_dir, model, SeedingExecutor(witnesses), base=base, target_only=True, min_depth=150)
+    s = propose.run(run_dir, model, SeedingExecutor(witnesses), base=base, target_only=True, min_frames=1.9)
     first = json.loads((run_dir / "gates/c01/0.json").read_text())
     assert first["failed_gate"] == "formal"
     repair = json.loads((run_dir / "responses/c01/1.json").read_text())["messages"][-1]["content"]
-    assert "`formal`" in repair and "witness depth 80 < 150: make the target require more" in repair
+    assert "witness is 1.15 frames, below 1.9: make the target need more protocol activity" in repair
     assert s["passes"]["1"]["accepted"] == ["c01"]
-    assert s["witnesses"]["c01"]["witness_depth"] == 200
-    assert json.loads((run_dir / "manifest.json").read_text())["min_depth"] == 150
+    w = s["witnesses"]["c01"]
+    assert (w["witness_depth"], w["witness_frames"]) == (180, 2.25)
+    assert 1.5 < w["active_frames"] < 2.25  # two frames of activity in 2.25 frames (designs/uart formal.yaml)
+    assert json.loads((run_dir / "manifest.json").read_text())["min_frames"] == 1.9
     assert propose.replay(run_dir, propose.Executor(image=None, j=2)) == []
 
 
